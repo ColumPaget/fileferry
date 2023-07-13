@@ -67,6 +67,12 @@ void ParseCommandLineListDrivers(int argc, const char *argv[])
 }
 
 
+void PrintVersion()
+{
+    printf("fileferry %s\n", VERSION);
+    exit(0);
+}
+
 
 int ParseCommandLine(int argc, const char *argv[])
 {
@@ -109,6 +115,7 @@ int ParseCommandLine(int argc, const char *argv[])
             else if (strcmp(arg, "-timeout")==0) Settings->CommandTimeout=atoi(CommandLineNext(Cmd));
             else if (strcmp(arg, "-smtp-server")==0) Settings->SmtpServer=CopyStr(Settings->SmtpServer, CommandLineNext(Cmd));
             else if (strcmp(arg, "-errors-email")==0) Settings->EmailForErrors=CopyStr(Settings->EmailForErrors, CommandLineNext(Cmd));
+            else if (strcmp(arg, "-nols")==0) Settings->Flags |= SETTING_NO_DIR_LIST;
             else if (strcmp(arg, "-N")==0) Settings->Flags |= SETTING_BATCH;
             else if (strcmp(arg, "-sixel")==0) Settings->Flags |= SETTING_SIXEL;
             else if ( (strcmp(arg, "-D")==0) || (strcmp(arg, "-debug")==0) )
@@ -120,6 +127,8 @@ int ParseCommandLine(int argc, const char *argv[])
             {
                 Settings->Flags |= SETTING_VERBOSE;
             }
+            else if (strcmp(arg, "-version")==0) PrintVersion();
+            else if (strcmp(arg, "--version")==0) PrintVersion();
             else if (strcmp(arg, "-?")==0) HelpCommandLine();
             else if (strcmp(arg, "-h")==0) HelpCommandLine();
             else if (strcmp(arg, "-help")==0) HelpCommandLine();
@@ -154,6 +163,18 @@ int ParseCommandLine(int argc, const char *argv[])
 }
 
 
+
+
+int SettingChangeBoolean(const char *Value, int Flag)
+{
+        if (! StrValid(Value)) Settings->Flags ^= Flag;
+        else if (strtobool(Value)) Settings->Flags |= Flag;
+        else Settings->Flags &= ~Flag;
+
+return(Settings->Flags & Flag);
+}
+
+
 int SettingChange(const char *Name, const char *Value)
 {
     if (strcasecmp(Name, "proxy")==0) Settings->ProxyChain=CopyStr(Settings->ProxyChain, Value);
@@ -164,26 +185,11 @@ int SettingChange(const char *Name, const char *Value)
     else if (strcasecmp(Name, "image-size")==0) Settings->ImagePreviewSize=CopyStr(Settings->ImagePreviewSize, Value);
     else if (strcasecmp(Name, "viewers")==0) Settings->ImageViewers=CopyStr(Settings->ImageViewers, Value);
     else if (strcasecmp(Name, "sixelers")==0) Settings->Sixelers=CopyStr(Settings->Sixelers, Value);
-    else if (strcasecmp(Name, "sixel")==0) 
-		{
-			if (strtobool(Value)) Settings->Flags |= SETTING_SIXEL;
-			else Settings->Flags &= ~SETTING_SIXEL;
-		}
-    else if (strcasecmp(Name, "verbose")==0) 
-		{
-			if (strtobool(Value)) Settings->Flags |= SETTING_VERBOSE;
-			else Settings->Flags &= ~SETTING_VERBOSE;
-		}
-    else if (strcasecmp(Name, "debug")==0) 
-		{
-			if (strtobool(Value)) Settings->Flags |= SETTING_DEBUG;
-			else Settings->Flags &= ~SETTING_DEBUG;
-		}
-    else if (strcasecmp(Name, "syslog")==0) 
-		{
-			if (strtobool(Value)) Settings->Flags |= SETTING_SYSLOG;
-			else Settings->Flags &= ~SETTING_SYSLOG;
-		}
+    else if (strcasecmp(Name, "sixel")==0) SettingChangeBoolean(Value, SETTING_SIXEL);
+    else if (strcasecmp(Name, "verbose")==0) SettingChangeBoolean(Value, SETTING_VERBOSE);
+    else if (strcasecmp(Name, "debug")==0) SettingChangeBoolean(Value, SETTING_DEBUG);
+    else if (strcasecmp(Name, "syslog")==0) SettingChangeBoolean(Value, SETTING_SYSLOG);
+    else if (strcasecmp(Name, "nols")==0) SettingChangeBoolean(Value, SETTING_NO_DIR_LIST);
 }
 
 
@@ -222,8 +228,10 @@ int SettingsInit(int argc, const char *argv[])
     Settings=(TSettings *) calloc(1, sizeof(TSettings));
     if (isatty(1)) Settings->Flags |= SETTING_PROGRESS;
     Settings->Flags |= SETTING_TIMESTAMPS;
-		Settings->ProxyChain=CopyStr(Settings->ProxyChain, "");
-		Settings->LogFile=CopyStr(Settings->LogFile, "");
+    Settings->ProxyChain=CopyStr(Settings->ProxyChain, "");
+    Settings->LogFile=CopyStr(Settings->LogFile, "");
+    Settings->EmailForErrors=CopyStr(Settings->EmailForErrors, "");
+    Settings->EmailSender=CopyStr(Settings->EmailSender, "");
     Settings->ConfigFile=MCopyStr(Settings->ConfigFile, GetCurrUserHomeDir(), "/.config/fileferry/fileferry.conf", ":/etc/fileferry/fileferry.conf", NULL);
     Settings->SmtpServer=CopyStr(Settings->SmtpServer, "127.0.0.1:25");
     Settings->FileStoresPath=MCopyStr(Settings->FileStoresPath, GetCurrUserHomeDir(), "/.config/fileferry/filestores.conf", ":/etc/fileferry/filestores.conf", NULL);

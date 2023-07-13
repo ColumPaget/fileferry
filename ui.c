@@ -44,25 +44,43 @@ int SortTimeCompare(void *data, void *i1, void *i2)
 }
 
 
+
+/*
+#define SETTING_PROGRESS 4
+#define SETTING_TIMESTAMPS 8
+*/
+
+
+static void UI_ShowFlag(const char *Name, int Flag)
+{
+    if (Settings->Flags & Flag) printf("%-20s yes\n", Name);
+    else printf("%-20s no\n", Name);
+}
+
 void UI_ShowSettings()
 {
-		if (Settings->Flags & SETTING_VERBOSE) printf("verbose:    yes\n");
-		else printf("verbose:    no\n");
-		if (Settings->Flags & SETTING_DEBUG)   printf("debug:      yes\n");
-		else printf("debug:      no\n");
-		if (Settings->Flags & SETTING_SYSLOG)  printf("syslog:     yes\n");
-		else printf("syslog:     no\n");
-    printf("proxy:      %s\n", Settings->ProxyChain);
-    printf("log-file:   %s\n", Settings->LogFile);
-    printf("timeout:    %d\n", Settings->CommandTimeout);
-    printf("image-size: %s\n", Settings->ImagePreviewSize);
-    printf("viewers:    %s\n", Settings->ImageViewers);
-		if (Settings->Flags & SETTING_SIXEL) printf("sixel:      yes\n");
-		else printf("sixel:      no\n");
-    printf("sixelers:   %s\n", Settings->Sixelers);
+    UI_ShowFlag("verbose", SETTING_VERBOSE);
+    UI_ShowFlag("debug",   SETTING_DEBUG);
+    UI_ShowFlag("syslog",  SETTING_SYSLOG);
+    UI_ShowFlag("sixel",   SETTING_SIXEL);
+    UI_ShowFlag("nols",    SETTING_NO_DIR_LIST);
+    UI_ShowFlag("progress",SETTING_PROGRESS);
+
+
+    printf("%-20s %s\n", "config-file", Settings->ConfigFile);
+    printf("%-20s %s\n", "proxy", Settings->ProxyChain);
+    printf("%-20s %d\n", "life", Settings->ProcessTimeout);
+    printf("%-20s %d\n", "timeout", Settings->CommandTimeout);
+    printf("%-20s %s\n", "log-file", Settings->LogFile);
+    printf("%-20s %s\n", "errors-email", Settings->EmailForErrors);
+    printf("%-20s %s\n", "mail-sender", Settings->EmailSender);
+    printf("%-20s %s\n", "smtp-server", Settings->SmtpServer);
+    printf("%-20s %s\n", "image-size", Settings->ImagePreviewSize);
+    printf("%-20s %s\n", "viewers", Settings->ImageViewers);
+    printf("%-20s %s\n", "sixelers", Settings->Sixelers);
+
+
     fflush(NULL);
-// else if (strcmp(Name, "smtp-server")==0) Settings->SmtpServer=CopyStr(Settings->SmtpServer, Value);
-// else if (strcmp(Name, "errors-email")==0) Settings->EmailForErrors=CopyStr(Settings->EmailForErrors, Value);
 }
 
 
@@ -79,8 +97,11 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
     Tempstr=CopyStr(Tempstr, Cmd->Target);
     DirList=FileStoreGlob(FS, Tempstr);
 
+    if (DirList)
+    {
     if (Cmd->Flags & CMD_FLAG_SORT_SIZE) ListSort(DirList, NULL, SortSizeCompare);
     if (Cmd->Flags & CMD_FLAG_SORT_TIME) ListSort(DirList, NULL, SortTimeCompare);
+    }
 
     Curr=ListGetNext(DirList);
     while (Curr)
@@ -225,6 +246,8 @@ static void UI_ShowFilePostProcess(TCommand *Cmd, TFileTransfer *Xfer)
 
     Tempstr=FileStoreReformatPath(Tempstr, Xfer->DestFinalName, Xfer->ToFS);
     if (Cmd->Flags & CMD_FLAG_IMG) DisplayImage(Cmd, Xfer->SourceFinalName, Tempstr);
+    unlink(Tempstr);
+
     Destroy(Tempstr);
 }
 

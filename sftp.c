@@ -46,7 +46,7 @@
 #define SSH_FXF_EXCL            0x00000020
 
 
-#define SSH_PASSWORD_REQUESTED         -1
+#define SSH_PASSWORD_REQUESTED              -1
 #define SSH_FX_OK                            0
 #define SSH_FX_EOF                           1
 #define SSH_FX_NO_SUCH_FILE                  2
@@ -56,6 +56,7 @@
 #define SSH_FX_NO_CONNECTION                 6
 #define SSH_FX_CONNECTION_LOST               7
 #define SSH_FX_OP_UNSUPPORTED                8
+#define SSH_FX_TIMEOUT                    9999
 
 #ifndef htonll
 #if __BIG_ENDIAN__
@@ -277,9 +278,12 @@ static const char *DecodeStatus(int Status)
     case SSH_FX_OP_UNSUPPORTED:
         return("Unsupported Operation");
         break;
+    case SSH_FX_TIMEOUT:
+        return("Timed out");
+        break;
     }
 
-    return("");
+    return("Unknown Status");
 }
 
 static int SFTP_ReadPacket(TFileStore *FS, STREAM *S, TPacket *Packet)
@@ -291,7 +295,7 @@ static int SFTP_ReadPacket(TFileStore *FS, STREAM *S, TPacket *Packet)
     int RetVal=SSH_FX_FAILURE;
 
     result=STREAMReadBytes(S, (char *) &valint, sizeof(uint32_t));
-    if (result==STREAM_TIMEOUT) return(SSH_FX_BAD_MESSAGE);
+    if (result==STREAM_TIMEOUT) return(SSH_FX_TIMEOUT);
 
     ptr=(const char *) &valint;
     if (strncasecmp((const char *) &valint, "pass", 4)==0)
@@ -385,7 +389,10 @@ static int SFTP_ReadToPacketID(TFileStore *FS, STREAM *S, int PktID, TPacket *Pa
     result=SFTP_ReadPacket(FS, S, Packet);
     while (result != SSH_FX_FAILURE)
     {
+        if (Settings->Flags & SETTING_DEBUG) fprintf(stderr, "ReadToPacketID: %d - %s. PktID: %d Expected: %d\n", result, DecodeStatus(result), Packet->id, PktID);
         if (Packet->id==PktID) break;
+
+        if (result == SSH_FX_TIMEOUT) break;
         result=SFTP_ReadPacket(FS, S, Packet);
     }
 
@@ -503,6 +510,7 @@ static int SFTP_ReadDataPacket(STREAM *S, TPacket *Packet, char *Data)
 
         ptr=SFTP_ExtractString(ptr, &len, &Tempstr);
         SetVar(Packet->Values, "description", Tempstr);
+        if (Settings->Flags & SETTING_DEBUG) fprintf(stderr, "SSH_FXP_STATUS: %d %s\n", ntohl(valint), Tempstr);
         Tempstr=FormatStr(Tempstr, "%d", ntohl(valint));
         SetVar(Packet->Values, "status", Tempstr);
         len=STREAM_CLOSED;
@@ -579,6 +587,8 @@ static int SFTP_SendFileHandleRequest(STREAM *S, int Type, const char *Base64, i
     val=htonl(handle_len);
     STREAMWriteBytes(S, (char *) &val, sizeof(uint32_t));
     STREAMWriteBytes(S, Handle, handle_len);
+
+    STREAMFlush(S);
 
     Destroy(Handle);
     return(TRUE);
@@ -755,44 +765,6 @@ static int SFTP_MkDir(TFileStore *FS, const char *Path, int Mode)
 
 
 
-
-static ListNode *SFTP_ListDir(TFileStore *FS, const char *Path)
-{
-    TPacket *Packet;
-    char *Handle=NULL, *Dir=NULL;
-    ListNode *FileList=NULL;
-    int fcount, result;
-
-    Dir=CopyStr(Dir, Path);
-    Packet=SFTP_PacketCreate();
-    SFTP_SendFileRequest(FS->S, SSH_FXP_OPENDIR, Dir, 0);
-    result=SFTP_ReadToPacketID(FS, FS->S, pkt_id, Packet);
-    if (result == SSH_FX_OK)
-    {
-        Handle=CopyStr(Handle, Packet->Handle);
-
-        FileList=ListCreate();
-        while (1)
-        {
-            SFTP_SendGetData(FS->S, SSH_FXP_READDIR, Handle);
-            result=SFTP_ReadDirectoryPacket(FS->S, FileList);
-            while (result==SFTP_TRY_AGAIN)
-            {
-                usleep(100000);
-                result=SFTP_ReadDirectoryPacket(FS->S, FileList);
-            }
-            if (result != TRUE) break;
-        }
-    } else UI_Output(0, "ERROR: OpenDir: Dir=%s result=%s %d (%s)", Dir, GetVar(Packet->Values, "status"), result, GetVar(Packet->Values, "description"));
-
-    SFTP_PacketDestroy(Packet);
-    Destroy(Handle);
-    Destroy(Dir);
-
-    return(FileList);
-}
-
-
 static STREAM *SFTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     TPacket *Packet;
@@ -831,20 +803,37 @@ static STREAM *SFTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenF
     return(S);
 }
 
-int SFTP_CloseFile(TFileStore *FS, STREAM *S)
+static int SFTP_CloseHandle(TFileStore *FS, STREAM *S, const char *Handle)
 {
-    const char *p_handle;
     TPacket *Packet;
+    int i, result;
+
+    if (! StrValid(Handle)) return(FALSE);
 
     Packet=SFTP_PacketCreate();
-    p_handle=STREAMGetValue(S, "SFTP:Handle");
-    SFTP_SendFileHandleRequest(S, SSH_FXP_CLOSE, p_handle, 0);
-    SFTP_ReadToPacketID(FS, FS->S, pkt_id, Packet);
+
+    for (i=0; i < 5; i++)
+    {
+        SFTP_SendFileHandleRequest(S, SSH_FXP_CLOSE, Handle, 0);
+        result=SFTP_ReadToPacketID(FS, FS->S, pkt_id, Packet);
+        if (result == SSH_FX_OK) break;
+        sleep(2);
+    }
+
     SFTP_PacketDestroy(Packet);
 
     STREAMFlush(S);
-    STREAMDestroy(S);
+
     return(TRUE);
+}
+
+
+int SFTP_CloseFile(TFileStore *FS, STREAM *S)
+{
+    const char *p_handle;
+
+    p_handle=STREAMGetValue(S, "SFTP:Handle");
+    return(SFTP_CloseHandle(FS, S, p_handle));
 }
 
 static int SFTP_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
@@ -870,12 +859,53 @@ static int SFTP_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t off
 
     Packet=SFTP_PacketCreate();
     p_handle=STREAMGetValue(S, "SFTP:Handle");
+
     SFTP_SendFileWrite(S, p_handle, offset, len, Buffer);
     SFTP_ReadPacket(FS, S, Packet);
+
     SFTP_PacketDestroy(Packet);
 
     return(len);
 }
+
+
+static ListNode *SFTP_ListDir(TFileStore *FS, const char *Path)
+{
+    TPacket *Packet;
+    char *Handle=NULL, *Dir=NULL;
+    ListNode *FileList=NULL;
+    int fcount, result;
+
+    Dir=CopyStr(Dir, Path);
+    Packet=SFTP_PacketCreate();
+    SFTP_SendFileRequest(FS->S, SSH_FXP_OPENDIR, Dir, 0);
+    result=SFTP_ReadToPacketID(FS, FS->S, pkt_id, Packet);
+    if (result == SSH_FX_OK)
+    {
+        Handle=CopyStr(Handle, Packet->Handle);
+
+        FileList=ListCreate();
+        while (1)
+        {
+            SFTP_SendGetData(FS->S, SSH_FXP_READDIR, Handle);
+            result=SFTP_ReadDirectoryPacket(FS->S, FileList);
+            while (result==SFTP_TRY_AGAIN)
+            {
+                usleep(100000);
+                result=SFTP_ReadDirectoryPacket(FS->S, FileList);
+            }
+            if (result != TRUE) break;
+        }
+    } else UI_Output(0, "ERROR: OpenDir: Dir=%s result=%s %d (%s)", Dir, GetVar(Packet->Values, "status"), result, GetVar(Packet->Values, "description"));
+    SFTP_CloseHandle(FS, FS->S, Handle);
+
+    SFTP_PacketDestroy(Packet);
+    Destroy(Handle);
+    Destroy(Dir);
+
+    return(FileList);
+}
+
 
 
 static int SFTP_Init(TFileStore *FS, STREAM *S)
@@ -883,7 +913,7 @@ static int SFTP_Init(TFileStore *FS, STREAM *S)
     uint32_t valint;
     TPacket *Packet;
 
-    STREAMSetTimeout(S, 100);
+    STREAMSetTimeout(S, 1000);
     SFTP_SendPacketHeader(S, SSH_FXP_INIT,  sizeof(uint32_t));
     valint=htonl(3); //version number, version 3
     STREAMWriteBytes(S, (char *) &valint, sizeof(uint32_t));

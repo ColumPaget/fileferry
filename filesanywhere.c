@@ -6,7 +6,17 @@
 #define LOGIN_URL "http://api.filesanywhere.com/AccountLogin"
 #define API_KEY "40D380BA-4E80-46D9-8629-6A2F229DBA94"
 
-int FilesAnywhere_Command(TFileStore *FS, char *XML, char *SOAPAction, char **ResponseData)
+
+char *FilesAnywhere_Path(char *FAWPath, const char *Path)
+{
+    FAWPath=CopyStr(FAWPath, Path);
+    strrep(FAWPath, '/', '\\');
+
+    return(FAWPath);
+}
+
+
+int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SOAPAction, char **ResponseData)
 {
     char *Tempstr=NULL, *PostData=NULL;
     const char *ptr;
@@ -18,6 +28,7 @@ int FilesAnywhere_Command(TFileStore *FS, char *XML, char *SOAPAction, char **Re
     PostData=MCopyStr(PostData,"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n<soap:Body>\n", XML, "</soap:Body>\n</soap:Envelope>\n", NULL);
     Tempstr=FormatStr(Tempstr, "w SOAPAction=%s Content-Type='text/xml; charset=utf-8' Content-Length=%d", SOAPAction, StrLen(PostData));
 
+    printf("XNL: %s\n", XML);
     S=STREAMOpen("https://api.filesanywhere.com/v2/fawapi.asmx", Tempstr);
     if (S)
     {
@@ -25,7 +36,7 @@ int FilesAnywhere_Command(TFileStore *FS, char *XML, char *SOAPAction, char **Re
         STREAMCommit(S);
         RetVal=HTTPCheckResponseCode(S);
         *ResponseData=STREAMReadDocument(*ResponseData, S);
-        //printf("\n%s\n", *ResponseData);
+        printf("\n%s\n", *ResponseData);
         STREAMClose(S);
     }
 
@@ -174,16 +185,19 @@ int FilesAnywhere_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
 
 static int FilesAnywhere_DeleteItem(TFileStore *FS, const char *Path, int Type, char **RetStr)
 {
-    char *XML=NULL;
+    char *XML=NULL, *FAWPath=NULL;
     int result;
 
+    FAWPath=FilesAnywhere_Path(FAWPath, Path);
     XML=MCopyStr(XML, "<DeleteItems xmlns=\"http://api.filesanywhere.com/\">\n", "<Token>",GetVar(FS->Vars,"AuthToken"),"</Token>\n",NULL);
-    if (Type==FTYPE_DIR) XML=MCatStr(XML,"<ItemsToDelete> <Item> <Type>folder</Type> <Path>",Path,"</Path> </Item>\n","</ItemsToDelete> </DeleteItems>\n",NULL);
-    else XML=MCatStr(XML,"<ItemsToDelete> <Item> <Type>file</Type> <Path>",Path,"</Path> </Item>\n","</ItemsToDelete> </DeleteItems>\n",NULL);
+    if (Type==FTYPE_DIR) XML=MCatStr(XML,"<ItemsToDelete> <Item> <Type>folder</Type> <Path>",FAWPath,"</Path> </Item>\n","</ItemsToDelete> </DeleteItems>\n",NULL);
+    else XML=MCatStr(XML,"<ItemsToDelete> <Item> <Type>file</Type> <Path>",FAWPath,"</Path> </Item>\n","</ItemsToDelete> </DeleteItems>\n",NULL);
 
-    result=FilesAnywhere_Command(FS, XML, "http://api.filesanywhere.com/DeleteItems",RetStr);
+    result=FilesAnywhere_Command(FS, XML, "http://api.filesanywhere.com/DeleteItems", RetStr);
 
     printf("FAW: DEL %d %s\n", Type, *RetStr);
+
+    Destroy(FAWPath);
     Destroy(XML);
     return(result);
 }
@@ -234,16 +248,17 @@ int FilesAnywhere_Rename(TFileStore *FS, const char *FromPath, const char *ToPat
     const char *ptr, *dptr;
     int result=FALSE, RetVal=FALSE;
 
-    QuotedFrom=CopyStr(QuotedFrom,FromPath);
+    QuotedFrom=FilesAnywhere_Path(QuotedFrom, FromPath);
+    ptr=strrchr(QuotedFrom,'\\');
 
-    ptr=strrchr(FromPath,'\\');
-    dptr=strrchr(ToPath,'\\');
+    QuotedTo=FilesAnywhere_Path(QuotedTo, ToPath);
+    dptr=strrchr(QuotedTo,'\\');
 
     if (dptr && ptr)
     {
-        if ((*(dptr+1)=='\0') || (strncmp(ToPath,FromPath,dptr-ToPath) !=0))
+        if ((*(dptr+1)=='\0') || (strncmp(QuotedTo, QuotedFrom, dptr - QuotedTo) != 0))
         {
-            XML=MCopyStr(XML, "<MoveItems xmlns=\"http://api.filesanywhere.com/\">\n", "<Token>",GetVar(FS->Vars,"AuthToken"),"</Token>\n", "<SrcPath>",QuotedFrom,"</SrcPath>\n", "<DstPath>",ToPath,"</DstPath>\n","</MoveItems>\n",NULL);
+            XML=MCopyStr(XML, "<MoveItems xmlns=\"http://api.filesanywhere.com/\">\n", "<Token>",GetVar(FS->Vars,"AuthToken"),"</Token>\n", "<SrcPath>",QuotedFrom,"</SrcPath>\n", "<DstPath>",QuotedTo,"</DstPath>\n","</MoveItems>\n",NULL);
             Tempstr=CopyStr(Tempstr, "http://api.filesanywhere.com/MoveItems");
         }
     }
@@ -251,7 +266,6 @@ int FilesAnywhere_Rename(TFileStore *FS, const char *FromPath, const char *ToPat
     if (! StrLen(Tempstr))
     {
         //Full path not allowed when changing file name
-        QuotedTo=CopyStr(QuotedTo,GetBasename(ToPath));
 
         XML=MCopyStr(XML, "<RenameItem xmlns=\"http://api.filesanywhere.com/\">\n", "<Token>",GetVar(FS->Vars,"AuthToken"),"</Token>\n", "<Path>",QuotedFrom,"</Path>\n", "<Type>","file","</Type>\n", "<NewName>",QuotedTo,"</NewName>\n","</RenameItem>\n",NULL);
         Tempstr=CopyStr(Tempstr, "http://api.filesanywhere.com/RenameItem");
@@ -262,7 +276,10 @@ int FilesAnywhere_Rename(TFileStore *FS, const char *FromPath, const char *ToPat
         ptr=XMLGetTag(Tempstr,NULL,&TagName,&TagData);
         while (ptr)
         {
-            if (strcasecmp(TagName,"Renamed")==0)
+            if (
+                (strcasecmp(TagName,"Renamed")==0) ||
+                (strcasecmp(TagName,"Moved")==0)
+            )
             {
                 ptr=XMLGetTag(ptr,NULL,&TagName,&TagData);
                 if (strcmp(TagData,"true")==0) RetVal=TRUE;

@@ -125,7 +125,7 @@ char *FileStoreReformatPath(char *RetStr, const char *Path, TFileStore *FS)
         if (strcmp(Path, "..") ==0)
         {
             StrRTruncChar(Tempstr, '/');
-            if (! StrValid(Tempstr)) Tempstr=CopyStr(Tempstr, "/");
+            Tempstr=CatStr(Tempstr, "/");
         }
         else if (strcmp(Path, ".")==0) /*do nothing*/ ;
         else
@@ -179,6 +179,7 @@ void FileStoreAddItem(TFileStore *FS, int Type, const char *Name, uint64_t Size)
     TFileItem *FI;
     char *Path=NULL;
 
+    if (! FS->DirList) FS->DirList=ListCreate();
     Path=FileStoreReformatPath(Path, Name, FS);
     FI=FileItemCreate(Path, Type, Size, 0);
     FI->mtime=Now;
@@ -217,9 +218,16 @@ ListNode *FileStoreGetDirList(TFileStore *FS, const char *Path)
 }
 
 
-ListNode *FileStoreRefreshCurrDirList(TFileStore *FS)
+static ListNode *FileStoreRefreshCurrDirList(TFileStore *FS, int Force)
 {
     if (FS->DirList) ListDestroy(FS->DirList, FileItemDestroy);
+    FS->DirList=NULL;
+
+    if (! Force)
+    {
+        if (FS->Flags & FILESTORE_NO_DIR_LIST) return(NULL);
+        if (Settings->Flags & SETTING_NO_DIR_LIST) return(NULL);
+    }
     FS->DirList=FileStoreGetDirList(FS, "");
 
     return(FS->DirList);
@@ -243,7 +251,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
         if (*Path=='/') SrcDir=FileStoreGetDirList(FS, Path);
         else
         {
-            if ( (ListSize(FS->DirList)==0) || strchr(Path, '/') || (strcmp(Path, ".")==0) ) SrcDir=FileStoreRefreshCurrDirList(FS);
+            if ( (ListSize(FS->DirList)==0) || strchr(Path, '/') || (strcmp(Path, ".")==0) ) SrcDir=FileStoreRefreshCurrDirList(FS, TRUE);
             SrcDir=FS->DirList;
         }
 
@@ -253,7 +261,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
     }
     else
     {
-        SrcDir=FileStoreRefreshCurrDirList(FS);
+        SrcDir=FileStoreRefreshCurrDirList(FS, TRUE);
         lname="*";
     }
 
@@ -338,7 +346,7 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
             FS->CurrDir=CopyStr(FS->CurrDir, Path);
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHDIR: $(path)", Path, "");
             result=TRUE;
-            FileStoreRefreshCurrDirList(FS);
+            FileStoreRefreshCurrDirList(FS, FALSE);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) CHDIR FAILED: $(path)", Path, "");
     }
@@ -801,7 +809,7 @@ TFileStore *FileStoreConnect(const char *Config)
                     if (StrValid(GetVar(FS->Vars, "ServerBanner"))) UI_Output(0, "%s", GetVar(FS->Vars, "ServerBanner"));
 
                     if (FS->GetValue) FileStoreOutputDiskQuota(FS);
-                    FileStoreRefreshCurrDirList(FS);
+                    FileStoreRefreshCurrDirList(FS, FALSE);
                     FS->HomeDir=CopyStr(FS->HomeDir, FS->CurrDir);
                 }
             }

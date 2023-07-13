@@ -36,7 +36,7 @@ typedef struct
     int Type;
     int Flags;
     int EncryptType;
-		int NoOfItems;
+    int NoOfItems;
     char *Mode;
     char *Target;
     char *Dest;

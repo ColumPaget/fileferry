@@ -8,9 +8,9 @@
 #include "errors_and_logging.h"
 #include "proc.h"
 
-int SigHandler(int Sig)
+void SigHandler(int Sig)
 {
-    if (Sig==SIGALRM) exit(1);
+    if (Sig == SIGALRM) exit(1);
 }
 
 
@@ -19,6 +19,7 @@ int ApplicationInit(int argc, const char *argv[])
     int Act;
     char *Tempstr=NULL;
 
+    signal(SIGALRM, SigHandler);
     ProcessStartTime=GetTime(0);
     FileStoreDriversInit();
     UI_Init();

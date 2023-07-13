@@ -1,9 +1,9 @@
 OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_drivers.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o ls_decode.o html.o rss.o webdav.o localdisk.o inet_protocols.o ftp.o sftp.o http.o pop3.o gdrive.o dropbox.o filesanywhere.o gofile.o filebin.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o
 BUILTIN=-DFILESTORE_BUILTIN_SFTP -DFILESTORE_BUILTIN_HTTP -DFILESTORE_BUILTIN_FTP -DFILESTORE_BUILTIN_POP3 -DFILESTORE_BUILTIN_GDRIVE -DFILESTORE_BUILTIN_DROPBOX -DFILESTORE_BUILTIN_GOFILE -DFILESTORE_BUILTIN_FILEBIN -DFILESTORE_BUILTIN_FILESANYWHERE
-FLAGS=-g -D_FILE_OFFSET_BITS=64 $(BUILTIN) 
+FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_VERSION=2.0 $(BUILTIN) 
 PREFIX=/usr/local
-LIBS=-lcap -lssl -lcrypto -lz 
-STATIC_LIBUSEFUL=libUseful-5/libUseful.a
+LIBS=-lUseful-5 -lcap -lssl -lcrypto -lz 
+STATIC_LIBUSEFUL=
 
 all: $(OBJ) main.c $(STATIC_LIBUSEFUL)
 	gcc $(FLAGS) -ofileferry $(OBJ) main.c $(STATIC_LIBUSEFUL) $(LIBS)
@@ -121,4 +121,4 @@ install:
 	cp fileferry $(PREFIX)/bin
 
 clean:
-	rm *.o */*.o */*.a */*.so fileferry
+	rm *.o */*.o */*.a */*.so *.orig fileferry

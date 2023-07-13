@@ -369,7 +369,7 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     TFileTransfer *Xfer;
     TFileItem *FI;
     ListNode *DirList, *Curr;
-    int result;
+    int result, transfers=0;
 
     if (! StrValid(Cmd->Target))
     {
@@ -412,8 +412,11 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
                 break;
             }
 
+
             UI_Output(0, "");
             FileTransferDestroy(Xfer);
+            transfers++;
+            if ((Cmd->NoOfItems > 0) && (transfers >= Cmd->NoOfItems)) break;
         }
         else UI_Output(UI_OUTPUT_VERBOSE, "TRANSFER NOT NEEDED: %s", FI->path);
 

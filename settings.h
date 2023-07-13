@@ -10,6 +10,7 @@
 #define SETTING_SYSLOG 16
 #define SETTING_BATCH  32
 #define SETTING_SIXEL  64
+#define SETTING_NO_DIR_LIST 8192
 
 typedef struct
 {
@@ -29,8 +30,8 @@ typedef struct
     char *EmailSender;
     char *WebhookForErrors;
     char *ImagePreviewSize;
-		char *ImageViewers;
-		char *Sixelers;
+    char *ImageViewers;
+    char *Sixelers;
     int ProcessTimeout;
     int CommandTimeout;
     int LogMaxSize;

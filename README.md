@@ -67,6 +67,7 @@ options:
   -life <timeout>                            - shutdown program after <timeout>
   -errors-email <email address>              - send email report of any errors to <email address>
   -smtp-server <url>                         - send error report email via smtp server at <url>
+  -nols                                      - don't grab a directory listing every time we change directory
 ```
 
 
@@ -210,6 +211,8 @@ Alternatively fileferry can display images in terminals that have sixel support.
 ```
 show -image -sixel *.jpg
 ```
+
+or you can turn on the 'sixel' option in settings, and 'show -image' will then default to sixel mode.
 
 The sixel feature requires either the image-magick 'convert' command or 'img2sixel' to be available.
 

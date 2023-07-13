@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "fileitem.h"
+#include "settings.h"
 #include <sys/stat.h>
 
 #define FILESTORE_DEBUG 1
@@ -13,6 +14,7 @@
 #define FILESTORE_FOLDERS 1024
 #define FILESTORE_USAGE 2048
 #define FILESTORE_SHARELINK 4096
+#define FILESTORE_NO_DIR_LIST SETTING_NO_DIR_LIST
 
 // we do not use 'setuid', 'setgid' or 'set sticky bit' in mkdir so we can
 // use these flags for other things

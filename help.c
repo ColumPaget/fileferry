@@ -197,6 +197,7 @@ void HelpCommand(const char *Command)
         printf("options:\n");
         printf("    -f                   force transfer even if destination already exists\n");
         printf("    -s                   sync. Only transfer files newer than existing files\n");
+        printf("    -n <number>          only transfer 'number' files of those matching request\n");
         printf("    -t <extn>            when transferring files, send them with temporary file extension <extn> and then rename to proper name/extension when transfer is complete\n");
         printf("    -et <extn>           when transferring files, send them with temporary file extension <extn> and then rename to proper name/extension when transfer is complete\n");
         printf("    -ed <extn>           change file extension of destination file to  <extn> when transfer is complete\n");
@@ -219,6 +220,7 @@ void HelpCommand(const char *Command)
         printf("options:\n");
         printf("    -f                   force transfer even if destination already exists\n");
         printf("    -s                   sync. Only transfer files newer than existing files\n");
+        printf("    -n <number>          only transfer 'number' files of those matching request\n");
         printf("    -t <extn>            when transferring files, send them with temporary file extension <extn> and then rename to proper name/extension when transfer is complete\n");
         printf("    -et <extn>           when transferring files, send them with temporary file extension <extn> and then rename to proper name/extension when transfer is complete\n");
         printf("    -ed <extn>           change file extension of destination file to  <extn> when transfer is complete\n");
@@ -359,6 +361,7 @@ void HelpCommandLine()
     printf("  -life <timeout>                            - shutdown program after <timeout>\n");
     printf("  -errors-email <email address>              - send email report of any errors to <email address>\n");
     printf("  -smtp-server <url>                         - send error report email via smtp server at <url>\n");
+    printf("  -nols                                      - don't get directory listing when changing directory\n");
 
     UI_Close();
     exit(0);

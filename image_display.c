@@ -70,7 +70,6 @@ void DisplayImage(TCommand *Cmd, const char *Title, const char *ImagePath)
         Tempstr=SelectProgram(Tempstr, Settings->Sixelers, ImagePath);
         system(Tempstr);
         printf("\n");
-        unlink(ImagePath);
     }
     else
     {
@@ -81,7 +80,6 @@ void DisplayImage(TCommand *Cmd, const char *Title, const char *ImagePath)
             if (pid==0)
             {
                 system(Tempstr);
-                unlink(ImagePath);
                 _exit(0);
             }
         }

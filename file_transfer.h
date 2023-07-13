@@ -28,6 +28,7 @@ struct t_file_transfer
     uint64_t Size;
     uint64_t Offset;
     uint64_t Downloaded;
+    uint64_t MaxTransfers;
     time_t StartTime;
     int DestBackups;
     int EncryptType;
