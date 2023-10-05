@@ -6,6 +6,14 @@
 #define GOOGLE_CLIENT_SECRET "YDYv4JZMI3umD80S7Xh_WNJV"
 
 
+/*
+static STREAM *GDrive_Connect(TFileStore *FS, const char *Path, )
+{
+
+}
+*/
+
+
 char *CreateItemFormatJSON(char *RetStr, TFileStore *FS, const char *Path, const char *MimeType)
 {
     const char *ptr;
@@ -32,7 +40,7 @@ STREAM *GDrive_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags,
     {
         PostData=CreateItemFormatJSON(PostData, FS, Path, "application/octet-stream");
         URL=MCopyStr(URL, "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", NULL);
-        Tempstr=FormatStr(Tempstr, "w 'Authorization=Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
+        Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
         S=STREAMOpen(URL, Tempstr);
         if (S)
         {
@@ -42,14 +50,14 @@ STREAM *GDrive_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags,
             URL=CopyStr(URL, STREAMGetValue(S, "HTTP:Location"));
             STREAMClose(S);
 
-            Tempstr=FormatStr(Tempstr, "W 'Authorization=Bearer %s' 'Content-Length=%lld'", FS->Pass, Size);
+            Tempstr=FormatStr(Tempstr, "W Authorization='Bearer %s' 'Content-Length=%lld'", FS->Pass, Size);
             S=STREAMOpen(URL, Tempstr);
         }
     }
     else
     {
         URL=MCopyStr(URL, "https://www.googleapis.com/drive/v3/files", Path, "?alt=media", NULL);
-        Tempstr=MCopyStr(Tempstr, "r 'Authorization=Bearer ", FS->Pass, "'", NULL);
+        Tempstr=MCopyStr(Tempstr, "r Authorization='Bearer ", FS->Pass, "'", NULL);
         S=STREAMOpen(URL, Tempstr);
     }
 
@@ -94,7 +102,7 @@ int GDrive_Unlink(TFileStore *FS, const char *Path)
     int RetVal=FALSE;
 
     URL=MCopyStr(URL, "https://www.googleapis.com/drive/v3/files", Path, NULL);
-    Tempstr=MCopyStr(Tempstr, "D 'Authorization=Bearer ", FS->Pass, "'", NULL);
+    Tempstr=MCopyStr(Tempstr, "D Authorization='Bearer ", FS->Pass, "'", NULL);
     S=STREAMOpen(URL, Tempstr);
     if (S) RetVal=TRUE;
     STREAMClose(S);
@@ -139,7 +147,7 @@ int GDrive_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
         else PostData=MCopyStr(PostData, "{\"name\": \"", GetBasename(NewPath), "\"}", NULL);
 
 
-        Tempstr=FormatStr(Tempstr, "P 'Authorization=Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
+        Tempstr=FormatStr(Tempstr, "P Authorization='Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
         S=STREAMOpen(URL, Tempstr);
         if (S)
         {
@@ -173,7 +181,7 @@ int GDrive_Copy(TFileStore *FS, const char *OldPath, const char *NewPath)
         FI=(TFileItem *) Curr->Item;
         URL=MCopyStr(URL, "https://www.googleapis.com/drive/v3/files/", FI->path, "/copy", NULL);
         PostData=MCopyStr(PostData, "{\"name\": \"", GetBasename(NewPath), "\"}", NULL);
-        Tempstr=FormatStr(Tempstr, "w 'Authorization=Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
+        Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
         S=STREAMOpen(URL, Tempstr);
         if (S)
         {
@@ -204,7 +212,7 @@ int GDrive_MkDir(TFileStore *FS, const char *Path, int Mkdir)
     PostData=CreateItemFormatJSON(PostData, FS, Path, "application/vnd.google-apps.folder");
     printf("MKDIR: [%s] %s\n", URL, PostData);
 
-    Tempstr=FormatStr(Tempstr, "w 'Authorization=Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
+    Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' 'Content-Type=application/json; charset=UTF-8' Content-Length=%d", FS->Pass, StrLen(PostData));
     S=STREAMOpen(URL, Tempstr);
     if (S)
     {
@@ -235,7 +243,7 @@ ListNode *GDrive_ListDir(TFileStore *FS, const char *Path)
     uint64_t size;
 
     Items=ListCreate();
-    Tempstr=MCopyStr(Tempstr, "r 'Authorization=Bearer ", FS->Pass, "'", NULL);
+    Tempstr=MCopyStr(Tempstr, "r Authorization='Bearer ", FS->Pass, "'", NULL);
 
     if (strcmp(Path, "/")==0) URL=CopyStr(URL, "https://www.googleapis.com/drive/v3/files?fields=*&q='root'+in+parents");
     else
@@ -293,21 +301,11 @@ static OAUTH *GDriveOAuth(TFileStore *FS)
     Ctx=OAuthCreate("pkce", FS->URL, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/oauth2/v2/token");
     if (! OAuthLoad(Ctx, FS->URL, ""))
     {
+	      //OAuthSetRedirectURI(Ctx, "http://127.0.0.1:8989");
         OAuthStage1(Ctx, "https://accounts.google.com/o/oauth2/v2/auth");
-        printf("GOTO: %s in a browser\n",Ctx->VerifyURL);
-        printf("Login and/or grant access, then cut and past the access code back to this program.\n\nAccess Code: ");
+        printf("GOTO BELOW URL IN A BROWSER. Login and/or grant access:\n%s\n", Ctx->VerifyURL);
         fflush(NULL);
-
-        Tempstr=SetStrLen(Tempstr,1024);
-        result=read(0,Tempstr,1024);
-        if (result > 0)
-        {
-            StrTrunc(Tempstr, result);
-            StripTrailingWhitespace(Tempstr);
-            StripTrailingWhitespace(Tempstr);
-            SetVar(Ctx->Vars, "code", Tempstr);
-            OAuthFinalize(Ctx, "https://oauth2.googleapis.com/token");
-        }
+        OAuthListen(Ctx, 8989, "https://oauth2.googleapis.com/token", 0);
     }
 
     FS->Pass=CopyStr(FS->Pass, Ctx->AccessToken);
@@ -349,7 +347,7 @@ char *GDrive_Quota(char *RetStr, TFileStore *FS)
     float total, avail, used;
 
     RetStr=CopyStr(RetStr, "");
-    Tempstr=MCopyStr(Tempstr, "r 'Authorization=Bearer ", FS->Pass, "'", NULL);
+    Tempstr=MCopyStr(Tempstr, "r Authorization='Bearer ", FS->Pass, "'", NULL);
     S=STREAMOpen("https://www.googleapis.com/drive/v3/about?fields=*", Tempstr);
     if (S)
     {

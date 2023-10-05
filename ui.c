@@ -93,9 +93,12 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
     int LineCount=0;
 
     time(&Now);
+
     //do this to handle Cmd->Target being NULL
     Tempstr=CopyStr(Tempstr, Cmd->Target);
-    DirList=FileStoreGlob(FS, Tempstr);
+
+    if (Cmd->Flags & CMD_FLAG_FORCE) DirList=FileStoreReloadAndGlob(FS, Tempstr);
+		else DirList=FileStoreGlob(FS, Tempstr);
 
     if (DirList)
     {
@@ -179,6 +182,50 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
     FileStoreFreeDir(FS, DirList);
 
     Destroy(Tempstr);
+}
+
+
+void UI_OutputFStat(TFileStore *FS, TCommand *Cmd)
+{
+ListNode *DirList, *Curr;
+unsigned int Files=0, Dirs=0;
+char *Tempstr=NULL;
+TFileItem *FI;
+double Bytes=0, Largest=0;
+time_t Oldest=0, Newest=0;
+
+//do this to handle Cmd->Target being NULL
+Tempstr=CopyStr(Tempstr, Cmd->Target);
+
+if (Cmd->Flags & CMD_FLAG_FORCE) DirList=FileStoreReloadAndGlob(FS, Tempstr);
+else DirList=FileStoreGlob(FS, Tempstr);
+
+Curr=ListGetNext(DirList);
+while (Curr)
+{
+ FI=(TFileItem *) Curr->Item;
+ if (FileIncluded(Cmd, FI, FS, FS))
+ {
+   if (FI->type==FTYPE_DIR) Dirs++;
+	 else 
+	{
+		Files++;
+		Bytes+=FI->size; 
+		if (FI->size > Largest) Largest=FI->size;
+		if (FI->mtime > Newest) Newest=FI->mtime;
+		if ((Oldest==0) || (FI->mtime < Oldest)) Oldest=FI->mtime;
+	}
+ }
+Curr=ListGetNext(Curr);
+}
+
+printf("dirs:%d files:%d total:%sb ", Dirs, Files, ToIEC(Bytes, 1));
+printf("largest:%sb ", ToIEC(Largest, 1));
+printf("oldest:%s ", GetDateStrFromSecs("%Y/%m/%d %H:%M:%S", Oldest, NULL));
+printf("newest:%s\n", GetDateStrFromSecs("%Y/%m/%d %H:%M:%S", Newest, NULL));
+
+FileStoreFreeDir(FS, DirList);
+Destroy(Tempstr);
 }
 
 

@@ -55,7 +55,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     if (strcmp(Switch, "-a")==0) Cmd->Flags |= CMD_FLAG_ALL;
     else if (strcmp(Switch, "-A")==0) Cmd->Flags |= CMD_FLAG_ABORT;
     else if (strcmp(Switch, "-Q")==0) Cmd->Flags |= CMD_FLAG_QUIT;
-    else if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FORCE;
+    else if (strcmp(Switch, "-F")==0) Cmd->Flags |= CMD_FLAG_FORCE;
     else if (strcmp(Switch, "-l")==0) Cmd->Flags |= CMD_FLAG_LONG;
     else if (strcmp(Switch, "-ll")==0) Cmd->Flags |= CMD_FLAG_LONG | CMD_FLAG_LONG_LONG;
     else if (strcmp(Switch, "-r")==0) Cmd->Flags |= CMD_FLAG_RECURSE;
@@ -132,6 +132,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     case CMD_GET:
     case CMD_MGET:
         if (strcmp(Switch,"-s")==0) Cmd->Flags |= CMD_FLAG_SYNC;
+    	else if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FORCE;
         else if (strcmp(Switch, "-n")==0)
         {
             CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
@@ -222,6 +223,10 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "ldel")==0) Cmd=CMD_LDEL;
     else if (strcmp(Str, "ls")==0)  Cmd=CMD_LS;
     else if (strcmp(Str, "lls")==0) Cmd=CMD_LLS;
+    else if (strcmp(Str, "stat")==0)  Cmd=CMD_STAT;
+    else if (strcmp(Str, "lstat")==0) Cmd=CMD_LSTAT;
+    else if (strcmp(Str, "stats")==0)  Cmd=CMD_STAT;
+    else if (strcmp(Str, "lstats")==0) Cmd=CMD_LSTAT;
     else if (strcmp(Str, "get")==0) Cmd=CMD_GET;
     else if (strcmp(Str, "put")==0) Cmd=CMD_PUT;
     else if (strcmp(Str, "mget")==0) Cmd=CMD_MGET;
@@ -483,6 +488,14 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 
     case CMD_LLS:
         UI_OutputDirList(LocalFS, Cmd);
+        break;
+
+    case CMD_STAT:
+        UI_OutputFStat(RemoteFS, Cmd);
+        break;
+
+    case CMD_LSTAT:
+        UI_OutputFStat(LocalFS, Cmd);
         break;
 
     case CMD_GET:

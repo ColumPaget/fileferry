@@ -7,6 +7,10 @@
 #include "ui.h"
 #include <fnmatch.h>
 
+
+#define DIR_CLEAR 1
+#define DIR_FORCE 2
+
 TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path)
 {
     TFileItem *FI;
@@ -218,16 +222,32 @@ ListNode *FileStoreGetDirList(TFileStore *FS, const char *Path)
 }
 
 
-static ListNode *FileStoreRefreshCurrDirList(TFileStore *FS, int Force)
+static void FileStoreClearCurrDirList(TFileStore *FS)
 {
-    if (FS->DirList) ListDestroy(FS->DirList, FileItemDestroy);
+   if (FS->DirList) ListDestroy(FS->DirList, FileItemDestroy);
     FS->DirList=NULL;
+}
 
-    if (! Force)
+
+static ListNode *FileStoreRefreshCurrDirList(TFileStore *FS, int Flags)
+{
+		//if we already have a dir listing, use that
+		if ( (! Flags) && (ListSize(FS->DirList) >0) ) return(FS->DirList);
+
+		//clear out our exising dir listing
+    FileStoreClearCurrDirList(FS);
+
+ 		//if force is not set, and we are set to not list directories by default
+		//(this is done when working with filestores full of files where we don't care
+		//about the items already present (maybe we are just uploading more items)
+		//in order to speed up processing
+    if (! (Flags & DIR_FORCE))
     {
         if (FS->Flags & FILESTORE_NO_DIR_LIST) return(NULL);
         if (Settings->Flags & SETTING_NO_DIR_LIST) return(NULL);
     }
+
+		//finally, if all of the above to not apply, load a new DirList
     FS->DirList=FileStoreGetDirList(FS, "");
 
     return(FS->DirList);
@@ -251,7 +271,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
         if (*Path=='/') SrcDir=FileStoreGetDirList(FS, Path);
         else
         {
-            if ( (ListSize(FS->DirList)==0) || strchr(Path, '/') || (strcmp(Path, ".")==0) ) SrcDir=FileStoreRefreshCurrDirList(FS, TRUE);
+            if ( (ListSize(FS->DirList)==0) || strchr(Path, '/') || (strcmp(Path, ".")==0) ) SrcDir=FileStoreRefreshCurrDirList(FS, DIR_FORCE);
             SrcDir=FS->DirList;
         }
 
@@ -261,7 +281,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
     }
     else
     {
-        SrcDir=FileStoreRefreshCurrDirList(FS, TRUE);
+        SrcDir=FileStoreRefreshCurrDirList(FS, 0);
         lname="*";
     }
 
@@ -284,6 +304,14 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 
     return(GlobList);
 }
+
+
+ListNode *FileStoreReloadAndGlob(TFileStore *FS, const char *Glob)
+{
+FileStoreRefreshCurrDirList(FS, DIR_FORCE);
+return(FileStoreGlob(FS, Glob));
+}
+
 
 int FileStoreGlobCount(TFileStore *FS, const char *Path)
 {
@@ -336,6 +364,7 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
     int result=FALSE;
     char *Path=NULL;
 
+    FileStoreClearCurrDirList(FS);
     if (FS->Flags & FILESTORE_FOLDERS)
     {
         if (StrValid(DestName)) Path=FileStoreGetPath(Path, FS, DestName);
@@ -346,7 +375,7 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
             FS->CurrDir=CopyStr(FS->CurrDir, Path);
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHDIR: $(path)", Path, "");
             result=TRUE;
-            FileStoreRefreshCurrDirList(FS, FALSE);
+            FileStoreRefreshCurrDirList(FS, 0);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) CHDIR FAILED: $(path)", Path, "");
     }
@@ -809,7 +838,7 @@ TFileStore *FileStoreConnect(const char *Config)
                     if (StrValid(GetVar(FS->Vars, "ServerBanner"))) UI_Output(0, "%s", GetVar(FS->Vars, "ServerBanner"));
 
                     if (FS->GetValue) FileStoreOutputDiskQuota(FS);
-                    FileStoreRefreshCurrDirList(FS, FALSE);
+                    FileStoreRefreshCurrDirList(FS, 0);
                     FS->HomeDir=CopyStr(FS->HomeDir, FS->CurrDir);
                 }
             }

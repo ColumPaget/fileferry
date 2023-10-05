@@ -28,7 +28,7 @@ int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SOAPActio
     PostData=MCopyStr(PostData,"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n<soap:Body>\n", XML, "</soap:Body>\n</soap:Envelope>\n", NULL);
     Tempstr=FormatStr(Tempstr, "w SOAPAction=%s Content-Type='text/xml; charset=utf-8' Content-Length=%d", SOAPAction, StrLen(PostData));
 
-    printf("XNL: %s\n", XML);
+    //printf("XML: %s\n", XML);
     S=STREAMOpen("https://api.filesanywhere.com/v2/fawapi.asmx", Tempstr);
     if (S)
     {
@@ -36,7 +36,7 @@ int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SOAPActio
         STREAMCommit(S);
         RetVal=HTTPCheckResponseCode(S);
         *ResponseData=STREAMReadDocument(*ResponseData, S);
-        printf("\n%s\n", *ResponseData);
+        //printf("\n%s\n", *ResponseData);
         STREAMClose(S);
     }
 
@@ -194,8 +194,6 @@ static int FilesAnywhere_DeleteItem(TFileStore *FS, const char *Path, int Type, 
     else XML=MCatStr(XML,"<ItemsToDelete> <Item> <Type>file</Type> <Path>",FAWPath,"</Path> </Item>\n","</ItemsToDelete> </DeleteItems>\n",NULL);
 
     result=FilesAnywhere_Command(FS, XML, "http://api.filesanywhere.com/DeleteItems", RetStr);
-
-    printf("FAW: DEL %d %s\n", Type, *RetStr);
 
     Destroy(FAWPath);
     Destroy(XML);

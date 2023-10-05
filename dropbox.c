@@ -15,12 +15,12 @@ char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const cha
     URL=MCopyStr(URL, "https://api.dropboxapi.com/2", Path, NULL);
     if (StrValid(Args))
     {
-        ConnectConfig=FormatStr(ConnectConfig, "w 'Authorization=Bearer %s' Content-Type=application/json Content-Length=%d", FS->Pass, StrLen(Args));
+        ConnectConfig=FormatStr(ConnectConfig, "w Authorization='Bearer %s' Content-Type=application/json Content-Length=%d", FS->Pass, StrLen(Args));
         Tempstr=MCopyStr(Tempstr, "$(filestore) GET ", URL, NULL);
     }
     else
     {
-        ConnectConfig=FormatStr(ConnectConfig, "w 'Authorization=Bearer %s'", FS->Pass);
+        ConnectConfig=FormatStr(ConnectConfig, "w Authorization='Bearer %s'", FS->Pass);
         Tempstr=MCopyStr(Tempstr, "$(filestore): POST ", URL, NULL);
     }
 
@@ -31,6 +31,7 @@ char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const cha
         if (StrValid(Args)) STREAMWriteLine(Args, S);
         STREAMCommit(S);
         ptr=STREAMGetValue(S, "HTTP:ResponseCode");
+
         if (StrValid(ptr) && (*ptr=='2'))
         {
             RetStr=STREAMReadDocument(RetStr, S);
@@ -40,6 +41,8 @@ char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const cha
             Tempstr=STREAMReadDocument(Tempstr, S);
             HandleEvent(FS, UI_OUTPUT_ERROR, Tempstr, URL, "");
             //printf("%s\n", Tempstr);
+	    Destroy(RetStr);
+	    RetStr=NULL;
         }
     }
     else HandleEvent(FS, UI_OUTPUT_ERROR, Tempstr, "", "");
@@ -60,13 +63,13 @@ STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags
     if (StrValid(OpenFlags) && (*OpenFlags=='w'))
     {
         URL=MCopyStr(URL, "https://content.dropboxapi.com/2/files/upload");
-        Tempstr=FormatStr(Tempstr, "w 'Authorization=Bearer %s' 'Dropbox-API-Arg={\"path\": \"%s\",\"mode\": \"add\",\"autorename\": true,\"mute\": false,\"strict_conflict\": false}' Content-Type=application/octet-stream Content-Length=%lld", FS->Pass, Path, Size);
+        Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' 'Dropbox-API-Arg={\"path\": \"%s\",\"mode\": \"add\",\"autorename\": true,\"mute\": false,\"strict_conflict\": false}' Content-Type=application/octet-stream Content-Length=%lld", FS->Pass, Path, Size);
         S=STREAMOpen(URL, Tempstr);
     }
     else
     {
         URL=MCopyStr(URL, "https://content.dropboxapi.com/2/files/download");
-        Tempstr=FormatStr(Tempstr, "r 'Authorization=Bearer %s' 'Dropbox-API-Arg={\"path\": \"%s\"}'", FS->Pass, Path);
+        Tempstr=FormatStr(Tempstr, "r Authorization='Bearer %s' 'Dropbox-API-Arg={\"path\": \"%s\"}'", FS->Pass, Path);
         fprintf(stderr, "%s\n", Tempstr);
         S=STREAMOpen(URL, Tempstr);
     }
@@ -228,6 +231,8 @@ int DropBox_Info(TFileStore *FS)
     PARSER *P;
 
     Tempstr=DropBox_Transact(Tempstr, FS, "/users/get_current_account", "");
+    if (StrValid(Tempstr))
+    {
     P=ParserParseDocument("json", Tempstr);
     if (P)
     {
@@ -236,6 +241,7 @@ int DropBox_Info(TFileStore *FS)
         SetVar(FS->Vars, "account_type", ParserGetValue(P, "/account_type/.tag"));
         RetVal=TRUE;
         ParserItemsDestroy(P);
+    }
     }
 
 
@@ -345,12 +351,15 @@ int DropBox_Connect(TFileStore *FS)
         printf("ERROR: SSL/TLS support not compiled in\n");
         return(FALSE);
     }
+
+
     OauthCtx=OAuthCreate("pkce", FS->URL, DROPBOX_CLIENT_ID, "", "", "https://www.dropbox.com/oauth2/token");
     DropBox_OAuth(FS, OauthCtx, FALSE);
     RetVal=DropBox_Info(FS);
     if (RetVal != TRUE)
     {
-        if (OAuthRefresh(OauthCtx, "https://www.dropbox.com/oauth2/token"))
+	OauthCtx->AccessToken=CopyStr(OauthCtx->AccessToken, "");
+        if (OAuthRefresh(OauthCtx, "https://www.dropbox.com/oauth2/token?grant_type=refresh_token&refresh_token=$(refresh_token)&client_id=$(client_id)"))
         {
             FS->Pass=CopyStr(FS->Pass, OauthCtx->AccessToken);
             if (StrValid(OauthCtx->AccessToken)) OAuthSave(OauthCtx, "");

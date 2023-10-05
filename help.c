@@ -19,6 +19,10 @@ void HelpCommandList()
     printf("lpwd                 show current local directory\n");
     printf("ls <path>            list remote directory. <path> is optional\n");
     printf("lls <path>           list local directory. <path> is optional\n");
+    printf("stat <path>          statistics for remote directory. <path> is optional\n");
+    printf("lstat <path>         statistics for local directory. <path> is optional\n");
+    printf("stats <path>         statistics for remote directory. <path> is optional\n");
+    printf("lstats <path>        statistics for local directory. <path> is optional\n");
     printf("mkdir <path>         make a remote directory <path>\n");
     printf("lmkdir <path>        make a local directory <path>\n");
     printf("rm <path>            delete remote file at <path> (wildcards allowed)\n");
@@ -162,6 +166,7 @@ void HelpCommand(const char *Command)
         printf("options:\n");
         printf("    -l                     list more info (file size and last update)\n");
         printf("    -ll                    list even more info\n");
+        printf("    -F                     force directory reload rather than using cached directory listing\n");
         printf("    -n <num>               show only '<num>' items\n");
         printf("    -S                     sort listing by file size\n");
         printf("    -t                     sort listing by timestamp\n");
@@ -169,8 +174,10 @@ void HelpCommand(const char *Command)
         printf("    -pg                    break listing up into pages\n");
         printf("    -f                     list files only\n");
         printf("    -files                 list files only\n");
-        printf("    -d                     list directories only only\n");
-        printf("    -dirs                  list directories only only\n");
+        printf("    -d                     list directories only\n");
+        printf("    -dirs                  list directories only\n");
+        printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         break;
 
     case CMD_LLS:
@@ -178,6 +185,7 @@ void HelpCommand(const char *Command)
         printf("options:\n");
         printf("    -l                     list more info (file size and last update)\n");
         printf("    -ll                    list even more info\n");
+        printf("    -F                     force directory reload rather than using cached directory listing\n");
         printf("    -n <num>               show only '<num>' items\n");
         printf("    -S                     sort listing by file size\n");
         printf("    -t                     sort listing by timestamp\n");
@@ -185,8 +193,27 @@ void HelpCommand(const char *Command)
         printf("    -pg                    break listing up into pages\n");
         printf("    -f                     list files only\n");
         printf("    -files                 list files only\n");
-        printf("    -d                     list directories only only\n");
-        printf("    -dirs                  list directories only only\n");
+        printf("    -d                     list directories only\n");
+        printf("    -dirs                  list directories only\n");
+        printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        break;
+
+    case CMD_STAT:
+        printf("stats <path>               statistics for files and folders on remote host\n");
+        printf("options:\n");
+        printf("    -F                     force directory reload rather than using cached directory listing\n");
+        printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        break;
+
+
+    case CMD_LSTAT:
+        printf("lstats <path>             statistics for files and folders on local host\n");
+        printf("options:\n");
+        printf("    -F                     force directory reload rather than using cached directory listing\n");
+        printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         break;
 
 
@@ -196,6 +223,7 @@ void HelpCommand(const char *Command)
         printf("mput <options> <path>    pull a file from remote host to local host (expects multiple files as arguments)\n");
         printf("options:\n");
         printf("    -f                   force transfer even if destination already exists\n");
+        printf("    -F                   force transfer even if destination already exists\n");
         printf("    -s                   sync. Only transfer files newer than existing files\n");
         printf("    -n <number>          only transfer 'number' files of those matching request\n");
         printf("    -t <extn>            when transferring files, send them with temporary file extension <extn> and then rename to proper name/extension when transfer is complete\n");
@@ -211,7 +239,9 @@ void HelpCommand(const char *Command)
         printf("    -bak                 make a backup of destination files before overwritting them\n");
         printf("    -x <pattern>         exclude files matching pattern\n");
         printf("    -i <pattern>         include files matching pattern\n");
-        break;
+        printf("    -newer <when>        transfer files newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -older <when>        transfer files older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+ 
 
     case CMD_PUT:
     case CMD_MPUT:
@@ -219,6 +249,7 @@ void HelpCommand(const char *Command)
         printf("mput <options> <path>    push a file from local host to remote host (expects multiple files as arguments)\n");
         printf("options:\n");
         printf("    -f                   force transfer even if destination already exists\n");
+        printf("    -F                   force transfer even if destination already exists\n");
         printf("    -s                   sync. Only transfer files newer than existing files\n");
         printf("    -n <number>          only transfer 'number' files of those matching request\n");
         printf("    -t <extn>            when transferring files, send them with temporary file extension <extn> and then rename to proper name/extension when transfer is complete\n");
@@ -240,6 +271,8 @@ void HelpCommand(const char *Command)
         printf("    -bak                 make a backup of destination files before overwritting them\n");
         printf("    -x <pattern>         exclude files matching pattern\n");
         printf("    -i <pattern>         include files matching pattern\n");
+        printf("    -newer <when>        transfer files newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -older <when>        transfer files older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         break;
 
     case CMD_RENAME:

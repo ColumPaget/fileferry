@@ -89,6 +89,7 @@ const char *FileStorePathRelativeToCurr(TFileStore *FS, const char *Path);
 char *FileStoreFullURL(char *RetStr, const char *Target, TFileStore *FS);
 char *FileStoreReformatPath(char *RetStr, const char *Path, TFileStore *FS);
 ListNode *FileStoreGlob(TFileStore *FS, const char *Path);
+ListNode *FileStoreReloadAndGlob(TFileStore *FS, const char *Path);
 ListNode *FileStoreGetDirList(TFileStore *FS, const char *Target);
 int FileStoreGlobCount(TFileStore *FS, const char *Path);
 int FileStoreItemExists(TFileStore *FS, const char *FName);

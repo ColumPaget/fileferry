@@ -122,6 +122,7 @@ int ParseCommandLine(int argc, const char *argv[])
             {
                 Settings->Flags |= SETTING_DEBUG;
                 LibUsefulSetValue("HTTP:Debug", "Y");
+                LibUsefulSetValue("LibUseful:Debug", "Y");
             }
             else if (strcmp(arg, "-v")==0)
             {

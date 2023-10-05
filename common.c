@@ -63,11 +63,22 @@ char *DatePartialToFull(char *RetStr, const char *DateStr)
 {
     char *Token=NULL, *Tempstr=NULL;
     const char *ptr;
+    time_t When;
+		int val;
 
-    if (! StrValid(DateStr)) RetStr=CopyStr(RetStr, GetDateStr("%Y/%m/%d %H:%M:%S", NULL));
+		//if no DateStr then use today's date
+    if (! StrValid(DateStr)) return(CopyStr(RetStr, GetDateStr("%Y/%m/%d %H:%M:%S", NULL)));
 
+		//if a duration in the form 3d or 2h etc, then return that much time in the past
+		val=strtol(DateStr, (char *) &ptr, 10);
+    if (val && (StrLen(ptr) ==1))
+		{
+			When=time(NULL) - ParseDuration(DateStr);
+      return(CopyStr(RetStr, GetDateStrFromSecs("%Y/%m/%d %H:%M:%S", When, NULL)));
+		}
+
+    //otherwise treat it as a date or time
     ptr=GetToken(DateStr, "\\S|T", &Token, GETTOKEN_QUOTES | GETTOKEN_MULTI_SEP);
-
     if (StrValid(ptr)) RetStr=CopyStr(RetStr, DateStr);
     else
     {
