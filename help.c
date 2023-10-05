@@ -142,10 +142,6 @@ void HelpCommand(const char *Command)
         printf("    -A                     (scripts only) abort script, logging an error, if mkdir fails\n");
         break;
 
-        printf("    -Q                     (scripts only) quit script silently if check fails\n");
-        printf("    -A                     (scripts only) abort script, logging an error, if check fails\n");
-        break;
-
 
     case CMD_EXISTS:
         printf("exists <pattern>           check if items matching '<pattern>' exist on remote host. Prints no output, used in scripts with the options -A or -Q");
@@ -178,6 +174,8 @@ void HelpCommand(const char *Command)
         printf("    -dirs                  list directories only\n");
         printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -smaller <size>        list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
+        printf("    -larger <size>         list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
         break;
 
     case CMD_LLS:
@@ -197,6 +195,8 @@ void HelpCommand(const char *Command)
         printf("    -dirs                  list directories only\n");
         printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -smaller <size>        list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
+        printf("    -larger <size>         list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
         break;
 
     case CMD_STAT:
@@ -205,6 +205,8 @@ void HelpCommand(const char *Command)
         printf("    -F                     force directory reload rather than using cached directory listing\n");
         printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -smaller <size>        list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
+        printf("    -larger <size>         list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
         break;
 
 
@@ -214,6 +216,8 @@ void HelpCommand(const char *Command)
         printf("    -F                     force directory reload rather than using cached directory listing\n");
         printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -smaller <size>        list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
+        printf("    -larger <size>         list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
         break;
 
 
@@ -241,6 +245,9 @@ void HelpCommand(const char *Command)
         printf("    -i <pattern>         include files matching pattern\n");
         printf("    -newer <when>        transfer files newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>        transfer files older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -smaller <size>      transfer items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
+        printf("    -larger <size>       transfer items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
+				break;
  
 
     case CMD_PUT:
@@ -273,6 +280,8 @@ void HelpCommand(const char *Command)
         printf("    -i <pattern>         include files matching pattern\n");
         printf("    -newer <when>        transfer files newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>        transfer files older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
+        printf("    -smaller <size>      transfer items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
+        printf("    -larger <size>       transfer items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
         break;
 
     case CMD_RENAME:

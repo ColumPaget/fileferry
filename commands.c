@@ -93,6 +93,16 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         if (val < 0) SetVar(Cmd->Vars, "Time:Newer", Token);
         else SetVar(Cmd->Vars, "Time:Older", Token);
     }
+    else if (strcmp(Switch, "-larger")==0)
+    {
+        CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+        SetVar(Cmd->Vars, "Size:Larger", Token);
+    }
+    else if (strcmp(Switch, "-smaller")==0)
+    {
+        CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+        SetVar(Cmd->Vars, "Size:Smaller", Token);
+    }
 
 
     switch (Cmd->Type)

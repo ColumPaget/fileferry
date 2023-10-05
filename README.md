@@ -235,6 +235,8 @@ pwd                  show current remote directory
 lpwd                 show current local directory
 ls <path>            list remote directory. <path> is optional
 lls <path>           list local directory. <path> is optional
+stats <path>         statistics for remote directory. <path> is optional
+lstats <path>        statistics local directory. <path> is optional
 mkdir <path>         make a remote directory <path>
 lmkdir <path>        make a local directory <path>
 rm <path>            delete remote file at <path> (wildcards allowed)

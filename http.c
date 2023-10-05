@@ -311,7 +311,8 @@ int HTTP_Connect(TFileStore *FS)
     }
 
     if (result==TRUE) return(TRUE);
-    HandleEvent(FS, 0, "(filestore): HTTP connect failed.", FS->URL, "");
+		if (result == ERR_FORBID) HandleEvent(FS, 0, "(filestore): HTTP connect failed: Forbidden. ", FS->URL, "");
+    else HandleEvent(FS, 0, "(filestore): HTTP connect failed.", FS->URL, "");
 
     return(FALSE);
 }
