@@ -381,7 +381,7 @@ void HelpCommandLine()
     printf("  fileferry -drivers                         - print list of available filestore drivers\n");
     printf("options:\n");
     printf("  -v                                         - be verbose\n");
-    printf("  -N                                         - batch mode, do not try to read any user input\n");
+    printf("  -N                                         - batch mode, do not try to read any user input, even passwords\n");
     printf("  -D                                         - print debugging\n");
     printf("  -debug                                     - print debugging\n");
     printf("  -f <path>                                  - path to config file\n");
@@ -404,7 +404,16 @@ void HelpCommandLine()
     printf("  -errors-email <email address>              - send email report of any errors to <email address>\n");
     printf("  -smtp-server <url>                         - send error report email via smtp server at <url>\n");
     printf("  -nols                                      - don't get directory listing when changing directory\n");
+    printf("  -sixel                                     - enable sixel support for displaying images\n");
+    printf("  -version                                   - print program version\n");
+    printf("  --version                                  - print program version\n");
+    printf("  -h                                         - print this help\n");
+    printf("  -?                                         - print this help\n");
+    printf("  -help                                      - print this help\n");
+    printf("  --help                                     - print this help\n");
 
     UI_Close();
     exit(0);
 }
+
+

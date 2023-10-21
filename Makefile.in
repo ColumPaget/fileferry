@@ -1,4 +1,4 @@
-OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_drivers.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o ls_decode.o html.o rss.o webdav.o localdisk.o inet_protocols.o ftp.o sftp.o http.o pop3.o gdrive.o dropbox.o filesanywhere.o gofile.o filebin.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o
+OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_drivers.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o ls_decode.o html.o rss.o webdav.o localdisk.o inet_protocols.o ftp.o sftp.o http.o pop3.o gdrive.o dropbox.o filesanywhere.o gofile.o filebin.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o
 BUILTIN=-DFILESTORE_BUILTIN_SFTP -DFILESTORE_BUILTIN_HTTP -DFILESTORE_BUILTIN_FTP -DFILESTORE_BUILTIN_POP3 -DFILESTORE_BUILTIN_GDRIVE -DFILESTORE_BUILTIN_DROPBOX -DFILESTORE_BUILTIN_GOFILE -DFILESTORE_BUILTIN_FILEBIN -DFILESTORE_BUILTIN_FILESANYWHERE
 FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_VERSION=@PACKAGE_VERSION@ $(BUILTIN) 
 PREFIX=@prefix@
@@ -49,6 +49,10 @@ saved_filestores.o: saved_filestores.h saved_filestores.c
 
 filestore.o: filestore.h filestore.c
 	gcc $(FLAGS) -c filestore.c
+
+filestore_dirlist.o: filestore_dirlist.h filestore_dirlist.c filestore.h
+	gcc $(FLAGS) -c filestore_dirlist.c
+
 
 filestore_drivers.o: filestore_drivers.h filestore_drivers.c
 	gcc $(FLAGS) -c filestore_drivers.c

@@ -4,7 +4,8 @@
 #include "help.h"
 #include "file_include_exclude.h"
 #include "errors_and_logging.h"
-
+#include "filestore.h"
+#include "filestore_dirlist.h"
 
 char *CommandFileLoad(char *RetStr, const char *Path)
 {
@@ -118,6 +119,14 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
             Cmd->NoOfItems = atoi(Token);
         }
         break;
+
+		case CMD_EXISTS:
+        if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
+        else if (strcmp(Switch, "-d")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
+        else if (strcmp(Switch, "-file")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
+        else if (strcmp(Switch, "-dir")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
+ 		    else if (strcmp(Switch, "-no")==0) Cmd->Flags |= CMD_FLAG_INVERT;
+		break;
 
     case CMD_LOCK:
     case CMD_LLOCK:
@@ -265,7 +274,7 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "sha1")==0) Cmd=CMD_SHA1;
     else if (strcmp(Str, "lsha1")==0) Cmd=CMD_LSHA1;
     else if (strcmp(Str, "info")==0) Cmd=CMD_INFO;
-    else if (strcmp(Str, "exists")==0) Cmd=CMD_INFO;
+    else if (strcmp(Str, "exists")==0) Cmd=CMD_EXISTS;
     else if (strcmp(Str, "lock")==0) Cmd=CMD_LOCK;
     else if (strcmp(Str, "llock")==0) Cmd=CMD_LLOCK;
     else if (strcmp(Str, "unlock")==0) Cmd=CMD_UNLOCK;
@@ -418,7 +427,7 @@ int CommandGlobAndProcess(TFileStore *FS, int CmdType, TCommand *Cmd, void *Func
         Curr=ListGetNext(Curr);
     }
 
-    FileStoreFreeDir(FS, DirList);
+    FileStoreDirListFree(FS, DirList);
 
     return(result);
 }
@@ -445,11 +454,15 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         break;
 
     case CMD_EXISTS:
-        result=FileStoreGlobCount(RemoteFS, Cmd->Target);
+        result=FileStoreItemExists(RemoteFS, Cmd->Target, Cmd->Flags);
+				if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
+				else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
         break;
 
     case CMD_LEXISTS:
         result=FileStoreGlobCount(LocalFS, Cmd->Target);
+				if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
+				else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
         break;
 
     case CMD_CD:
@@ -475,6 +488,15 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
     case CMD_LMKDIR:
         result=FileStoreMkDir(LocalFS, Cmd->Target, 0700);
         break;
+
+    case CMD_RMDIR:
+        result=FileStoreRmDir(RemoteFS, Cmd->Target);
+        break;
+
+    case CMD_LRMDIR:
+        result=FileStoreRmDir(LocalFS, Cmd->Target);
+        break;
+
 
     case CMD_RENAME:
         result=CommandGlobAndProcess(RemoteFS, CMD_TYPE_DEST, Cmd, FileStoreRename);
@@ -631,6 +653,8 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         break;
     }
 
+		if (Cmd->Flags & CMD_FLAG_INVERT) result=! result;
+
     if ((! result) && (Cmd->Flags & CMD_FLAG_ABORT)) result=CMD_ABORT;
     if ((! result) && (Cmd->Flags & CMD_FLAG_QUIT)) result=CMD_QUIT;
     CommandDeactivateTimeout();
@@ -649,6 +673,8 @@ void CommandListProcess(const char *Commands, TFileStore *LocalFS, TFileStore *R
     TCommand *Cmd;
     const char *ptr;
     int result;
+
+		if (Settings->Flags & SETTING_VERBOSE) printf("PROCESS COMMANDS: [%s]\n", Commands);
 
     ptr=GetToken(Commands, ";", &Token, 0);
     while (ptr)

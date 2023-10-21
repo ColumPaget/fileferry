@@ -5,6 +5,8 @@
 #include "image_display.h"
 #include "file_include_exclude.h"
 #include "fileitem.h"
+#include "filestore.h"
+#include "filestore_dirlist.h"
 #include "commands.h"
 #include "settings.h"
 #include <stdarg.h>
@@ -179,7 +181,7 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
     }
 
 
-    FileStoreFreeDir(FS, DirList);
+    FileStoreDirListFree(FS, DirList);
 
     Destroy(Tempstr);
 }
@@ -224,7 +226,7 @@ void UI_OutputFStat(TFileStore *FS, TCommand *Cmd)
     printf("oldest:%s ", GetDateStrFromSecs("%Y/%m/%d %H:%M:%S", Oldest, NULL));
     printf("newest:%s\n", GetDateStrFromSecs("%Y/%m/%d %H:%M:%S", Newest, NULL));
 
-    FileStoreFreeDir(FS, DirList);
+    FileStoreDirListFree(FS, DirList);
     Destroy(Tempstr);
 }
 
@@ -331,7 +333,7 @@ int UI_ShowFile(TFileStore *FromFS, TFileStore *LocalFS, TCommand *Cmd)
         Curr=ListGetNext(Curr);
     }
 
-    FileStoreFreeDir(FromFS, DirList);
+    FileStoreDirListFree(FromFS, DirList);
 
     FileStoreDestroy(StdOutFS);
     FileStoreDestroy(CacheFS);

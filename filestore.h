@@ -20,6 +20,11 @@
 // use these flags for other things
 #define MKDIR_EXISTS_OKAY S_ISUID
 
+
+#define DIR_CLEAR 1
+#define DIR_FORCE 2
+
+
 typedef enum {FILESTORE_FTP, FILESTORE_SFTP, FILESTORE_HTTP, FILESTORE_WEBDAV} EFileStoreTypes;
 
 typedef struct t_struct_fs TFileStore;
@@ -88,13 +93,9 @@ void FileStoreDisConnect(TFileStore *FS);
 const char *FileStorePathRelativeToCurr(TFileStore *FS, const char *Path);
 char *FileStoreFullURL(char *RetStr, const char *Target, TFileStore *FS);
 char *FileStoreReformatPath(char *RetStr, const char *Path, TFileStore *FS);
-ListNode *FileStoreGlob(TFileStore *FS, const char *Path);
-ListNode *FileStoreReloadAndGlob(TFileStore *FS, const char *Path);
-ListNode *FileStoreGetDirList(TFileStore *FS, const char *Target);
-int FileStoreGlobCount(TFileStore *FS, const char *Path);
-int FileStoreItemExists(TFileStore *FS, const char *FName);
 int FileStoreChDir(TFileStore *FS, const char *Path);
 int FileStoreMkDir(TFileStore *FS, const char *Path, int Mode);
+int FileStoreRmDir(TFileStore *FS, const char *Path);
 int FileStoreUnlinkPath(TFileStore *FS, const char *Path);
 int FileStoreUnlinkItem(TFileStore *FS, TFileItem *FI);
 int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest);
@@ -103,8 +104,6 @@ int FileStoreLock(TFileStore *FS, const char *Path, int Flags);
 int FileStoreUnLock(TFileStore *FS, const char *Path);
 int FileStoreChPassword(TFileStore *FS, const char *OldPassword, const char *NewPassword);
 char *FileStoreGetValue(char *RetStr, TFileStore *FS, const char *Path, const char *Value);
-void FileStoreAddItem(TFileStore *FS, int Type, const char *Name, uint64_t Size);
-void FileStoreDeleteItem(TFileStore *FS, const char *Path);
 int FileStoreCopyFile(TFileStore *FS, const char *Path, const char *Dest);
 TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path);
 void FileStoreOutputDiskQuota(TFileStore *FS);
@@ -112,6 +111,5 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS);
 void FileStoreRecordCipherDetails(TFileStore *FS, STREAM *S);
 void FileStoreOutputCipherDetails(TFileStore *FS, int Verbosity);
 
-void FileStoreFreeDir(TFileStore *FS, ListNode *Dir);
 
 #endif

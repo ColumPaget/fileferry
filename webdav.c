@@ -173,12 +173,12 @@ char *WebDav_GetQuota(char *RetStr, TFileStore *FS)
                 if (strcasecmp(Tag, "quota-available-bytes")==0)
                 {
                     ptr=XMLGetTag(ptr, &Namespace, &Tag, &Value);
-                    avail=strtod(Value, NULL);
+                    if (StrValid(Value)) avail=strtod(Value, NULL);
                 }
                 if (strcasecmp(Tag, "quota-used-bytes")==0)
                 {
                     ptr=XMLGetTag(ptr, &Namespace, &Tag, &Value);
-                    used=strtod(Value, NULL);
+                    if (StrValid(Value)) used=strtod(Value, NULL);
                 }
 
                 ptr=XMLGetTag(ptr, &Namespace, &Tag, &Value);

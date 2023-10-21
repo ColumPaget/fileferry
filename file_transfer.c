@@ -5,6 +5,8 @@
 #include "settings.h"
 #include "file_include_exclude.h"
 #include "errors_and_logging.h"
+#include "filestore.h"
+#include "filestore_dirlist.h"
 
 
 
@@ -122,7 +124,7 @@ int TransferPreProcess(TFileTransfer *Xfer)
     char *Tempstr=NULL, *Path=NULL;
     int i;
 
-    if (FileStoreItemExists(Xfer->ToFS, Xfer->DestFinalName))
+    if (FileStoreItemExists(Xfer->ToFS, Xfer->DestFinalName, 0))
     {
         if (! (Xfer->Flags & XFER_FLAG_FORCE)) return(XFER_DEST_EXISTS);
     }
@@ -232,7 +234,7 @@ int TransferPostProcess(TFileTransfer *Xfer)
     }
 
     time(&Now);
-    FileStoreAddItem(ToFS, FTYPE_FILE, Xfer->DestFinalName, Xfer->Offset);
+    FileStoreDirListAddItem(ToFS, FTYPE_FILE, Xfer->DestFinalName, Xfer->Offset);
 
 
     Destroy(Tempstr);
@@ -423,7 +425,7 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
         Curr=ListGetNext(Curr);
     }
 
-    FileStoreFreeDir(FromFS, DirList);
+    FileStoreDirListFree(FromFS, DirList);
 
     return(TRUE);
 }

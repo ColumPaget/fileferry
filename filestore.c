@@ -1,6 +1,7 @@
 #include "filestore.h"
 #include "fileitem.h"
 #include "filestore_drivers.h"
+#include "filestore_dirlist.h"
 #include "saved_filestores.h"
 #include "settings.h"
 #include "errors_and_logging.h"
@@ -8,8 +9,6 @@
 #include <fnmatch.h>
 
 
-#define DIR_CLEAR 1
-#define DIR_FORCE 2
 
 TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path)
 {
@@ -60,13 +59,6 @@ void FileStoreDestroy(void *p_FileStore)
     ListDestroy(FS->DirList, Destroy);
 }
 
-
-void FileStoreFreeDir(TFileStore *FS, ListNode *Dir)
-{
-    if (FS->DirList==Dir) return;
-
-    ListDestroy(Dir, FileItemDestroy);
-}
 
 
 char *FileStoreFullURL(char *RetStr, const char *Target, TFileStore *FS)
@@ -189,168 +181,6 @@ char *FileStoreReformatDestination(char *RetStr, const char *DestPath, const cha
 
 
 
-void FileStoreAddItem(TFileStore *FS, int Type, const char *Name, uint64_t Size)
-{
-    TFileItem *FI;
-    char *Path=NULL;
-
-    if (! FS->DirList) FS->DirList=ListCreate();
-    Path=FileStoreReformatPath(Path, Name, FS);
-    FI=FileItemCreate(Path, Type, Size, 0);
-    FI->mtime=Now;
-    ListAddNamedItem(FS->DirList, FI->name, FI);
-
-    Destroy(Path);
-}
-
-
-void FileStoreDeleteItem(TFileStore *FS, const char *Path)
-{
-    TFileItem *FI;
-    ListNode *Curr;
-
-    Curr=ListFindNamedItem(FS->DirList, GetBasename(Path));
-    if (Curr)
-    {
-        FI=(TFileItem *) Curr->Item;
-        FileItemDestroy(FI);
-        ListDeleteNode(Curr);
-    }
-}
-
-
-ListNode *FileStoreGetDirList(TFileStore *FS, const char *Path)
-{
-    char *Tempstr=NULL;
-    ListNode *DirList=NULL;
-
-    Tempstr=FileStoreReformatPath(Tempstr, Path, FS);
-    DirList=FS->ListDir(FS, Tempstr);
-
-    Destroy(Tempstr);
-
-    return(DirList);
-}
-
-
-static void FileStoreClearCurrDirList(TFileStore *FS)
-{
-    if (FS->DirList) ListDestroy(FS->DirList, FileItemDestroy);
-    FS->DirList=NULL;
-}
-
-
-static ListNode *FileStoreRefreshCurrDirList(TFileStore *FS, int Flags)
-{
-    //if we already have a dir listing, use that
-    if ( (! Flags) && (ListSize(FS->DirList) >0) ) return(FS->DirList);
-
-    //clear out our exising dir listing
-    FileStoreClearCurrDirList(FS);
-
-    //if force is not set, and we are set to not list directories by default
-    //(this is done when working with filestores full of files where we don't care
-    //about the items already present (maybe we are just uploading more items)
-    //in order to speed up processing
-    if (! (Flags & DIR_FORCE))
-    {
-        if (FS->Flags & FILESTORE_NO_DIR_LIST) return(NULL);
-        if (Settings->Flags & SETTING_NO_DIR_LIST) return(NULL);
-    }
-
-    //finally, if all of the above to not apply, load a new DirList
-    FS->DirList=FileStoreGetDirList(FS, "");
-
-    return(FS->DirList);
-}
-
-
-
-ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
-{
-    ListNode *GlobList, *SrcDir, *Curr;
-    char *Tempstr=NULL;
-    TFileItem *Item;
-    const char *lname, *rname;
-
-    GlobList=ListCreate();
-
-    //absolute path, not something in curr dir
-
-    if (StrValid(Path))
-    {
-        if (*Path=='/') SrcDir=FileStoreGetDirList(FS, Path);
-        else
-        {
-            if ( (ListSize(FS->DirList)==0) || strchr(Path, '/') || (strcmp(Path, ".")==0) ) SrcDir=FileStoreRefreshCurrDirList(FS, DIR_FORCE);
-            SrcDir=FS->DirList;
-        }
-
-        //use basename not 'GetBasename' as these behave differently for a path ending in '/'
-        //basename will return blank for a path like '/tmp/', whereas GetBasename will return '/tmp'
-        lname=basename(Path);
-    }
-    else
-    {
-        SrcDir=FileStoreRefreshCurrDirList(FS, 0);
-        lname="*";
-    }
-
-    Curr=ListGetNext(SrcDir);
-    while (Curr)
-    {
-        rname=GetBasename(Curr->Tag);
-        if ((! StrValid(lname)) || (fnmatch(lname, rname, 0)==0))
-        {
-            Item=FileItemClone((TFileItem *) Curr->Item);
-            ListAddNamedItem(GlobList, Item->name, Item);
-        }
-
-        Curr=ListGetNext(Curr);
-    }
-
-    FileStoreFreeDir(FS, SrcDir);
-
-    Destroy(Tempstr);
-
-    return(GlobList);
-}
-
-
-ListNode *FileStoreReloadAndGlob(TFileStore *FS, const char *Glob)
-{
-    FileStoreRefreshCurrDirList(FS, DIR_FORCE);
-    return(FileStoreGlob(FS, Glob));
-}
-
-
-int FileStoreGlobCount(TFileStore *FS, const char *Path)
-{
-    ListNode *Items;
-    int count;
-
-    Items=FileStoreGlob(FS, Path);
-    count=ListSize(Items);
-    FileStoreFreeDir(FS, Items);
-
-    return(count);
-}
-
-
-
-int FileStoreItemExists(TFileStore *FS, const char *FName)
-{
-    ListNode *Curr;
-
-    Curr=ListGetNext(FS->DirList);
-    while (Curr)
-    {
-        if (strcmp(GetBasename(Curr->Tag), FName)==0) return(TRUE);
-        Curr=ListGetNext(Curr);
-    }
-
-    return(FALSE);
-}
 
 
 char *FileStoreGetPath(char *RetStr, TFileStore *FS, const char *DestName)
@@ -375,7 +205,7 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
     int result=FALSE;
     char *Path=NULL;
 
-    FileStoreClearCurrDirList(FS);
+    FileStoreDirListClear(FS);
     if (FS->Flags & FILESTORE_FOLDERS)
     {
         if (StrValid(DestName)) Path=FileStoreGetPath(Path, FS, DestName);
@@ -386,7 +216,7 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
             FS->CurrDir=CopyStr(FS->CurrDir, Path);
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHDIR: $(path)", Path, "");
             result=TRUE;
-            FileStoreRefreshCurrDirList(FS, 0);
+            FileStoreDirListRefresh(FS, 0);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) CHDIR FAILED: $(path)", Path, "");
     }
@@ -409,7 +239,7 @@ int FileStoreMkDir(TFileStore *FS, const char *Path, int Mode)
 
         if (result==TRUE)
         {
-            FileStoreAddItem(FS, FTYPE_DIR, Path, Mode);
+            FileStoreDirListAddItem(FS, FTYPE_DIR, Path, Mode);
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) MKDIR: $(path)", Path, "");
         }
         else
@@ -417,6 +247,67 @@ int FileStoreMkDir(TFileStore *FS, const char *Path, int Mode)
             if ((result==ERR_EXISTS) && (Mode & MKDIR_EXISTS_OKAY)) /*do nothing*/;
             else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) MKDIR FAILED: $(path)", Path, "");
         }
+    }
+    else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support directories/folders");
+
+    Destroy(Tempstr);
+
+    return(result);
+}
+
+int FileStoreUnlinkItem(TFileStore *FS, TFileItem *FI)
+{
+    char *Tempstr=NULL;
+    ListNode *Files, *Curr;
+    int result=FALSE;
+
+    if (FS->UnlinkPath)
+    {
+        Tempstr=FileStoreReformatPath(Tempstr, FI->path, FS);
+        if (FS->UnlinkPath(FS, Tempstr)==TRUE)
+        {
+            FileStoreDirListRemoveItem(FS, FI->name);
+            HandleEvent(FS, 0, "$(filestore) DELETE: '$(path)'", FI->path, "");
+            result=TRUE;
+        }
+        else
+        {
+            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) DELETE FAILED: '$(path);", FI->path, "");
+        }
+    }
+    else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support unlink/delete");
+
+    Destroy(Tempstr);
+    return(result);
+}
+
+
+int FileStoreUnlinkPath(TFileStore *FS, const char *Path)
+{
+    TFileItem *FI;
+
+    FI=FileStoreGetFileInfo(FS, Path);
+    if (! FI) return(FALSE);
+    return(FileStoreUnlinkItem(FS, FI));
+}
+
+
+int FileStoreRmDir(TFileStore *FS, const char *Path)
+{
+    char *Tempstr=NULL;
+    int result=FALSE;
+		TFileItem *FI;
+
+    if (FS->MkDir)
+    {
+				FI=FileStoreGetFileInfo(FS, Path);
+				if (FI && (FI->type == FTYPE_DIR))
+				{
+        result=FileStoreUnlinkItem(FS, FI);
+
+        if (result==TRUE) HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RMDIR: $(path)", Path, "");
+        else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) RMDIR FAILED: $(path)", Path, "");
+				}
     }
     else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support directories/folders");
 
@@ -488,12 +379,12 @@ int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
             Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
             if (Node)
             {
-								if (IsMove) FileStoreDeleteItem(FS, Path);
+								if (IsMove) FileStoreDirListRemoveItem(FS, Path);
 								else
 								{
 								//take a clone so we can delete the existing item
                 FI=FileItemClone((TFileItem *) Node->Item);
-                FileStoreDeleteItem(FS, Path);
+                FileStoreDirListRemoveItem(FS, Path);
                 FI->path=CopyStr(FI->path, Arg2);
                 FI->name=CopyStr(FI->name, GetBasename(FI->path));
                 ListAddNamedItem(FS->DirList, FI->name, FI);
@@ -501,7 +392,7 @@ int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
             }
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RENAME: $(path) $(dest)", Path, Arg2);
         }
-        else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) REMAME FAILED: $(path) $(dest)", Path, Arg2);
+        else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) RENAME FAILED: $(path) $(dest)", Path, Arg2);
     }
     else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support file move/rename");
 
@@ -535,7 +426,7 @@ int FileStoreCopyFile(TFileStore *FS, const char *Path, const char *Dest)
             if (Node)
             {
                 FI=FileItemClone((TFileItem *) Node->Item);
-                FileStoreDeleteItem(FS, Path);
+                FileStoreDirListRemoveItem(FS, Path);
                 FI->path=CopyStr(FI->path, Dest);
                 FI->name=CopyStr(FI->name, GetBasename(Dest));
                 ListAddNamedItem(FS->DirList, FI->name, FI);
@@ -578,42 +469,6 @@ int FileStoreChMod(TFileStore *FS, const char *ModeStr, const char *Path)
 
 
 
-
-int FileStoreUnlinkItem(TFileStore *FS, TFileItem *FI)
-{
-    char *Tempstr=NULL;
-    ListNode *Files, *Curr;
-    int result=FALSE;
-
-    if (FS->UnlinkPath)
-    {
-        Tempstr=FileStoreReformatPath(Tempstr, FI->path, FS);
-        if (FS->UnlinkPath(FS, Tempstr)==TRUE)
-        {
-            FileStoreDeleteItem(FS, FI->name);
-            HandleEvent(FS, 0, "$(filestore) DELETE: '$(path)'", FI->path, "");
-        }
-        else
-        {
-            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) DELETE FAILED: '$(path);", FI->path, "");
-            result=FALSE;
-        }
-    }
-    else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support unlink/delete");
-
-    Destroy(Tempstr);
-    return(result);
-}
-
-
-int FileStoreUnlinkPath(TFileStore *FS, const char *Path)
-{
-    TFileItem *FI;
-
-    FI=FileStoreGetFileInfo(FS, Path);
-    if (! FI) return(FALSE);
-    return(FileStoreUnlinkItem(FS, FI));
-}
 
 
 char *FileStoreGetValue(char *RetStr, TFileStore *FS, const char *Path, const char *Value)
@@ -795,6 +650,7 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
                 ptr=GetNameValuePair(ptr, " ", "=", &Name, &Value);
             }
 
+						//only display disk space if we have some values
             Tempstr=MCopyStr(Tempstr, "Disk Space: total: ", ToIEC(total, 2), NULL);
             Value=FormatStr(Value, " used: %0.1f%% (%sb) ", used * 100.0 / total, ToIEC(used, 2));
             Tempstr=CatStr(Tempstr, Value);
@@ -857,7 +713,7 @@ TFileStore *FileStoreConnect(const char *Config)
                     if (StrValid(GetVar(FS->Vars, "ServerBanner"))) UI_Output(0, "%s", GetVar(FS->Vars, "ServerBanner"));
 
                     if (FS->GetValue) FileStoreOutputDiskQuota(FS);
-                    FileStoreRefreshCurrDirList(FS, 0);
+                    FileStoreDirListRefresh(FS, 0);
                     FS->HomeDir=CopyStr(FS->HomeDir, FS->CurrDir);
                 }
             }
