@@ -4,14 +4,14 @@
 time_t DatePartialToSecs(const char *Date)
 {
     char *Tempstr=NULL;
-		time_t When;
+    time_t When;
 
     Tempstr=DatePartialToFull(Tempstr, Date);
     When=DateStrToSecs("%Y/%m/%d %H:%M:%S", Tempstr, NULL);
 
-		Destroy(Tempstr);
+    Destroy(Tempstr);
 
-return(When);
+    return(When);
 }
 
 
@@ -20,9 +20,9 @@ int FileIncluded(TCommand *Cmd, TFileItem *FI, TFileStore *FS, TFileStore *ToFS)
     TFileItem *Existing;
     const char *ptr, *p_ID;
     time_t When;
-		int val, RetVal=TRUE;
+    int val, RetVal=TRUE;
 
-		//never include these
+    //never include these
     if (strcmp(FI->name, ".")==0) return(FALSE);
     if (strcmp(FI->name, "..")==0) return(FALSE);
 
@@ -37,32 +37,32 @@ int FileIncluded(TCommand *Cmd, TFileItem *FI, TFileStore *FS, TFileStore *ToFS)
         if (Existing) return(FALSE);
     }
 
-		//use RetVal from here on, so that Includes can override it
+    //use RetVal from here on, so that Includes can override it
     ptr=GetVar(Cmd->Vars, "Time:Newer");
     if (StrValid(ptr))
     {
-				When=DatePartialToSecs(ptr);
+        When=DatePartialToSecs(ptr);
         if (FI->mtime < When) RetVal=FALSE;
     }
 
     ptr=GetVar(Cmd->Vars, "Time:Older");
     if (StrValid(ptr))
     {
-				When=DatePartialToSecs(ptr);
+        When=DatePartialToSecs(ptr);
         if (FI->mtime > When) RetVal=FALSE;
     }
 
     ptr=GetVar(Cmd->Vars, "Size:Smaller");
     if (StrValid(ptr))
     {
-				val=FromIEC(ptr, 10);
+        val=FromIEC(ptr, 10);
         if (FI->size > val) RetVal=FALSE;
     }
 
     ptr=GetVar(Cmd->Vars, "Size:Larger");
     if (StrValid(ptr))
     {
-				val=FromIEC(ptr, 10);
+        val=FromIEC(ptr, 10);
         if (FI->size < val) RetVal=FALSE;
     }
 

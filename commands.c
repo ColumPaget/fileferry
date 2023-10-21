@@ -142,7 +142,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     case CMD_GET:
     case CMD_MGET:
         if (strcmp(Switch,"-s")==0) Cmd->Flags |= CMD_FLAG_SYNC;
-    	else if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FORCE;
+        else if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FORCE;
         else if (strcmp(Switch, "-n")==0)
         {
             CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);

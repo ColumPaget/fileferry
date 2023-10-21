@@ -122,14 +122,23 @@ The filestores file is, by default, stored in `~/.config/fileferry/filestores.co
 WEBDAV FILESTORES
 =================
 
-Webdav support brings certain issues with it. Some sites mix webdav access, behind a username and password, with 'public' access to other pages withut authentication. For instance, a podcast feed might support webdav with authentication so the feed provider can update it. Thus the same URL can provide different services. In order to distinguish between webdav and straight web-pages fileferry  will will attempt to login to any url where a username is provided in the url.
+Webdav support brings certain issues with it. Some sites mix webdav access, behind a username and password, with 'public' access to other pages without authentication. For instance, a podcast feed might support webdav with authentication so the feed provider can update it. Thus the same URL can provide different services. In order to distinguish between webdav and straight web-pages fileferry  will will attempt to login to any url where a username is provided in the url.
 
+Webdav has been seen to work with the following providers:
 
+MyDrive.ch    https://www.mydrive.ch/
+DriveHQ       https://drivehq.com
+Koofr         https://koofr.net
+Yandex        https://yandex.com
+opendrive     https://opendrive.com
+woelkli       https://woelkli.com
+4shared       https://4shared.com
+powerfolder   https://powerfolder.com
 
 RSS FILESTORES
 ==============
 
-fileferry supports RSS/atom feeds and extracts filenames from these feeds when they are encountered.
+fileferry supports RSS/atom feeds and extracts filenames from these feeds when they are encountered, allowing you to view a podcast feed as though it were an FTP/webdav server.
 
 
 
@@ -142,7 +151,7 @@ SFTP filestores are a special case. SSH/SFTP has a feature where server details 
 2) an ssh 'config' alias
 3) a fileferry filestore alias that references either a url, or an ssh 'config' alias
 
-SFTP filestores require openssh installed to work.
+SFTP filestores require openssh (though not the sftp program) installed to work.
 
 
 

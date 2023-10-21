@@ -247,8 +247,8 @@ void HelpCommand(const char *Command)
         printf("    -older <when>        transfer files older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -smaller <size>      transfer items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
         printf("    -larger <size>       transfer items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
-				break;
- 
+        break;
+
 
     case CMD_PUT:
     case CMD_MPUT:

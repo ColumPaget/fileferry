@@ -78,16 +78,17 @@ int TerminalConsumeCharacter(const char **ptr)
 
     default:
         //handle unicode
-        if (**ptr & 128)
+        //all unicode has the top 2 bits set in the first byte
+        //even if it has more than these set it will at least
+        //have the first two
+        if (**ptr & 192)
         {
-            switch (**ptr & 224)
-            {
-            case 224:
-                ptr_incr(ptr, 1);
-            case 192:
-                ptr_incr(ptr, 1);
-            }
-
+            //if starts with 11110 then there will be 3 unicode bytes after
+            if ((**ptr & 248)==240) ptr_incr(ptr, 3); //
+            //if starts with 1110 then there will be 2 unicode bytes after
+            else if ((**ptr & 240)==224) ptr_incr(ptr, 2); //
+            //if starts with 110 then there will be 1 unicode bytes after
+            else if ((**ptr & 224)==192) ptr_incr(ptr, 1); //
             IsRealChar=TRUE;
         }
         else IsRealChar=TRUE;
@@ -329,6 +330,7 @@ void TerminalInternalConfig(const char *Config, int *ForeColor, int *BackColor, 
         case 's':
         case 'S':
             if (strcasecmp(Name,"stars")==0) *Flags |= TERM_SHOWSTARS;
+            if (strcasecmp(Name,"stars+1")==0) *Flags |= TERM_SHOWTEXTSTARS;
             if (strcasecmp(Name,"saveattribs")==0) *Flags |= TERM_SAVEATTRIBS;
             if (strcasecmp(Name,"save")==0) *Flags |= TERM_SAVEATTRIBS;
             break;
@@ -930,6 +932,7 @@ int TerminalTextConfig(const char *Config)
     if (strcasecmp(Config, "hidetext")==0) return(TERM_HIDETEXT);
     if (strcasecmp(Config, "stars")==0) return(TERM_SHOWSTARS);
     if (strcasecmp(Config, "stars+1")==0) return(TERM_SHOWTEXTSTARS);
+    if (strcasecmp(Config, "textstars")==0) return(TERM_SHOWTEXTSTARS);
     return(0);
 }
 

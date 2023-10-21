@@ -168,11 +168,11 @@ int ParseCommandLine(int argc, const char *argv[])
 
 int SettingChangeBoolean(const char *Value, int Flag)
 {
-        if (! StrValid(Value)) Settings->Flags ^= Flag;
-        else if (strtobool(Value)) Settings->Flags |= Flag;
-        else Settings->Flags &= ~Flag;
+    if (! StrValid(Value)) Settings->Flags ^= Flag;
+    else if (strtobool(Value)) Settings->Flags |= Flag;
+    else Settings->Flags &= ~Flag;
 
-return(Settings->Flags & Flag);
+    return(Settings->Flags & Flag);
 }
 
 

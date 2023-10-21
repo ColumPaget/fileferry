@@ -55,7 +55,7 @@ ListNode *ParserNewObject(ListNode *Parent, int Type, const char *Name)
     char *Token=NULL;
 
     Item=ListCreate();
-    Item->ItemType=Type;
+    Item->ItemType=ITEM_INTERNAL_LIST;
     Item->Tag=CopyStr(Item->Tag,Name);
     if (StrValid(Name))
     {
@@ -523,8 +523,8 @@ static const char *ParserRSSItems(int ParserType, const char *Doc, ListNode *Par
     char *Token=NULL, *PrevToken=NULL, *Name=NULL;
     int BreakOut=FALSE, InTag=FALSE;
 
-		PrevToken=CopyStr(PrevToken, "");
-		Name=CopyStr(Name, "");
+    PrevToken=CopyStr(PrevToken, "");
+    Name=CopyStr(Name, "");
 
     ptr=Doc;
     while (ptr && (! BreakOut))
@@ -859,6 +859,12 @@ ListNode *ParserParseDocument(const char *TypeStr, const char *Doc)
     ListNode *Items;
     int Type;
 
+    if (! StrValid(Doc))
+    {
+        RaiseError(0, "ParserParseDocument", "Empty Document Supplied");
+        return(NULL);
+    }
+
     Type=ParserIdentifyDocType(TypeStr);
     if (Type==-1)
     {
@@ -887,7 +893,7 @@ ListNode *ParserFindItem(ListNode *Items, const char *Name)
     char *Token=NULL;
     const char *ptr;
 
-
+    if (! Items) return(NULL);
     ptr=Name;
     if (*ptr=='/')
     {
@@ -919,10 +925,10 @@ ListNode *ParserFindItem(ListNode *Items, const char *Name)
 
 ListNode *ParserSubItems(ListNode *Node)
 {
-        if (Node->ItemType == ITEM_STRING) return(NULL);
-        if (Node->ItemType == ITEM_INTEGER) return(NULL);
-        if (Node->ItemType == ITEM_ROOT) return(Node);
-        return((ListNode *) Node->Item);
+    if (Node->ItemType == ITEM_STRING) return(NULL);
+    if (Node->ItemType == ITEM_INTEGER) return(NULL);
+    if (Node->ItemType == ITEM_ROOT) return(Node);
+    return((ListNode *) Node->Item);
 }
 
 

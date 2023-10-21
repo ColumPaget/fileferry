@@ -6,7 +6,7 @@
 #include "errors_and_logging.h"
 #include "password.h"
 
-char *HTTPSetConfig(char *RetStr, TFileStore *FS, const char *Method, int Depth, const char *ContentType, int ContentLength)
+static char *HTTPSetConfig(char *RetStr, TFileStore *FS, const char *Method, int Depth, const char *ContentType, int ContentLength, const char *ExtraArgs)
 {
     char *Tempstr=NULL;
 
@@ -18,8 +18,8 @@ char *HTTPSetConfig(char *RetStr, TFileStore *FS, const char *Method, int Depth,
         RetStr=MCatStr(RetStr, " Content-Length=", Tempstr, NULL);
     }
 
-    if (StrValid(FS->User))  RetStr=MCatStr(RetStr, " user=", FS->User, NULL);
-    if (StrValid(FS->AuthCreds)) RetStr=MCatStr(RetStr, " password=", FS->AuthCreds, NULL);
+    if (StrValid(FS->User))  RetStr=MCatStr(RetStr, " user='", FS->User, "'", NULL);
+    if (StrValid(FS->AuthCreds)) RetStr=MCatStr(RetStr, " password='", FS->AuthCreds, "'", NULL);
 
     if (strcmp(Method, "PROPFIND")==0)
     {
@@ -27,9 +27,37 @@ char *HTTPSetConfig(char *RetStr, TFileStore *FS, const char *Method, int Depth,
         RetStr=CatStr(RetStr, Tempstr);
     }
 
+    RetStr=MCatStr(RetStr, " ", ExtraArgs, NULL);
     Destroy(Tempstr);
 
     return(RetStr);
+}
+
+
+STREAM *HTTPOpenURL(TFileStore *FS, const char *Method, const char *URL, const char *ExtraArgs, const char *ContentType, int ContentSize, int DavDepth)
+{
+    char *FullURL=NULL, *Args=NULL, *Tempstr=NULL;
+    STREAM *S;
+
+    Args=HTTPSetConfig(Args, FS, Method, DavDepth, ContentType, ContentSize, ExtraArgs);
+    Tempstr=MCopyStr(Tempstr, Method, " ", URL, NULL);
+    HandleEvent(FS, UI_OUTPUT_DEBUG, Tempstr, "", "");
+
+    if (strncmp(URL, "http:", 5)==0) FullURL=CopyStr(FullURL, URL);
+    else if (strncmp(URL, "https:", 6)==0) FullURL=CopyStr(FullURL, URL);
+    else
+    {
+        Tempstr=HTTPQuoteChars(Tempstr, URL, "@ ");
+        FullURL=FileStoreFullURL(FullURL, Tempstr, FS);
+    }
+
+    S=STREAMOpen(FullURL, Args);
+
+    Destroy(Tempstr);
+    Destroy(FullURL);
+    Destroy(Args);
+
+    return(S);
 }
 
 
@@ -80,13 +108,7 @@ int HTTPBasicCommand(TFileStore *FS, const char *Target, const char *Method, con
     const char *ptr;
     STREAM *S;
 
-    URL=FileStoreFullURL(URL, Target, FS);
-    Args=HTTPSetConfig(Args, FS, Method, 0, "", 0);
-    Args=MCatStr(Args, " ", ExtraArgs, NULL);
-    Tempstr=MCopyStr(Tempstr, Method, " ", URL, NULL);
-    HandleEvent(FS, 0, Tempstr, "", "");
-
-    S=STREAMOpen(URL, Args);
+    S=HTTPOpenURL(FS, Method, Target, ExtraArgs, "", 0, 0);
     if (S)
     {
         RetVal=HTTPCheckResponseCode(S);
@@ -163,12 +185,10 @@ static int HTTP_Internal_ListDir(TFileStore *FS, const char *Dir, ListNode *File
     STREAM *S;
     int RetVal=FALSE;
 
-    Tempstr=FileStoreFullURL(Tempstr, Dir, FS);
-    if (FS->Type==FILESTORE_WEBDAV) RetVal=Webdav_ListDir(FS, Tempstr, FileList);
+    if (FS->Type==FILESTORE_WEBDAV) RetVal=Webdav_ListDir(FS, Dir, FileList);
     else
     {
-        Args=HTTPSetConfig(Args, FS, "GET", 0, "", 0);
-        S=STREAMOpen(Tempstr, Args);
+        S=HTTPOpenURL(FS, "GET", Dir, "", "", 0, 0);
         if (S)
         {
             Tempstr=STREAMReadDocument(Tempstr, S);
@@ -216,15 +236,7 @@ STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, u
         if (*ptr==' ') break;
     }
 
-    if (strncmp(Path, "http:", 5)==0) Tempstr=CopyStr(Tempstr, Path);
-    else if (strncmp(Path, "https:", 6)==0) Tempstr=CopyStr(Tempstr, Path);
-    else Tempstr=FileStoreFullURL(Tempstr, Path, FS);
-
-    Args=HTTPSetConfig(Args, FS, Method, 0, "", Size);
-    //Args=CatStr(Args, " keepalive");
-
-    Value=MCopyStr(Value, "W", Args, NULL);
-    S=STREAMOpen(Tempstr, Value);
+    S=HTTPOpenURL(FS, Method, Path, "", "", Size, 0);
     if (S)
     {
         if (strcmp(Method, "GET")==0)
@@ -311,7 +323,7 @@ int HTTP_Connect(TFileStore *FS)
     }
 
     if (result==TRUE) return(TRUE);
-		if (result == ERR_FORBID) HandleEvent(FS, 0, "(filestore): HTTP connect failed: Forbidden. ", FS->URL, "");
+    if (result == ERR_FORBID) HandleEvent(FS, 0, "(filestore): HTTP connect failed: Forbidden. ", FS->URL, "");
     else HandleEvent(FS, 0, "(filestore): HTTP connect failed.", FS->URL, "");
 
     return(FALSE);

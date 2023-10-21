@@ -5,6 +5,8 @@ Copyright (c) 2015 Colum Paget <colums.projects@googlemail.com>
 
 /*
 
+These functions relate to CLIENT SIZE http, https
+
 For basic http usage (getting webpages) you don't need to use most of this stuff. You can just pass the URL to 'STREAMOpen' like so:
 
 STREAM *S;
@@ -221,6 +223,8 @@ char *HTTPDigest(char *RetStr, const char *Method, const char *Logon, const char
 
 
 void HTTPInfoSetAuth(HTTPInfoStruct *Auth, const char *Logon, const char *Password, int Type);
+
+int HTTPConnectOkay(STREAM *S);
 
 #ifdef __cplusplus
 }

@@ -41,8 +41,8 @@ char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const cha
             Tempstr=STREAMReadDocument(Tempstr, S);
             HandleEvent(FS, UI_OUTPUT_ERROR, Tempstr, URL, "");
             //printf("%s\n", Tempstr);
-	    Destroy(RetStr);
-	    RetStr=NULL;
+            Destroy(RetStr);
+            RetStr=NULL;
         }
     }
     else HandleEvent(FS, UI_OUTPUT_ERROR, Tempstr, "", "");
@@ -233,15 +233,15 @@ int DropBox_Info(TFileStore *FS)
     Tempstr=DropBox_Transact(Tempstr, FS, "/users/get_current_account", "");
     if (StrValid(Tempstr))
     {
-    P=ParserParseDocument("json", Tempstr);
-    if (P)
-    {
-        SetVar(FS->Vars, "account_id", ParserGetValue(P, "/account_id"));
-        SetVar(FS->Vars, "display_name", ParserGetValue(P, "/name/display_name"));
-        SetVar(FS->Vars, "account_type", ParserGetValue(P, "/account_type/.tag"));
-        RetVal=TRUE;
-        ParserItemsDestroy(P);
-    }
+        P=ParserParseDocument("json", Tempstr);
+        if (P)
+        {
+            SetVar(FS->Vars, "account_id", ParserGetValue(P, "/account_id"));
+            SetVar(FS->Vars, "display_name", ParserGetValue(P, "/name/display_name"));
+            SetVar(FS->Vars, "account_type", ParserGetValue(P, "/account_type/.tag"));
+            RetVal=TRUE;
+            ParserItemsDestroy(P);
+        }
     }
 
 
@@ -358,7 +358,7 @@ int DropBox_Connect(TFileStore *FS)
     RetVal=DropBox_Info(FS);
     if (RetVal != TRUE)
     {
-	OauthCtx->AccessToken=CopyStr(OauthCtx->AccessToken, "");
+        OauthCtx->AccessToken=CopyStr(OauthCtx->AccessToken, "");
         if (OAuthRefresh(OauthCtx, "https://www.dropbox.com/oauth2/token?grant_type=refresh_token&refresh_token=$(refresh_token)&client_id=$(client_id)"))
         {
             FS->Pass=CopyStr(FS->Pass, OauthCtx->AccessToken);

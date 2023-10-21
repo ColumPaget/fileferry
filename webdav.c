@@ -5,22 +5,24 @@
 
 #define PROPFIND_XML "<?xml version=\"1.0\" encoding=\"utf-8\" ?> <D:propfind xmlns:D=\"DAV:\" > <D:prop> <D:getcontentlength/> <D:resourcetype/> <D:iscollection/> <D:creationdate/> <D:getlastmodified/> <executable xmlns=\"http://apache.org/dav/props/\"/> <md5-checksum xmlns=\"http://subversion.tigris.org/xmlns/dav/\"/> </D:prop> </D:propfind>"
 
-static void HTTP_Webdav_Normalize_Path(TFileStore *FS, TFileItem *FI, const char *Path)
+static void HTTP_Webdav_Normalize_Path(TFileStore *FS, TFileItem *FI, const char *URL)
 {
     const char *ptr;
-    char *Tempstr=NULL;
+    char *Tempstr=NULL, *Path=NULL;
 
-    if (strncmp(Path, "https:",6)==0)
+    if (strncmp(URL, "https:",6)==0)
     {
-        ParseURL(Path, NULL, NULL, NULL, NULL, NULL, &Tempstr, NULL);
+        ParseURL(URL, NULL, NULL, NULL, NULL, NULL, &Tempstr, NULL);
         ptr=Tempstr;
     }
-    else ptr=Path;
+    else ptr=URL;
 
-    FI->path=CopyStr(FI->path, FileStorePathRelativeToCurr(FS, ptr));
-    FI->name=HTTPUnQuote(FI->name, GetBasename(FI->path));
+    Path=HTTPUnQuote(Path, ptr);
+    FI->path=CopyStr(FI->path, FileStorePathRelativeToCurr(FS, Path));
+    FI->name=CopyStr(FI->name, GetBasename(FI->path));
 
     Destroy(Tempstr);
+    Destroy(Path);
 }
 
 
@@ -71,11 +73,15 @@ const char *HTTP_Webdav_Parse_Propfind(const char *XML, TFileStore *FS, ListNode
         ptr=XMLGetTag(ptr, &Namespace, &Tag, &Value);
     }
 
-    if (StrValid(FI->name)) ListAddNamedItem(FileList, FI->name, FI);
+    if (StrValid(FI->name))
+    {
+        //printf("CMP: [%s] [%s]\n", FS->CurrDir, FI->path);
+        if (strcmp(FS->CurrDir, FI->path) !=0) ListAddNamedItem(FileList, FI->name, FI);
+    }
 
     Destroy(Namespace);
-    Destroy(Tag);
     Destroy(Value);
+    Destroy(Tag);
 
     return(ptr);
 }
@@ -91,8 +97,7 @@ int Webdav_ListDir(TFileStore *FS, const char *URL, ListNode *FileList)
     STREAM *S;
 
 
-    Tempstr=MCopyStr(Tempstr, URL, " Depth=1 user=", FS->User, " password=", FS->Pass, NULL);
-    S=HTTPMethod("PROPFIND", Tempstr, "application/xml", "", StrLen(PROPFIND_XML));
+    S=HTTPOpenURL(FS, "PROPFIND", URL, "", "application/xml", StrLen(PROPFIND_XML), 1);
     if (S)
     {
         STREAMWriteLine(PROPFIND_XML, S);
@@ -146,9 +151,8 @@ char *WebDav_GetQuota(char *RetStr, TFileStore *FS)
                 "</D:prop>"
                 "</D:propfind>");
 
-    Tempstr=HTTPSetConfig(Tempstr, FS, "PROPFIND", 0, "application/xml", StrLen(XML));
-    Value=FileStoreFullURL(Value, "", FS);
-    S=STREAMOpen(Value, Tempstr);
+    //ask for props of root directory
+    S=HTTPOpenURL(FS, "PROPFIND", "", "", "application/xml", StrLen(XML), 0);
     if (S)
     {
         STREAMWriteLine(XML, S);

@@ -22,6 +22,17 @@ TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path)
 }
 
 
+int FileStoreIsDir(TFileStore *FS, const char *Path)
+{
+TFileItem *FI;
+
+FI=FileStoreGetFileInfo(FS, Path);
+if (! FI) return(FALSE);
+if (FI->type == FTYPE_DIR) return(TRUE);
+return(FALSE);
+}
+
+
 TFileStore *FileStoreCreate()
 {
     TFileStore *FS;
@@ -224,30 +235,30 @@ ListNode *FileStoreGetDirList(TFileStore *FS, const char *Path)
 
 static void FileStoreClearCurrDirList(TFileStore *FS)
 {
-   if (FS->DirList) ListDestroy(FS->DirList, FileItemDestroy);
+    if (FS->DirList) ListDestroy(FS->DirList, FileItemDestroy);
     FS->DirList=NULL;
 }
 
 
 static ListNode *FileStoreRefreshCurrDirList(TFileStore *FS, int Flags)
 {
-		//if we already have a dir listing, use that
-		if ( (! Flags) && (ListSize(FS->DirList) >0) ) return(FS->DirList);
+    //if we already have a dir listing, use that
+    if ( (! Flags) && (ListSize(FS->DirList) >0) ) return(FS->DirList);
 
-		//clear out our exising dir listing
+    //clear out our exising dir listing
     FileStoreClearCurrDirList(FS);
 
- 		//if force is not set, and we are set to not list directories by default
-		//(this is done when working with filestores full of files where we don't care
-		//about the items already present (maybe we are just uploading more items)
-		//in order to speed up processing
+    //if force is not set, and we are set to not list directories by default
+    //(this is done when working with filestores full of files where we don't care
+    //about the items already present (maybe we are just uploading more items)
+    //in order to speed up processing
     if (! (Flags & DIR_FORCE))
     {
         if (FS->Flags & FILESTORE_NO_DIR_LIST) return(NULL);
         if (Settings->Flags & SETTING_NO_DIR_LIST) return(NULL);
     }
 
-		//finally, if all of the above to not apply, load a new DirList
+    //finally, if all of the above to not apply, load a new DirList
     FS->DirList=FileStoreGetDirList(FS, "");
 
     return(FS->DirList);
@@ -308,8 +319,8 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 
 ListNode *FileStoreReloadAndGlob(TFileStore *FS, const char *Glob)
 {
-FileStoreRefreshCurrDirList(FS, DIR_FORCE);
-return(FileStoreGlob(FS, Glob));
+    FileStoreRefreshCurrDirList(FS, DIR_FORCE);
+    return(FileStoreGlob(FS, Glob));
 }
 
 
@@ -448,15 +459,18 @@ int FileStoreUnLock(TFileStore *FS, const char *Path)
 }
 
 
+
+
 int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
 {
     char *Arg1=NULL, *Arg2=NULL;
     TFileItem *FI;
     ListNode *Node;
-    int result=FALSE, i;
+    int result=FALSE, IsMove=FALSE, i;
 
     if (FS->RenamePath)
     {
+				IsMove=FileStoreIsDir(FS, Dest);
         Arg1=FileStoreReformatPath(Arg1, Path, FS);
         Arg2=FileStoreReformatDestination(Arg2, Dest, GetBasename(Path), FS);
 
@@ -474,11 +488,16 @@ int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
             Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
             if (Node)
             {
+								if (IsMove) FileStoreDeleteItem(FS, Path);
+								else
+								{
+								//take a clone so we can delete the existing item
                 FI=FileItemClone((TFileItem *) Node->Item);
                 FileStoreDeleteItem(FS, Path);
                 FI->path=CopyStr(FI->path, Arg2);
                 FI->name=CopyStr(FI->name, GetBasename(FI->path));
                 ListAddNamedItem(FS->DirList, FI->name, FI);
+								}
             }
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RENAME: $(path) $(dest)", Path, Arg2);
         }
