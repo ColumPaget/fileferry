@@ -13,6 +13,6 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path);
 ListNode *FileStoreReloadAndGlob(TFileStore *FS, const char *Glob);
 int FileStoreGlobCount(TFileStore *FS, const char *Path);
 int FileStoreItemExists(TFileStore *FS, const char *FName, int Flags);
-
+ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char *Match);
 
 #endif

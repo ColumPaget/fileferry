@@ -200,22 +200,47 @@ char *FileStoreGetPath(char *RetStr, TFileStore *FS, const char *DestName)
 }
 
 
+
+static char *FileStoreAttemptChDir(char *RetPath, TFileStore *FS, const char *DestName)
+{
+ListNode *DirList, *Curr;
+TFileItem *FI;
+
+  if (StrValid(DestName)) RetPath=FileStoreGetPath(RetPath, FS, DestName);
+  else RetPath=CopyStr(RetPath, FS->HomeDir);
+	if (! FS->ChDir) return(RetPath);
+  if (FS->ChDir(FS, RetPath)) return(RetPath);
+ 
+	DirList=FileStoreDirListMatch(FS, NULL, DestName);
+	Curr=ListGetNext(DirList);
+	while (Curr)
+	{
+	FI=(TFileItem *) Curr->Item;
+  RetPath=FileStoreReformatPath(RetPath, FI->path, FS);
+  if (FS->ChDir(FS, RetPath)) return(RetPath);
+	Curr=ListGetNext(Curr);
+	}
+	 
+RetPath=CopyStr(RetPath, "");
+return(RetPath);
+}
+
+
 int FileStoreChDir(TFileStore *FS, const char *DestName)
 {
     int result=FALSE;
     char *Path=NULL;
 
-    FileStoreDirListClear(FS);
     if (FS->Flags & FILESTORE_FOLDERS)
     {
-        if (StrValid(DestName)) Path=FileStoreGetPath(Path, FS, DestName);
-        else Path=CopyStr(Path, FS->HomeDir);
-
-        if ((! FS->ChDir) || FS->ChDir(FS, Path))
-        {
+			 Path=FileStoreAttemptChDir(Path, FS, DestName);
+			 if (StrValid(Path))
+       {
             FS->CurrDir=CopyStr(FS->CurrDir, Path);
+						StripDirectorySlash(FS->CurrDir);
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHDIR: $(path)", Path, "");
             result=TRUE;
+    				FileStoreDirListClear(FS);
             FileStoreDirListRefresh(FS, 0);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) CHDIR FAILED: $(path)", Path, "");
@@ -554,6 +579,7 @@ TFileStore *FileStoreParse(const char *Config)
         FS->Name=CopyStr(FS->Name, Name);
         ParseURL(Tempstr, &Proto, &Host, &Port, &FS->User, &FS->Pass, &Path, NULL);
         FS->URL=MCopyStr(FS->URL, Proto, "://", Host, NULL);
+
         if (StrValid(Port))
         {
             if  (strcasecmp(Proto, "https")==0)

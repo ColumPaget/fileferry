@@ -85,15 +85,35 @@ ListNode *FileStoreDirListRefresh(TFileStore *FS, int Flags)
 }
 
 
+ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char *Match)
+{
+ListNode *GlobList, *Curr;
+TFileItem *Item;
+const char *rname;
+
+    GlobList=ListCreate();
+		if (InputList==NULL) InputList=FS->DirList;
+    Curr=ListGetNext(InputList);
+    while (Curr)
+    {
+        rname=GetBasename(Curr->Tag);
+        if ((! StrValid(Match)) || (fnmatch(Match, rname, 0)==0))
+        {
+            Item=FileItemClone((TFileItem *) Curr->Item);
+            if (Item->type != FTYPE_DELETED) ListAddNamedItem(GlobList, Item->name, Item);
+        }
+
+        Curr=ListGetNext(Curr);
+    }
+return(GlobList);
+}
+
 
 ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 {
     ListNode *GlobList, *SrcDir, *Curr;
     char *Tempstr=NULL;
-    TFileItem *Item;
-    const char *lname, *rname;
-
-    GlobList=ListCreate();
+    const char *Match;
 
     //absolute path, not something in curr dir
 
@@ -108,27 +128,15 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 
         //use basename not 'GetBasename' as these behave differently for a path ending in '/'
         //basename will return blank for a path like '/tmp/', whereas GetBasename will return '/tmp'
-        lname=basename(Path);
+        Match=basename(Path);
     }
     else
     {
         SrcDir=FileStoreDirListRefresh(FS, 0);
-        lname="*";
+        Match="*";
     }
 
-    Curr=ListGetNext(SrcDir);
-    while (Curr)
-    {
-        rname=GetBasename(Curr->Tag);
-        if ((! StrValid(lname)) || (fnmatch(lname, rname, 0)==0))
-        {
-            Item=FileItemClone((TFileItem *) Curr->Item);
-            if (Item->type != FTYPE_DELETED) ListAddNamedItem(GlobList, Item->name, Item);
-        }
-
-        Curr=ListGetNext(Curr);
-    }
-
+		GlobList=FileStoreDirListMatch(FS, SrcDir, Match);
     FileStoreDirListFree(FS, SrcDir);
 
     Destroy(Tempstr);

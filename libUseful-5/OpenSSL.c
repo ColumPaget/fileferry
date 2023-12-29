@@ -799,7 +799,7 @@ int OpenSSLSTREAMCheckForBytes(STREAM *S)
 
 int OpenSSLSTREAMReadBytes(STREAM *S, char *Data, int len)
 {
-    int bytes_read=0;
+    int bytes_read=0, val;
 #ifdef HAVE_LIBSSL
     SSL *SSL_OBJ;
 
@@ -812,6 +812,7 @@ int OpenSSLSTREAMReadBytes(STREAM *S, char *Data, int len)
         //  saved_errno=errno;
         //zero or less indicates some kind of error. Could be we are waiting for or bytes, or any number of
         //real errors that count as disconnection
+
         if (bytes_read < 1)
         {
             //turns out you get hangs here if you treat SSL_ERROR_WANT_READ as being 'wait for more bytes'
@@ -819,8 +820,9 @@ int OpenSSLSTREAMReadBytes(STREAM *S, char *Data, int len)
             //and if we don't, the connection is effectively closed
             bytes_read=-1;
 
-            /*
-            switch (SSL_get_error(SSL_OBJ, bytes_read))
+	/*
+            val=SSL_get_error(SSL_OBJ, bytes_read);
+            switch (val)
             {
             //these all mean SSL is waiting for more data, and has nothing to offer us right now
             case SSL_ERROR_WANT_READ:
@@ -832,7 +834,7 @@ int OpenSSLSTREAMReadBytes(STREAM *S, char *Data, int len)
             	bytes_read=-1;
             break;
             }
-            */
+	 */
         }
     }
 #endif

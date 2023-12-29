@@ -633,15 +633,13 @@ int FTP_Disconnect(TFileStore *FS)
 
 
 
-static int FTP_SendPassword(TFileStore *FS, int Try, char **LoginBanner)
+static int FTP_SendPassword(TFileStore *FS, const char *Pass, int Try, char **LoginBanner)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
-    const char *p_Pass;
     int len, result=FALSE;
 
-    len=PasswordGet(FS, Try, &p_Pass);
     STREAMWriteLine("PASS ", FS->S);
-    STREAMWriteBytes(FS->S, p_Pass, len);
+    STREAMWriteBytes(FS->S, Pass, len);
     STREAMWriteLine("\r\n", FS->S);
     //STREAMWriteLoggedLine(Tempstr, FS, FS->S);
     STREAMFlush(FS->S);
@@ -669,12 +667,22 @@ static int FTP_SendPassword(TFileStore *FS, int Try, char **LoginBanner)
 static int FTP_Login(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL, *LoginBanner=NULL;
-    const char *p_Pass=NULL;
+    const char *p_User=NULL, *p_Pass=NULL;
     int result=FALSE, len, Try;
 
     LoginBanner=CopyStr(LoginBanner,GetVar(FS->Vars,"LoginBanner"));
+		if (StrValid(FS->User)) 
+		{
+			p_User=FS->User;
+			p_Pass=FS->Pass;
+		}
+		else
+		{
+			 p_User="anonymous";
+			 p_Pass="anonymous";
+		}
 
-    Tempstr=FormatStr(Tempstr,"USER %s\r\n",FS->User);
+    Tempstr=FormatStr(Tempstr,"USER %s\r\n",p_User);
     SendLoggedLine(Tempstr, FS, FS->S);
 
     InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY | INET_CONTINUE);
@@ -692,8 +700,10 @@ static int FTP_Login(TFileStore *FS)
         {
             for (Try=0; Try < 5; Try++)
             {
-                result=FTP_SendPassword(FS, Try, &LoginBanner);
+    						if (p_Pass==NULL) len=PasswordGet(FS, Try, &p_Pass);
+                result=FTP_SendPassword(FS, p_Pass, Try, &LoginBanner);
                 if (result) break;
+								p_Pass=NULL;
             }
         }
     }
