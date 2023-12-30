@@ -1,5 +1,24 @@
 #include "ls_decode.h"
 
+static int LS_CountNumericArgs(const char *Input)
+{
+    int count=0;
+    char *Token=NULL;
+    const char *ptr;
+
+    ptr=GetToken(Input, "\\S", &Token, 0);
+    while (ptr)
+    {
+        if ( (count > 2) && (! isdigit(*Token)) ) break;
+        count++;
+        ptr=GetToken(ptr, "\\S", &Token, 0);
+    }
+
+    Destroy(Token);
+    return(count);
+}
+
+
 TFileItem *Decode_LS_Output(char *CurrDir, char *LsLine)
 {
     TFileItem *FI;
@@ -10,9 +29,14 @@ TFileItem *Decode_LS_Output(char *CurrDir, char *LsLine)
     FI=FileItemCreate("", FTYPE_FILE, 0, 0);
 
     ptr=GetToken(LsLine,"\\S",&Token,0);
-    if (StrLen(Token)==8) //dos style
+    if (StrLen(Token)==8) //dos style, will be the date, in mm-dd-yy format
     {
+        DateStr=MCopyStr(DateStr, Token, " ", NULL);
         ptr=GetToken(ptr,"\\S",&Token,0);
+        DateStr=CatStrLen(DateStr, Token, 5); //HH:MM
+        DateStr=MCatStr(DateStr, ":00", Token+5, NULL);
+        FI->mtime=DateStrToSecs("%m-%d-%y %I:%M:%S%p",DateStr,NULL);
+
         ptr=GetToken(ptr,"\\S",&Token,0);
         StripTrailingWhitespace(Token);
         if (strcmp(Token,"<DIR>")==0) FI->type=FTYPE_DIR;
@@ -50,7 +74,7 @@ TFileItem *Decode_LS_Output(char *CurrDir, char *LsLine)
         }
         //FI->Permissions=CopyStr(FI->Permissions,Token);
 
-        ptr=GetToken(ptr,"\\S",&Token,0);
+        if (LS_CountNumericArgs(ptr) > 3) ptr=GetToken(ptr,"\\S",&Token,0);
         ptr=GetToken(ptr,"\\S",&FI->user,0);
         ptr=GetToken(ptr,"\\S",&FI->group,0);
         ptr=GetToken(ptr,"\\S",&Token,0);

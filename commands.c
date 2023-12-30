@@ -120,13 +120,13 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         }
         break;
 
-		case CMD_EXISTS:
+    case CMD_EXISTS:
         if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
         else if (strcmp(Switch, "-d")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
         else if (strcmp(Switch, "-file")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
         else if (strcmp(Switch, "-dir")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
- 		    else if (strcmp(Switch, "-no")==0) Cmd->Flags |= CMD_FLAG_INVERT;
-		break;
+        else if (strcmp(Switch, "-no")==0) Cmd->Flags |= CMD_FLAG_INVERT;
+        break;
 
     case CMD_LOCK:
     case CMD_LLOCK:
@@ -455,14 +455,14 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 
     case CMD_EXISTS:
         result=FileStoreItemExists(RemoteFS, Cmd->Target, Cmd->Flags);
-				if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
-				else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
+        if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
+        else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
         break;
 
     case CMD_LEXISTS:
         result=FileStoreGlobCount(LocalFS, Cmd->Target);
-				if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
-				else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
+        if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
+        else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
         break;
 
     case CMD_CD:
@@ -653,7 +653,7 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         break;
     }
 
-		if (Cmd->Flags & CMD_FLAG_INVERT) result=! result;
+    if (Cmd->Flags & CMD_FLAG_INVERT) result=! result;
 
     if ((! result) && (Cmd->Flags & CMD_FLAG_ABORT)) result=CMD_ABORT;
     if ((! result) && (Cmd->Flags & CMD_FLAG_QUIT)) result=CMD_QUIT;
@@ -674,7 +674,7 @@ void CommandListProcess(const char *Commands, TFileStore *LocalFS, TFileStore *R
     const char *ptr;
     int result;
 
-		if (Settings->Flags & SETTING_VERBOSE) printf("PROCESS COMMANDS: [%s]\n", Commands);
+    if (Settings->Flags & SETTING_VERBOSE) printf("PROCESS COMMANDS: [%s]\n", Commands);
 
     ptr=GetToken(Commands, ";", &Token, 0);
     while (ptr)

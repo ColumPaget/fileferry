@@ -34,7 +34,7 @@ void FileStoreDirListRemoveItem(TFileStore *FS, const char *Path)
     if (Curr)
     {
         FI=(TFileItem *) Curr->Item;
-				FI->type=FTYPE_DELETED;
+        FI->type=FTYPE_DELETED;
     }
 }
 
@@ -87,12 +87,12 @@ ListNode *FileStoreDirListRefresh(TFileStore *FS, int Flags)
 
 ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char *Match)
 {
-ListNode *GlobList, *Curr;
-TFileItem *Item;
-const char *rname;
+    ListNode *GlobList, *Curr;
+    TFileItem *Item;
+    const char *rname;
 
     GlobList=ListCreate();
-		if (InputList==NULL) InputList=FS->DirList;
+    if (InputList==NULL) InputList=FS->DirList;
     Curr=ListGetNext(InputList);
     while (Curr)
     {
@@ -105,7 +105,7 @@ const char *rname;
 
         Curr=ListGetNext(Curr);
     }
-return(GlobList);
+    return(GlobList);
 }
 
 
@@ -136,7 +136,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
         Match="*";
     }
 
-		GlobList=FileStoreDirListMatch(FS, SrcDir, Match);
+    GlobList=FileStoreDirListMatch(FS, SrcDir, Match);
     FileStoreDirListFree(FS, SrcDir);
 
     Destroy(Tempstr);
@@ -169,18 +169,18 @@ int FileStoreGlobCount(TFileStore *FS, const char *Path)
 int FileStoreItemExists(TFileStore *FS, const char *FName, int Flags)
 {
     ListNode *Curr;
-		TFileItem *FI;
+    TFileItem *FI;
 
     Curr=ListGetNext(FS->DirList);
     while (Curr)
     {
-				FI=(TFileItem *) Curr->Item;
+        FI=(TFileItem *) Curr->Item;
         if ( (FI->type != FTYPE_DELETED) && (strcmp(FI->name, FName)==0) )
-				{
-						if ((Flags & CMD_FLAG_FILES_ONLY) && (FI->type==FTYPE_FILE)) return(TRUE);
-						else if ((Flags & CMD_FLAG_DIRS_ONLY) && (FI->type==FTYPE_DIR)) return(TRUE);
-						else return(TRUE);
-				}
+        {
+            if ((Flags & CMD_FLAG_FILES_ONLY) && (FI->type==FTYPE_FILE)) return(TRUE);
+            else if ((Flags & CMD_FLAG_DIRS_ONLY) && (FI->type==FTYPE_DIR)) return(TRUE);
+            else return(TRUE);
+        }
         Curr=ListGetNext(Curr);
     }
 

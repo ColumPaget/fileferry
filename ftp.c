@@ -671,16 +671,16 @@ static int FTP_Login(TFileStore *FS)
     int result=FALSE, len, Try;
 
     LoginBanner=CopyStr(LoginBanner,GetVar(FS->Vars,"LoginBanner"));
-		if (StrValid(FS->User)) 
-		{
-			p_User=FS->User;
-			p_Pass=FS->Pass;
-		}
-		else
-		{
-			 p_User="anonymous";
-			 p_Pass="anonymous";
-		}
+    if (StrValid(FS->User))
+    {
+        p_User=FS->User;
+        p_Pass=FS->Pass;
+    }
+    else
+    {
+        p_User="anonymous";
+        p_Pass="anonymous";
+    }
 
     Tempstr=FormatStr(Tempstr,"USER %s\r\n",p_User);
     SendLoggedLine(Tempstr, FS, FS->S);
@@ -700,10 +700,10 @@ static int FTP_Login(TFileStore *FS)
         {
             for (Try=0; Try < 5; Try++)
             {
-    						if (p_Pass==NULL) len=PasswordGet(FS, Try, &p_Pass);
+                if (p_Pass==NULL) len=PasswordGet(FS, Try, &p_Pass);
                 result=FTP_SendPassword(FS, p_Pass, Try, &LoginBanner);
                 if (result) break;
-								p_Pass=NULL;
+                p_Pass=NULL;
             }
         }
     }

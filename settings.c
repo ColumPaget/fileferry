@@ -89,8 +89,8 @@ int ParseCommandLine(int argc, const char *argv[])
     Cmd=CommandLineParserCreate(argc, argv);
     arg=CommandLineNext(Cmd);
 
-		//must do this to prevent loading commands twice
-		Settings->Commands=CopyStr(Settings->Commands, "");
+    //must do this to prevent loading commands twice
+    Settings->Commands=CopyStr(Settings->Commands, "");
 
     if (strcmp(arg, "-filestores")==0) Act=ACT_LIST_FILESTORES;
     else if (strcmp(arg, "-drivers")==0) Act=ACT_LIST_DRIVERS;

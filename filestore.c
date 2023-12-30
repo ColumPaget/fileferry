@@ -23,12 +23,12 @@ TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path)
 
 int FileStoreIsDir(TFileStore *FS, const char *Path)
 {
-TFileItem *FI;
+    TFileItem *FI;
 
-FI=FileStoreGetFileInfo(FS, Path);
-if (! FI) return(FALSE);
-if (FI->type == FTYPE_DIR) return(TRUE);
-return(FALSE);
+    FI=FileStoreGetFileInfo(FS, Path);
+    if (! FI) return(FALSE);
+    if (FI->type == FTYPE_DIR) return(TRUE);
+    return(FALSE);
 }
 
 
@@ -203,26 +203,29 @@ char *FileStoreGetPath(char *RetStr, TFileStore *FS, const char *DestName)
 
 static char *FileStoreAttemptChDir(char *RetPath, TFileStore *FS, const char *DestName)
 {
-ListNode *DirList, *Curr;
-TFileItem *FI;
+    ListNode *DirList, *Curr;
+    TFileItem *FI;
 
-  if (StrValid(DestName)) RetPath=FileStoreGetPath(RetPath, FS, DestName);
-  else RetPath=CopyStr(RetPath, FS->HomeDir);
-	if (! FS->ChDir) return(RetPath);
-  if (FS->ChDir(FS, RetPath)) return(RetPath);
- 
-	DirList=FileStoreDirListMatch(FS, NULL, DestName);
-	Curr=ListGetNext(DirList);
-	while (Curr)
-	{
-	FI=(TFileItem *) Curr->Item;
-  RetPath=FileStoreReformatPath(RetPath, FI->path, FS);
-  if (FS->ChDir(FS, RetPath)) return(RetPath);
-	Curr=ListGetNext(Curr);
-	}
-	 
-RetPath=CopyStr(RetPath, "");
-return(RetPath);
+    if (StrValid(DestName)) RetPath=FileStoreGetPath(RetPath, FS, DestName);
+    else RetPath=CopyStr(RetPath, FS->HomeDir);
+    if (! FS->ChDir) return(RetPath);
+    if (FS->ChDir(FS, RetPath)) return(RetPath);
+
+    DirList=FileStoreDirListMatch(FS, NULL, DestName);
+    Curr=ListGetNext(DirList);
+    while (Curr)
+    {
+        FI=(TFileItem *) Curr->Item;
+        if (FI->type == FTYPE_DIR)
+        {
+            RetPath=FileStoreReformatPath(RetPath, FI->path, FS);
+            if (FS->ChDir(FS, RetPath)) return(RetPath);
+        }
+        Curr=ListGetNext(Curr);
+    }
+
+    RetPath=CopyStr(RetPath, "");
+    return(RetPath);
 }
 
 
@@ -233,14 +236,14 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
 
     if (FS->Flags & FILESTORE_FOLDERS)
     {
-			 Path=FileStoreAttemptChDir(Path, FS, DestName);
-			 if (StrValid(Path))
-       {
+        Path=FileStoreAttemptChDir(Path, FS, DestName);
+        if (StrValid(Path))
+        {
             FS->CurrDir=CopyStr(FS->CurrDir, Path);
-						StripDirectorySlash(FS->CurrDir);
+            StripDirectorySlash(FS->CurrDir);
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHDIR: $(path)", Path, "");
             result=TRUE;
-    				FileStoreDirListClear(FS);
+            FileStoreDirListClear(FS);
             FileStoreDirListRefresh(FS, 0);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) CHDIR FAILED: $(path)", Path, "");
@@ -321,18 +324,18 @@ int FileStoreRmDir(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL;
     int result=FALSE;
-		TFileItem *FI;
+    TFileItem *FI;
 
     if (FS->MkDir)
     {
-				FI=FileStoreGetFileInfo(FS, Path);
-				if (FI && (FI->type == FTYPE_DIR))
-				{
-        result=FileStoreUnlinkItem(FS, FI);
+        FI=FileStoreGetFileInfo(FS, Path);
+        if (FI && (FI->type == FTYPE_DIR))
+        {
+            result=FileStoreUnlinkItem(FS, FI);
 
-        if (result==TRUE) HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RMDIR: $(path)", Path, "");
-        else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) RMDIR FAILED: $(path)", Path, "");
-				}
+            if (result==TRUE) HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RMDIR: $(path)", Path, "");
+            else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) RMDIR FAILED: $(path)", Path, "");
+        }
     }
     else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support directories/folders");
 
@@ -386,7 +389,7 @@ int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
 
     if (FS->RenamePath)
     {
-				IsMove=FileStoreIsDir(FS, Dest);
+        IsMove=FileStoreIsDir(FS, Dest);
         Arg1=FileStoreReformatPath(Arg1, Path, FS);
         Arg2=FileStoreReformatDestination(Arg2, Dest, GetBasename(Path), FS);
 
@@ -404,16 +407,16 @@ int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
             Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
             if (Node)
             {
-								if (IsMove) FileStoreDirListRemoveItem(FS, Path);
-								else
-								{
-								//take a clone so we can delete the existing item
-                FI=FileItemClone((TFileItem *) Node->Item);
-                FileStoreDirListRemoveItem(FS, Path);
-                FI->path=CopyStr(FI->path, Arg2);
-                FI->name=CopyStr(FI->name, GetBasename(FI->path));
-                ListAddNamedItem(FS->DirList, FI->name, FI);
-								}
+                if (IsMove) FileStoreDirListRemoveItem(FS, Path);
+                else
+                {
+                    //take a clone so we can delete the existing item
+                    FI=FileItemClone((TFileItem *) Node->Item);
+                    FileStoreDirListRemoveItem(FS, Path);
+                    FI->path=CopyStr(FI->path, Arg2);
+                    FI->name=CopyStr(FI->name, GetBasename(FI->path));
+                    ListAddNamedItem(FS->DirList, FI->name, FI);
+                }
             }
             HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RENAME: $(path) $(dest)", Path, Arg2);
         }
@@ -676,7 +679,7 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
                 ptr=GetNameValuePair(ptr, " ", "=", &Name, &Value);
             }
 
-						//only display disk space if we have some values
+            //only display disk space if we have some values
             Tempstr=MCopyStr(Tempstr, "Disk Space: total: ", ToIEC(total, 2), NULL);
             Value=FormatStr(Value, " used: %0.1f%% (%sb) ", used * 100.0 / total, ToIEC(used, 2));
             Tempstr=CatStr(Tempstr, Value);
