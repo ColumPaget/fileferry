@@ -79,7 +79,7 @@ int SavedFileStoresSave(const char *PathList, ListNode *FileStores)
         while (Curr)
         {
             FS=(TFileStore *) Curr->Item;
-            Tempstr=MCopyStr(Tempstr, FS->Name, " ", FS->URL, NULL);
+            Tempstr=MCopyStr(Tempstr, FS->Name, " ", FS->URL, FS->CurrDir, NULL);
             if (StrValid(FS->User)) Tempstr=MCatStr(Tempstr, " user='", FS->User,"'",  NULL);
             if (StrValid(FS->Pass)) Tempstr=MCatStr(Tempstr, " password='", FS->Pass,"'",  NULL);
             if (StrValid(FS->Encrypt)) Tempstr=MCatStr(Tempstr, " encrypt='", FS->Encrypt,"'",  NULL);

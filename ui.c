@@ -166,7 +166,7 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
             {
                 if (LineCount > 10)
                 {
-                    printf("--- PRESS ENTER FOR MORE ---\r");
+                    printf("enter 'quit' to end, 'resume' to cease paging, anything else for next page\r");
                     fflush(NULL);
                     Tempstr=STREAMReadLine(Tempstr, StdIO);
                     StripTrailingWhitespace(Tempstr);

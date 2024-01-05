@@ -633,15 +633,16 @@ int FTP_Disconnect(TFileStore *FS)
 
 
 
-static int FTP_SendPassword(TFileStore *FS, const char *Pass, int Try, char **LoginBanner)
+static int FTP_SendPassword(TFileStore *FS, const char *Pass, int PassLen, int Try, char **LoginBanner)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
-    int len, result=FALSE;
+    int result=FALSE;
 
+		//Don't use STREAMWriteLoggedLine for the password, as we don't want to display it
     STREAMWriteLine("PASS ", FS->S);
-    STREAMWriteBytes(FS->S, Pass, len);
+    STREAMWriteBytes(FS->S, Pass, PassLen);
     STREAMWriteLine("\r\n", FS->S);
-    //STREAMWriteLoggedLine(Tempstr, FS, FS->S);
+
     STREAMFlush(FS->S);
 
     InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY);
@@ -701,7 +702,9 @@ static int FTP_Login(TFileStore *FS)
             for (Try=0; Try < 5; Try++)
             {
                 if (p_Pass==NULL) len=PasswordGet(FS, Try, &p_Pass);
-                result=FTP_SendPassword(FS, p_Pass, Try, &LoginBanner);
+								else len=StrLen(p_Pass);
+
+                result=FTP_SendPassword(FS, p_Pass, len, Try, &LoginBanner);
                 if (result) break;
                 p_Pass=NULL;
             }

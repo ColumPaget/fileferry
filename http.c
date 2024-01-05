@@ -118,7 +118,12 @@ int HTTPBasicCommand(TFileStore *FS, const char *Target, const char *Method, con
             HandleEvent(FS, RetVal, Tempstr, "", "");
         }
 
-        if (StrValid(STREAMGetValue(S, "HTTP:DAV"))) FS->Type=FILESTORE_WEBDAV;
+        if (StrValid(STREAMGetValue(S, "HTTP:DAV"))) 
+				{
+								FS->Type=FILESTORE_WEBDAV;
+    						FS->GetValue=WebDav_GetValue;
+				}
+
         FileStoreRecordCipherDetails(FS, S);
 
         ptr=STREAMGetValue(S, "HTTP:Date");
@@ -344,6 +349,5 @@ int HTTP_Attach(TFileStore *FS)
     FS->WriteBytes=HTTP_WriteBytes;
     FS->UnlinkPath=HTTP_Unlink_Path;
     FS->RenamePath=HTTP_Rename_Path;
-    FS->GetValue=WebDav_GetValue;
 //FS->CurrDir=HTTP_RealPath(FS->CurrDir, ".", S);
 }
