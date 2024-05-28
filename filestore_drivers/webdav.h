@@ -1,7 +1,7 @@
 #ifndef FILEFERRY_WEBDAV_H
 #define FILEFERRY_WEBDAV_H
 
-#include "filestore.h"
+#include "../filestore.h"
 
 
 char *WebDav_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName);

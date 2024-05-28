@@ -1,6 +1,6 @@
 #include "gdrive.h"
 #include "http.h"
-#include "ui.h"
+#include "../ui.h"
 
 #define GOOGLE_CLIENT_ID "596195748702.apps.googleusercontent.com"
 #define GOOGLE_CLIENT_SECRET "YDYv4JZMI3umD80S7Xh_WNJV"
@@ -14,7 +14,7 @@ static STREAM *GDrive_Connect(TFileStore *FS, const char *Path, )
 */
 
 
-char *CreateItemFormatJSON(char *RetStr, TFileStore *FS, const char *Path, const char *MimeType)
+static char *CreateItemFormatJSON(char *RetStr, TFileStore *FS, const char *Path, const char *MimeType)
 {
     const char *ptr;
 
@@ -30,7 +30,7 @@ char *CreateItemFormatJSON(char *RetStr, TFileStore *FS, const char *Path, const
     return(RetStr);
 }
 
-STREAM *GDrive_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *GDrive_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     STREAM *S;
     char *URL=NULL, *Tempstr=NULL, *PostData=NULL;
@@ -70,7 +70,7 @@ STREAM *GDrive_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags,
 }
 
 
-int GDrive_CloseFile(TFileStore *FS, STREAM *S)
+static int GDrive_CloseFile(TFileStore *FS, STREAM *S)
 {
     char *Tempstr=NULL;
 
@@ -84,18 +84,18 @@ int GDrive_CloseFile(TFileStore *FS, STREAM *S)
 }
 
 
-int GDrive_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int GDrive_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMReadBytes(S, Buffer, len));
 }
 
-int GDrive_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int GDrive_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMWriteBytes(S, Buffer, len));
 }
 
 
-int GDrive_Unlink(TFileStore *FS, const char *Path)
+static int GDrive_Unlink(TFileStore *FS, const char *Path)
 {
     STREAM *S;
     char *URL=NULL, *Tempstr=NULL;
@@ -116,7 +116,7 @@ int GDrive_Unlink(TFileStore *FS, const char *Path)
 
 
 
-int GDrive_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
+static int GDrive_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
 {
     ListNode *Items, *Curr;
     TFileItem *FI;
@@ -154,7 +154,7 @@ int GDrive_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
             STREAMWriteLine(PostData, S);
             STREAMCommit(S);
             Tempstr=STREAMReadDocument(Tempstr, S);
-            if (HTTPCheckResponseCode(S)==TRUE) RetVal=TRUE;
+            if (HTTP_CheckResponseCode(S)==TRUE) RetVal=TRUE;
             STREAMClose(S);
         }
     }
@@ -167,7 +167,7 @@ int GDrive_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
 }
 
 
-int GDrive_Copy(TFileStore *FS, const char *OldPath, const char *NewPath)
+static int GDrive_Copy(TFileStore *FS, const char *OldPath, const char *NewPath)
 {
     ListNode *Items, *Curr;
     char *URL=NULL, *Tempstr=NULL, *PostData=NULL;
@@ -202,7 +202,7 @@ int GDrive_Copy(TFileStore *FS, const char *OldPath, const char *NewPath)
 
 
 
-int GDrive_MkDir(TFileStore *FS, const char *Path, int Mkdir)
+static int GDrive_MkDir(TFileStore *FS, const char *Path, int Mkdir)
 {
     ListNode *Items, *Curr;
     char *URL=NULL, *Tempstr=NULL, *PostData=NULL;
@@ -232,7 +232,7 @@ int GDrive_MkDir(TFileStore *FS, const char *Path, int Mkdir)
 
 
 
-ListNode *GDrive_ListDir(TFileStore *FS, const char *Path)
+static ListNode *GDrive_ListDir(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL, *URL=NULL;
     const char *ptr;
@@ -338,7 +338,7 @@ static OAUTH *GDriveOAuth(TFileStore *FS)
   },
 */
 
-char *GDrive_Quota(char *RetStr, TFileStore *FS)
+static char *GDrive_Quota(char *RetStr, TFileStore *FS)
 {
     char *Tempstr=NULL;
     STREAM *S;
@@ -373,7 +373,7 @@ char *GDrive_Quota(char *RetStr, TFileStore *FS)
 
 
 
-char *GDrive_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+static char *GDrive_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
     RetStr=CopyStr(RetStr, "");
     if (strcmp(ValName, "DiskQuota")==0) RetStr=GDrive_Quota(RetStr, FS);
@@ -381,7 +381,7 @@ char *GDrive_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char
     return(RetStr);
 }
 
-int GDrive_Info(TFileStore *FS)
+static int GDrive_Info(TFileStore *FS)
 {
     char *Tempstr=NULL;
     Tempstr=GDrive_GetValue(Tempstr, FS, "/", "DiskQuota");
@@ -391,7 +391,7 @@ int GDrive_Info(TFileStore *FS)
 }
 
 
-int GDrive_ChDir(TFileStore *FS, const char *Path)
+static int GDrive_ChDir(TFileStore *FS, const char *Path)
 {
     if (strcmp(Path, "..")==0)
     {
@@ -403,7 +403,7 @@ int GDrive_ChDir(TFileStore *FS, const char *Path)
 }
 
 
-int GDrive_Connect(TFileStore *FS)
+static int GDrive_Connect(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     char *ptr;

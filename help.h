@@ -4,6 +4,7 @@
 #include "common.h"
 
 void HelpCommand(const char *Command);
+void HelpCommandList();
 void HelpCommandLine();
 
 

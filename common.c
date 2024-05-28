@@ -6,6 +6,18 @@
 uint64_t ProcessStartTime;
 time_t Now;
 
+
+void AppendVar(ListNode *Vars, const char *VarName, const char *Value)
+{
+    char *Tempstr=NULL;
+
+    Tempstr=MCopyStr(Tempstr,GetVar(Vars, VarName),Value, " ", NULL);
+    SetVar(Vars, VarName, Tempstr);
+
+    Destroy(Tempstr);
+}
+
+
 void ClipExtension(char *Path)
 {
     const char *ptr;
@@ -70,7 +82,7 @@ char *DatePartialToFull(char *RetStr, const char *DateStr)
     if (! StrValid(DateStr)) return(CopyStr(RetStr, GetDateStr("%Y/%m/%d %H:%M:%S", NULL)));
 
     //if a duration in the form 3d or 2h etc, then return that much time in the past
-    val=strtol(DateStr, (char *) &ptr, 10);
+    val=strtol(DateStr, (char **) &ptr, 10);
     if (val && (StrLen(ptr) ==1))
     {
         When=time(NULL) - ParseDuration(DateStr);

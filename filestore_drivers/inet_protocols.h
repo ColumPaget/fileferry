@@ -1,8 +1,7 @@
 #ifndef FILEFERRY_INET_PROTOCOLS_H
 #define FILEFERRY_INET_PROTOCOLS_H
 
-#include "common.h"
-#include "filestore.h"
+#include "../filestore.h"
 
 #define INET_CONTINUE 1
 #define INET_OKAY 2

@@ -1,7 +1,7 @@
 #ifndef FILEFERRY_DRIVERS_H
 #define FILEFERRY_DRIVERS_H
 
-#include "filestore.h"
+#include "../filestore.h"
 
 typedef struct
 {

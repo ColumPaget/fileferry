@@ -1,9 +1,9 @@
 #include "dropbox.h"
-#include "errors_and_logging.h"
+#include "../errors_and_logging.h"
 
 #define DROPBOX_CLIENT_ID "tachgefepatxzya"
 
-char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const char *Args)
+static char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const char *Args)
 {
     char *URL=NULL, *ConnectConfig=NULL, *Tempstr=NULL;
     const char *ptr;
@@ -55,7 +55,7 @@ char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const cha
 }
 
 
-STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     STREAM *S;
     char *URL=NULL, *Tempstr=NULL;
@@ -83,7 +83,7 @@ STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags
 }
 
 
-int DropBox_CloseFile(TFileStore *FS, STREAM *S)
+static int DropBox_CloseFile(TFileStore *FS, STREAM *S)
 {
     char *Tempstr=NULL;
 
@@ -99,18 +99,18 @@ int DropBox_CloseFile(TFileStore *FS, STREAM *S)
 }
 
 
-int DropBox_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int DropBox_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMReadBytes(S, Buffer, len));
 }
 
-int DropBox_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int DropBox_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMWriteBytes(S, Buffer, len));
 }
 
 
-int DropBox_Unlink(TFileStore *FS, const char *Path)
+static int DropBox_Unlink(TFileStore *FS, const char *Path)
 {
     STREAM *S;
     char *JSON=NULL, *Tempstr=NULL;
@@ -129,7 +129,7 @@ int DropBox_Unlink(TFileStore *FS, const char *Path)
 }
 
 
-int DropBox_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
+static int DropBox_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
 {
     ListNode *Items, *Curr;
     char *JSON=NULL, *Tempstr=NULL;
@@ -153,7 +153,7 @@ int DropBox_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
 }
 
 
-int DropBox_MkDir(TFileStore *FS, const char *Path, int Mkdir)
+static int DropBox_MkDir(TFileStore *FS, const char *Path, int Mkdir)
 {
     STREAM *S;
     char *JSON=NULL, *Tempstr=NULL;
@@ -171,7 +171,7 @@ int DropBox_MkDir(TFileStore *FS, const char *Path, int Mkdir)
 }
 
 
-ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
+static ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL, *JSON=NULL;
     ListNode *Items, *FilesP, *Curr;
@@ -224,7 +224,7 @@ ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
 
 */
 
-int DropBox_Info(TFileStore *FS)
+static int DropBox_Info(TFileStore *FS)
 {
     char *Tempstr=NULL;
     int RetVal=FALSE;
@@ -251,7 +251,7 @@ int DropBox_Info(TFileStore *FS)
 
 
 
-char *DropBox_GetDiskQuota(char *RetStr, TFileStore *FS, const char *Path)
+static char *DropBox_GetDiskQuota(char *RetStr, TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL;
     PARSER *P;
@@ -272,7 +272,7 @@ char *DropBox_GetDiskQuota(char *RetStr, TFileStore *FS, const char *Path)
 }
 
 
-char *DropBox_GetSharedLink(char *RetStr, TFileStore *FS, const char *Path)
+static char *DropBox_GetSharedLink(char *RetStr, TFileStore *FS, const char *Path)
 {
     char *URL=NULL, *Tempstr=NULL;
     PARSER *P;
@@ -294,7 +294,7 @@ char *DropBox_GetSharedLink(char *RetStr, TFileStore *FS, const char *Path)
 }
 
 
-char *DropBox_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+static char *DropBox_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
     RetStr=CopyStr(RetStr, "");
     if (strcmp(ValName, "DiskQuota")==0) RetStr=DropBox_GetDiskQuota(RetStr, FS, Path);
@@ -337,7 +337,7 @@ static OAUTH *DropBox_OAuth(TFileStore *FS, OAUTH *Ctx, int Force)
 
 
 
-int DropBox_Connect(TFileStore *FS)
+static int DropBox_Connect(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     char *ptr;

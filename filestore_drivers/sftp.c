@@ -1,9 +1,9 @@
 #include "sftp.h"
-#include "fileitem.h"
-#include "ui.h"
-#include "errors_and_logging.h"
-#include "settings.h"
-#include "password.h"
+#include "../fileitem.h"
+#include "../ui.h"
+#include "../errors_and_logging.h"
+#include "../settings.h"
+#include "../password.h"
 
 #define SFTP_TRY_AGAIN -1
 #define SFT_DISCONNECTED -2
@@ -90,7 +90,7 @@ typedef struct
 
 int pkt_id=0;
 
-TPacket *SFTP_PacketCreate()
+static TPacket *SFTP_PacketCreate()
 {
     TPacket *Packet;
 
@@ -99,7 +99,7 @@ TPacket *SFTP_PacketCreate()
     return(Packet);
 }
 
-void SFTP_PacketDestroy(TPacket *Packet)
+static void SFTP_PacketDestroy(TPacket *Packet)
 {
     Destroy(Packet->Handle);
     Destroy(Packet->data);
@@ -163,7 +163,7 @@ static int SFTP_SendString(STREAM *S, const char *Str)
 
 
 
-const char *SFTP_ExtractString(const char *Buffer, int *len, char **Str)
+static const char *SFTP_ExtractString(const char *Buffer, int *len, char **Str)
 {
     const char *ptr;
 
@@ -186,7 +186,7 @@ const char *SFTP_ExtractString(const char *Buffer, int *len, char **Str)
 #define SSH_FILEXFER_ATTR_EXTENDED      0x80000000
 
 
-const char *SFTP_ExtractFileAttr(const char *Input, TFileItem *FI)
+static const char *SFTP_ExtractFileAttr(const char *Input, TFileItem *FI)
 {
     const char *ptr;
     uint32_t flags, len, count;
@@ -332,7 +332,7 @@ static int SFTP_ReadPacket(TFileStore *FS, STREAM *S, TPacket *Packet)
         valint=*(uint32_t *) ptr;
         ptr+=sizeof(uint32_t);
         Tempstr=FormatStr(Tempstr, "%d", htonl(valint));
-        SetVar(Packet->Values, "version", Tempstr);
+        SetVar(FS->Vars, "ProtocolVersion", Tempstr);
         while (ptr)
         {
             ptr=SFTP_ExtractString(ptr, &len, &Tempstr);
@@ -463,8 +463,13 @@ static int SFTP_ReadDirectoryPacket(STREAM *S, ListNode *FileList)
             ptr=SFTP_ExtractString(ptr, &len, &FI->path);
             FI->name=CopyStr(FI->name, FI->path);
             ptr=SFTP_ExtractString(ptr, &len, &Tempstr);
-            ListAddNamedItem(FileList, FI->name, FI);
             ptr=SFTP_ExtractFileAttr(ptr, FI);
+
+            if (
+                (strcmp(FI->name, ".") !=0) &&
+                (strcmp(FI->name, "..") !=0)
+            ) ListAddNamedItem(FileList, FI->name, FI);
+            else FileItemDestroy(FI);
         }
         RetVal=TRUE;
         break;
@@ -660,7 +665,7 @@ static char *SFTP_RealPath(char *RetStr, const char *Target, STREAM *S)
 
 
 //doesn't really chdir, but checks if a directory exists
-int SFTP_ChDir(TFileStore *FS, const char *Path)
+static int SFTP_ChDir(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -828,7 +833,7 @@ static int SFTP_CloseHandle(TFileStore *FS, STREAM *S, const char *Handle)
 }
 
 
-int SFTP_CloseFile(TFileStore *FS, STREAM *S)
+static int SFTP_CloseFile(TFileStore *FS, STREAM *S)
 {
     const char *p_handle;
 
@@ -1019,7 +1024,7 @@ static STREAM *SFTP_Launch(TFileStore *FS)
         }
         else FS->CurrDir=SFTP_RealPath(FS->CurrDir, ".", S);
     }
-    else HandleEvent(FS, 0, "SFTP connect failed.", FS->URL, "");
+    else HandleEvent(FS, 0, "$(filestore): SFTP connect failed.", FS->URL, "");
 
 
     Destroy(Tempstr);
@@ -1029,14 +1034,16 @@ static STREAM *SFTP_Launch(TFileStore *FS)
 }
 
 
-int SFTP_Connect(TFileStore *FS)
+static int SFTP_Connect(TFileStore *FS)
 {
     STREAM *S;
 
     S=SFTP_Launch(FS);
     if (! S) return(FALSE);
-
     FS->S=S;
+
+    FileStoreGetTimeFromFile(FS);
+
     return(TRUE);
 }
 

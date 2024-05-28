@@ -1,12 +1,12 @@
 #include "filestore.h"
 #include "fileitem.h"
-#include "filestore_drivers.h"
 #include "filestore_dirlist.h"
 #include "saved_filestores.h"
 #include "settings.h"
 #include "errors_and_logging.h"
 #include "ui.h"
 #include <fnmatch.h>
+#include "filestore_drivers/filestore_drivers.h"
 
 
 
@@ -543,7 +543,12 @@ void FileStoreGetTimeFromFile(TFileStore *FS)
     STREAM *S;
     ListNode *Curr;
     TFileItem *FI;
+    char *Tempstr=NULL;
+		int StoredFlags;
 
+		//suppress errors while we are doing these 'automatic' tests and transfers
+		StoredFlags=Settings->Flags;
+		Settings->Flags |= SETTING_NOERROR;
     S=FS->OpenFile(FS, ".fileferry.timetest", "w", 0);
     if (S)
     {
@@ -558,7 +563,20 @@ void FileStoreGetTimeFromFile(TFileStore *FS)
             FI=(TFileItem *) Curr->Item;
             FS->TimeOffset=time(NULL) - FI->mtime;
         }
+
+        if (FS->GetValue)
+        {
+            Tempstr=FS->GetValue(Tempstr, FS,  ".fileferry.timetest", "md5");
+            if (StrValid(Tempstr)) SetVar(FS->Vars, "HashTypes", "md5");
+            Tempstr=FS->GetValue(Tempstr, FS,  ".fileferry.timetest", "sha");
+            if (StrValid(Tempstr)) SetVar(FS->Vars, "HashTypes", "sha");
+            Tempstr=FS->GetValue(Tempstr, FS,  ".fileferry.timetest", "sha256");
+            if (StrValid(Tempstr)) SetVar(FS->Vars, "HashTypes", "sha256");
+        }
     }
+		Settings->Flags=StoredFlags;
+
+    Destroy(Tempstr);
 }
 
 
@@ -697,6 +715,8 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
 
 void FileStoreOutputSupportedFeatures(TFileStore *FS)
 {
+    const char *ptr;
+
     if (! FS->Flags & FILESTORE_FOLDERS) UI_Output(0, "This filestore does not support directories/folders");
     if (FS->Flags & FILESTORE_SHARELINK) UI_Output(0, "This filestore supports link sharing via the 'share' command");
     if (FS->Flags & FILESTORE_USAGE) UI_Output(0, "This filestore supports disk-usage/quota reporting via the 'info usage' command");
@@ -705,6 +725,8 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS)
     if (! FS->UnlinkPath) UI_Output(0, "This filestore does NOT support deleting files");
     if (! FS->RenamePath) UI_Output(0, "This filestore does NOT support moving/renaming files");
     if (! FS->MkDir) UI_Output(0, "This filestore does NOT support folders/directories");
+    ptr=GetVar(FS->Vars, "HashTypes");
+    if (StrValid(ptr)) UI_Output(0, "This filestore supports checksum/hashing using %s", ptr);
     if (StrValid(FS->Features)) UI_Output(0, "Protocol Supported Features: %s", FS->Features);
 }
 
@@ -736,8 +758,9 @@ TFileStore *FileStoreConnect(const char *Config)
                 {
                     FS->Flags |= FILESTORE_CONNECTED;
                     if (StrValid(Path)) FileStoreChDir(FS, Path);
-                    //if ((FS->TimeOffset==0) && (strcmp(Proto, "local file") !=0) ) FileStoreGetTimeFromFile(FS);
+
                     FileStoreOutputSupportedFeatures(FS);
+                    if (StrValid(GetVar(FS->Vars, "ProtocolVersion"))) UI_Output(0, "Protocol Version: %s", GetVar(FS->Vars, "ProtocolVersion"));
                     if (StrValid(GetVar(FS->Vars, "SSL:CipherDetails"))) FileStoreOutputCipherDetails(FS, UI_OUTPUT_VERBOSE);
                     if (StrValid(GetVar(FS->Vars, "ServerBanner"))) UI_Output(0, "%s", GetVar(FS->Vars, "ServerBanner"));
 

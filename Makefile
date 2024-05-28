@@ -1,5 +1,5 @@
-OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_drivers.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o ls_decode.o html.o rss.o webdav.o localdisk.o inet_protocols.o ftp.o sftp.o http.o pop3.o gdrive.o dropbox.o filesanywhere.o gofile.o filebin.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o
-BUILTIN=-DFILESTORE_BUILTIN_SFTP -DFILESTORE_BUILTIN_HTTP -DFILESTORE_BUILTIN_FTP -DFILESTORE_BUILTIN_POP3 -DFILESTORE_BUILTIN_GDRIVE -DFILESTORE_BUILTIN_DROPBOX -DFILESTORE_BUILTIN_GOFILE -DFILESTORE_BUILTIN_FILEBIN -DFILESTORE_BUILTIN_FILESANYWHERE
+OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o html.o rss.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o filestore_drivers/fileferry_builtin_drivers.a
+BUILTIN=-DFILESTORE_BUILTIN_SFTP -DFILESTORE_BUILTIN_HTTP -DFILESTORE_BUILTIN_FTP -DFILESTORE_BUILTIN_POP3 -DFILESTORE_BUILTIN_GDRIVE -DFILESTORE_BUILTIN_DROPBOX -DFILESTORE_BUILTIN_GOFILE -DFILESTORE_BUILTIN_FILEBIN -DFILESTORE_BUILTIN_FILESANYWHERE -DFILESTORE_BUILTIN_SYNOLOGY
 FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_VERSION=2.0 $(BUILTIN) 
 PREFIX=/usr/local
 LIBS=-lUseful-5 -lcap -lssl -lcrypto -lz 
@@ -10,6 +10,9 @@ all: $(OBJ) main.c $(STATIC_LIBUSEFUL)
 
 libUseful-5/libUseful.a:
 	make -C libUseful-5
+
+filestore_drivers/fileferry_builtin_drivers.a:
+	make -C filestore_drivers
 
 common.o: common.h common.c
 	gcc $(FLAGS) -c common.c
@@ -53,10 +56,6 @@ filestore.o: filestore.h filestore.c
 filestore_dirlist.o: filestore_dirlist.h filestore_dirlist.c filestore.h
 	gcc $(FLAGS) -c filestore_dirlist.c
 
-
-filestore_drivers.o: filestore_drivers.h filestore_drivers.c
-	gcc $(FLAGS) -c filestore_drivers.c
-
 filestore_index.o: filestore_index.h filestore_index.c
 	gcc $(FLAGS) -c filestore_index.c
 
@@ -78,11 +77,29 @@ filecache.o: filecache.h filecache.c
 inet_protocols.o: inet_protocols.h inet_protocols.c
 	gcc $(FLAGS) -c inet_protocols.c
 
+image_display.o: image_display.h image_display.c
+	gcc $(FLAGS) -c image_display.c
+
+encrypt.o: encrypt.h encrypt.c
+	gcc $(FLAGS) -c encrypt.c
+
+password.o: password.h password.c
+	gcc $(FLAGS) -c password.c
+
+errors_and_logging.o: errors_and_logging.h errors_and_logging.c
+	gcc $(FLAGS) -c errors_and_logging.c
+
 sftp.o: sftp.h sftp.c
 	gcc $(FLAGS) -c sftp.c
 
 ftp.o: ftp.h ftp.c
 	gcc $(FLAGS) -c ftp.c
+
+http.o: http.h http.c
+	gcc $(FLAGS) -c http.c
+
+webdav.o: webdav.h webdav.c
+	gcc $(FLAGS) -c webdav.c
 
 pop3.o: pop3.h pop3.c
 	gcc $(FLAGS) -c pop3.c
@@ -102,27 +119,12 @@ gofile.o: gofile.h gofile.c
 filebin.o: filebin.h filebin.c
 	gcc $(FLAGS) -c filebin.c
 
-http.o: http.h http.c
-	gcc $(FLAGS) -c http.c
-
-webdav.o: webdav.h webdav.c
-	gcc $(FLAGS) -c webdav.c
-
-image_display.o: image_display.h image_display.c
-	gcc $(FLAGS) -c image_display.c
-
-encrypt.o: encrypt.h encrypt.c
-	gcc $(FLAGS) -c encrypt.c
-
-password.o: password.h password.c
-	gcc $(FLAGS) -c password.c
-
-errors_and_logging.o: errors_and_logging.h errors_and_logging.c
-	gcc $(FLAGS) -c errors_and_logging.c
+synology.o: synology.h synology.c
+	gcc $(FLAGS) -c synology.c
 
 
 install:
 	cp fileferry $(PREFIX)/bin
 
 clean:
-	rm *.o */*.o */*.a */*.so *.orig fileferry
+	rm *.orig *.o */*.o */*.a */*.so */*.orig fileferry

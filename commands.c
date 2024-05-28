@@ -78,11 +78,13 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     else if (strcmp(Switch, "-newer")==0)
     {
         CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+				if (! StrValid(Token)) Token=CopyStr(Token, "?");
         SetVar(Cmd->Vars, "Time:Newer", Token);
     }
     else if (strcmp(Switch, "-older")==0)
     {
         CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+				if (! StrValid(Token)) Token=CopyStr(Token, "?");
         SetVar(Cmd->Vars, "Time:Older", Token);
     }
     else if (strcmp(Switch, "-mtime")==0)
@@ -135,9 +137,11 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         break;
 
     case CMD_SHOW:
-        if (strcmp(Switch, "-img")==0) Cmd->Flags |= CMD_FLAG_IMG;
+				//special case where sixel can be set at the session-wide level
         if (Settings->Flags & SETTING_SIXEL) Cmd->Flags |= CMD_FLAG_SIXEL;
-        if (strcmp(Switch, "-sixel")==0) Cmd->Flags |= CMD_FLAG_SIXEL;
+
+        if (strcmp(Switch, "-img")==0) Cmd->Flags |= CMD_FLAG_IMG;
+        else if (strcmp(Switch, "-sixel")==0) Cmd->Flags |= CMD_FLAG_SIXEL;
         break;
 
     case CMD_PUT:
@@ -270,9 +274,13 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "crc")==0) Cmd=CMD_CRC;
     else if (strcmp(Str, "lcrc")==0) Cmd=CMD_LCRC;
     else if (strcmp(Str, "md5")==0) Cmd=CMD_MD5;
+    else if (strcmp(Str, "md5sum")==0) Cmd=CMD_MD5;
     else if (strcmp(Str, "lmd5")==0) Cmd=CMD_LMD5;
+    else if (strcmp(Str, "lmd5sum")==0) Cmd=CMD_LMD5;
     else if (strcmp(Str, "sha1")==0) Cmd=CMD_SHA1;
+    else if (strcmp(Str, "sha1sum")==0) Cmd=CMD_SHA1;
     else if (strcmp(Str, "lsha1")==0) Cmd=CMD_LSHA1;
+    else if (strcmp(Str, "lsha1sum")==0) Cmd=CMD_LSHA1;
     else if (strcmp(Str, "info")==0) Cmd=CMD_INFO;
     else if (strcmp(Str, "exists")==0) Cmd=CMD_EXISTS;
     else if (strcmp(Str, "lock")==0) Cmd=CMD_LOCK;
@@ -283,6 +291,7 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "password")==0) Cmd=CMD_CHPASSWORD;
     else if (strcmp(Str, "chpasswd")==0) Cmd=CMD_CHPASSWORD;
     else if (strcmp(Str, "passwd")==0) Cmd=CMD_CHPASSWORD;
+    else if (strcmp(Str, "diff")==0) Cmd=CMD_DIFF;
     else if (strcmp(Str, "set")==0) Cmd=CMD_SET;
     else if (strcmp(Str, "help")==0) Cmd=CMD_HELP;
     else if (strcmp(Str, "quit")==0) Cmd=CMD_QUIT;
@@ -316,6 +325,10 @@ TCommand *CommandParse(const char *Str)
         ptr=GetToken(ptr, "\\S", &Token, 0);
         if (! StrValid(Token)) UI_ShowSettings();
         else SettingChange(Token, ptr);
+        break;
+
+    case CMD_NONE:
+        HandleEvent(NULL, UI_OUTPUT_ERROR, "unrecognized command: $(path)", Token, "");
         break;
 
 
@@ -430,6 +443,145 @@ int CommandGlobAndProcess(TFileStore *FS, int CmdType, TCommand *Cmd, void *Func
     FileStoreDirListFree(FS, DirList);
 
     return(result);
+}
+
+
+
+static void CommandGetValueGlob(TFileStore *FS, const char *ValueName, TCommand *Cmd)
+{
+    ListNode *DirList, *Curr;
+    char *Tempstr=NULL;
+    TFileItem *FI;
+
+    if (FS->GetValue)
+    {
+        DirList=FileStoreGlob(FS, Cmd->Target);
+        Curr=ListGetNext(DirList);
+        if (! Curr) UI_Output(UI_OUTPUT_ERROR, "No files matching '%s'", Cmd->Target);
+
+        while (Curr)
+        {
+            FI=(TFileItem *) Curr->Item;
+            if (FileIncluded(Cmd, FI, FS, FS))
+            {
+                Tempstr=FS->GetValue(Tempstr, FS, FI->path, ValueName);
+                printf("%s 	%s\n", Tempstr, FI->name);
+            }
+            Curr=ListGetNext(Curr);
+        }
+
+        FileStoreDirListFree(FS, DirList);
+    }
+
+    Destroy(Tempstr);
+}
+
+
+
+int CommandHashCompare(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath)
+{
+char *Token=NULL, *RemoteHash=NULL, *LocalHash=NULL;
+const char *ptr;
+int result=TRUE;
+
+ptr=GetVar(RemoteFS->Vars, "HashTypes");
+if (! StrValid(ptr)) return(TRUE);
+
+ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
+while (ptr)
+{
+if (RemoteFS->GetValue)
+{
+  LocalHash=LocalFS->GetValue(LocalHash, LocalFS, LocalPath, Token);
+  RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemotePath, Token);
+
+	if (strcasecmp(RemoteHash, LocalHash) != 0) result=FALSE;
+	break;
+}
+ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
+}
+
+Destroy(RemoteHash);
+Destroy(LocalHash);
+Destroy(Token);
+
+return(result);
+}
+
+
+void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
+{
+    ListNode *LocalDir, *RemoteDir, *Curr, *Node;
+    TFileItem *LocalItem, *RemoteItem;
+		char *RemoteTime=NULL, *LocalTime=NULL;
+		int diff=0, match=0;
+
+    LocalDir=FileStoreGlob(LocalFS, Cmd->Target);
+    RemoteDir=FileStoreGlob(RemoteFS, Cmd->Target);
+
+    Curr=ListGetNext(LocalDir);
+    while (Curr)
+    {
+        LocalItem=(TFileItem *) Curr->Item;
+        Node=ListFindNamedItem(RemoteDir, Curr->Tag);
+        if (Node)
+        {
+            RemoteItem=(TFileItem *) Node->Item;
+
+						LocalTime=CopyStr(LocalTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", LocalItem->mtime, NULL));
+						RemoteTime=CopyStr(RemoteTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", RemoteItem->mtime, NULL));
+            if (LocalItem->size != RemoteItem->size) 
+						{
+								printf("%-30s   size difference   local:%llu    remote:%llu\n", Curr->Tag, LocalItem->size, RemoteItem->size);
+								diff++;
+						}
+						else if (StrValid(GetVar(Cmd->Vars, "Time:Newer")) && (LocalItem->mtime < RemoteItem->mtime))
+						{
+								printf("%-30s   remote newer      local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
+								diff++;
+						}
+						else if (StrValid(GetVar(Cmd->Vars, "Time:Older")) && (LocalItem->mtime > RemoteItem->mtime))
+						{
+								printf("%-30s   local newer       local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
+								diff++;
+						}
+						else if (! CommandHashCompare(LocalFS, RemoteFS, LocalItem->path, RemoteItem->path))
+						{
+								printf("%-30s   hash difference\n", Curr->Tag);
+								diff++;
+						}
+						else 
+						{
+							if (Cmd->Flags & CMD_FLAG_ALL) printf("%-30s   match\n", Curr->Tag);
+							match++;	
+						}
+        }
+        else 
+				{
+					printf("%-30s   local only\n", Curr->Tag);
+					diff++;
+				}
+        Curr=ListGetNext(Curr);
+    }
+
+    Curr=ListGetNext(RemoteDir);
+    while (Curr)
+    {
+        RemoteItem=(TFileItem *) Curr->Item;
+        Node=ListFindNamedItem(LocalDir, Curr->Tag);
+        if (! Node)
+				{
+					printf("%s   remote only\n", Curr->Tag);
+					diff++;
+				}
+        Curr=ListGetNext(Curr);
+    }
+
+printf("%d items differ %d items match\n", diff, match);
+
+
+Destroy(RemoteTime);
+Destroy(LocalTime);
 }
 
 
@@ -589,67 +741,39 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         break;
 
     case CMD_CRC:
-        if (RemoteFS->GetValue)
-        {
-            Tempstr=RemoteFS->GetValue(Tempstr, RemoteFS, Cmd->Target, "crc");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(RemoteFS, "crc", Cmd);
         break;
 
     case CMD_MD5:
-        if (RemoteFS->GetValue)
-        {
-            Tempstr=RemoteFS->GetValue(Tempstr, RemoteFS, Cmd->Target, "md5");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(RemoteFS, "md5", Cmd);
         break;
 
     case CMD_SHA1:
-        if (RemoteFS->GetValue)
-        {
-            Tempstr=RemoteFS->GetValue(Tempstr, RemoteFS, Cmd->Target, "sha1");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(RemoteFS, "sha1", Cmd);
         break;
 
     case CMD_SHA256:
-        if (RemoteFS->GetValue)
-        {
-            Tempstr=RemoteFS->GetValue(Tempstr, RemoteFS, Cmd->Target, "sha256");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(RemoteFS, "sha256", Cmd);
         break;
 
     case CMD_LCRC:
-        if (LocalFS->GetValue)
-        {
-            Tempstr=LocalFS->GetValue(Tempstr, LocalFS, Cmd->Target, "crc");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(LocalFS, "crc", Cmd);
         break;
 
     case CMD_LMD5:
-        if (LocalFS->GetValue)
-        {
-            Tempstr=LocalFS->GetValue(Tempstr, LocalFS, Cmd->Target, "md5");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(LocalFS, "md5", Cmd);
         break;
 
     case CMD_LSHA1:
-        if (LocalFS->GetValue)
-        {
-            Tempstr=LocalFS->GetValue(Tempstr, LocalFS, Cmd->Target, "sha1");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(LocalFS, "sha1", Cmd);
         break;
 
     case CMD_LSHA256:
-        if (LocalFS->GetValue)
-        {
-            Tempstr=LocalFS->GetValue(Tempstr, LocalFS, Cmd->Target, "sha256");
-            printf("%s\n", Tempstr);
-        }
+        CommandGetValueGlob(LocalFS, "sha256", Cmd);
+        break;
+
+    case CMD_DIFF:
+        CommandDiff(Cmd, LocalFS, RemoteFS);
         break;
     }
 

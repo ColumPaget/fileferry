@@ -1,12 +1,12 @@
 #include "common.h"
 #include "fileitem.h"
 #include "filestore.h"
-#include "filestore_drivers.h"
 #include "ui.h"
 #include "settings.h"
 #include "commands.h"
 #include "errors_and_logging.h"
 #include "proc.h"
+#include "filestore_drivers/filestore_drivers.h"
 
 void SigHandler(int Sig)
 {

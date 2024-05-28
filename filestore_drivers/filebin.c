@@ -1,7 +1,7 @@
 #include "filebin.h"
-#include "ui.h"
+#include "../ui.h"
 
-char *FileBin_BinName(char *RetStr, TFileStore *FS)
+static char *FileBin_BinName(char *RetStr, TFileStore *FS)
 {
     char *Tempstr=NULL;
     const char *ptr;
@@ -85,7 +85,7 @@ static void FileBin_ParseItem(ListNode *Items, const char *JSON)
 }
 
 
-ListNode *FileBin_ListDir(TFileStore *FS, const char *Path)
+static ListNode *FileBin_ListDir(TFileStore *FS, const char *Path)
 {
     ListNode *Items;
     char *URL=NULL, *Tempstr=NULL;
@@ -115,7 +115,7 @@ ListNode *FileBin_ListDir(TFileStore *FS, const char *Path)
 }
 
 
-int FileBin_Info(TFileStore *FS)
+static int FileBin_Info(TFileStore *FS)
 {
     char *Tempstr=NULL;
     PARSER *P;
@@ -150,7 +150,7 @@ int FileBin_Info(TFileStore *FS)
 }
 
 
-STREAM *FileBin_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *FileBin_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     char *URL=NULL, *Tempstr=NULL;
     const char *ptr;
@@ -171,7 +171,7 @@ STREAM *FileBin_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags
 }
 
 
-int FileBin_CloseFile(TFileStore *FS, STREAM *S)
+static int FileBin_CloseFile(TFileStore *FS, STREAM *S)
 {
     char *Tempstr=NULL;
 
@@ -186,18 +186,18 @@ int FileBin_CloseFile(TFileStore *FS, STREAM *S)
 }
 
 
-int FileBin_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int FileBin_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMReadBytes(S, Buffer, len));
 }
 
-int FileBin_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int FileBin_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMWriteBytes(S, Buffer, len));
 }
 
 
-int FileBin_Unlink(TFileStore *FS, const char *Path)
+static int FileBin_Unlink(TFileStore *FS, const char *Path)
 {
     char *URL=NULL, *Tempstr=NULL;
     const char *ptr;
@@ -230,7 +230,7 @@ int FileBin_Unlink(TFileStore *FS, const char *Path)
 }
 
 
-int FileBin_Freeze(TFileStore *FS, const char *Path)
+static int FileBin_Freeze(TFileStore *FS, const char *Path)
 {
     char *URL=NULL, *Tempstr=NULL;
     const char *ptr;
@@ -264,7 +264,7 @@ int FileBin_Freeze(TFileStore *FS, const char *Path)
 
 
 
-char *FileBin_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+static char *FileBin_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
     int total, avail, used;
 
@@ -274,7 +274,7 @@ char *FileBin_GetValue(char *RetStr, TFileStore *FS, const char *Path, const cha
 }
 
 
-int FileBin_Connect(TFileStore *FS)
+static int FileBin_Connect(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     int RetVal=FALSE;

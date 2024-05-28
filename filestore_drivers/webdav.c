@@ -1,7 +1,7 @@
 #include "webdav.h"
 #include "http.h"
-#include "fileitem.h"
-#include "ui.h"
+#include "../fileitem.h"
+#include "../ui.h"
 
 #define PROPFIND_XML "<?xml version=\"1.0\" encoding=\"utf-8\" ?> <D:propfind xmlns:D=\"DAV:\" > <D:prop> <D:getcontentlength/> <D:resourcetype/> <D:iscollection/> <D:creationdate/> <D:getlastmodified/> <executable xmlns=\"http://apache.org/dav/props/\"/> <md5-checksum xmlns=\"http://subversion.tigris.org/xmlns/dav/\"/> </D:prop> </D:propfind>"
 
@@ -75,7 +75,6 @@ const char *HTTP_Webdav_Parse_Propfind(const char *XML, TFileStore *FS, ListNode
 
     if (StrValid(FI->name))
     {
-        //printf("CMP: [%s] [%s]\n", FS->CurrDir, FI->path);
         if (strcmp(FS->CurrDir, FI->path) !=0) ListAddNamedItem(FileList, FI->name, FI);
     }
 
@@ -97,14 +96,14 @@ int Webdav_ListDir(TFileStore *FS, const char *URL, ListNode *FileList)
     STREAM *S;
 
 
-    S=HTTPOpenURL(FS, "PROPFIND", URL, "", "application/xml", StrLen(PROPFIND_XML), 1);
+    S=HTTP_OpenURL(FS, "PROPFIND", URL, "", "application/xml", StrLen(PROPFIND_XML), 1);
     if (S)
     {
         STREAMWriteLine(PROPFIND_XML, S);
         UI_Output(UI_OUTPUT_DEBUG, "%s", PROPFIND_XML);
         if (STREAMCommit(S))
         {
-            RetVal=HTTPCheckResponseCode(S);
+            RetVal=HTTP_CheckResponseCode(S);
             Tempstr=STREAMReadDocument(Tempstr, S);
 
             UI_Output(UI_OUTPUT_DEBUG, "%s", Tempstr);
@@ -152,14 +151,14 @@ char *WebDav_GetQuota(char *RetStr, TFileStore *FS)
                 "</D:propfind>");
 
     //ask for props of root directory
-    S=HTTPOpenURL(FS, "PROPFIND", "", "", "application/xml", StrLen(XML), 0);
+    S=HTTP_OpenURL(FS, "PROPFIND", "", "", "application/xml", StrLen(XML), 0);
     if (S)
     {
         STREAMWriteLine(XML, S);
         UI_Output(UI_OUTPUT_DEBUG, "%s", XML);
         STREAMCommit(S);
 
-        result=HTTPCheckResponseCode(S);
+        result=HTTP_CheckResponseCode(S);
 
         Tempstr=STREAMReadDocument(Tempstr, S);
 
@@ -207,6 +206,8 @@ char *WebDav_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char
     RetStr=CopyStr(RetStr, "");
 
     if (strcasecmp(ValName, "DiskQuota")==0) RetStr=WebDav_GetQuota(RetStr, FS);
-
+    if (strcasecmp(ValName, "md5")==0) RetStr=HTTP_GetValue(RetStr, FS, Path, ValName);
+    if (strcasecmp(ValName, "sha")==0) RetStr=HTTP_GetValue(RetStr, FS, Path, ValName);
+    if (strcasecmp(ValName, "sha256")==0) RetStr=HTTP_GetValue(RetStr, FS, Path, ValName);
     return(RetStr);
 }

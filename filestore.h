@@ -111,5 +111,6 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS);
 void FileStoreRecordCipherDetails(TFileStore *FS, STREAM *S);
 void FileStoreOutputCipherDetails(TFileStore *FS, int Verbosity);
 
+void FileStoreGetTimeFromFile(TFileStore *FS);
 
 #endif

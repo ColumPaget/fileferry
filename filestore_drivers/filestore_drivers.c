@@ -40,6 +40,10 @@ static ListNode *Drivers=NULL;
 #include "filesanywhere.h"
 #endif
 
+#ifdef FILESTORE_BUILTIN_SYNOLOGY
+#include "synology.h"
+#endif
+
 
 
 void FileStoreDriversInit()
@@ -83,6 +87,10 @@ void FileStoreDriversInit()
 
 #ifdef FILESTORE_BUILTIN_FILESANYWHERE
     FileStoreDriverAdd("faw", "FilesAnywhere", "FilesAnywhere v2 API. https://filesanywhere.com ", FilesAnywhere_Attach);
+#endif
+
+#ifdef FILESTORE_BUILTIN_SYNOLOGY
+    FileStoreDriverAdd("syno", "SynologyNAS", "Synology NAS API.", SYNO_Attach);
 #endif
 
 

@@ -60,6 +60,7 @@ void HelpCommandList()
     printf("lsha1 <path>         print sha1 hash for file at <path> on local host\n");
     printf("sha256 <path>        print sha256 hash for file at <path> on remote host (only on services that support this)\n");
     printf("lsha256 <path>       print sha256 hash for file at <path> on local host\n");
+    printf("diff <pattern>       list files matching <pattern> that are different between local and remote directories\n");
 
 
 
@@ -348,6 +349,14 @@ void HelpCommand(const char *Command)
         printf("lsha256 <path>              generate SHA256 hash for file at <path> on localhost\n");
         break;
 
+    case CMD_DIFF:
+        printf("diff <pattern>              print files that differ between remote and local directories\n");
+        printf("    -a                      include non-differing files in listing\n");
+        printf("    -newer                  include files where the remote files are newer in the listing\n");
+        printf("    -older                  include files where the remote files are older in the listing\n");
+        break;
+
+
     case CMD_LOCK:
         printf("lock <path>                 lock a file for filestores that support this (currently only local disk)\n");
         printf("    -w                      wait to obtain lock, rather than giving up if file locked\n");
@@ -379,6 +388,7 @@ void HelpCommandLine()
     printf("  fileferry -add [name] [filestore url]      - add a filestore to saved filestores list\n");
     printf("  fileferry -filestores                      - print list of saved filestores\n");
     printf("  fileferry -drivers                         - print list of available filestore drivers\n");
+    printf("  fileferry -commands                        - print list of interactive commands\n");
     printf("options:\n");
     printf("  -v                                         - be verbose\n");
     printf("  -N                                         - batch mode, do not try to read any user input, even passwords\n");

@@ -1,7 +1,7 @@
 #include "gdrive.h"
-#include "filestore_index.h"
+#include "../filestore_index.h"
 
-int GoFile_Info(TFileStore *FS)
+static int GoFile_Info(TFileStore *FS)
 {
     char *Tempstr=NULL;
     PARSER *P;
@@ -60,7 +60,7 @@ int GoFile_Info(TFileStore *FS)
 }
 
 
-STREAM *GoFile_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *GoFile_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     char *URL=NULL, *Tempstr=NULL, *Boundary=NULL;
     char *Page=NULL;
@@ -89,7 +89,7 @@ STREAM *GoFile_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags,
 }
 
 
-int GoFile_CloseFile(TFileStore *FS, STREAM *S)
+static int GoFile_CloseFile(TFileStore *FS, STREAM *S)
 {
     char *Tempstr=NULL;
     PARSER *P;
@@ -119,18 +119,18 @@ int GoFile_CloseFile(TFileStore *FS, STREAM *S)
 }
 
 
-int GoFile_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int GoFile_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMReadBytes(S, Buffer, len));
 }
 
-int GoFile_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int GoFile_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMWriteBytes(S, Buffer, len));
 }
 
 
-int GoFile_Unlink(TFileStore *FS, const char *Path)
+static int GoFile_Unlink(TFileStore *FS, const char *Path)
 {
     int RetVal=FALSE;
 
@@ -138,7 +138,7 @@ int GoFile_Unlink(TFileStore *FS, const char *Path)
 }
 
 
-int GoFile_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
+static int GoFile_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
 {
     STREAM *S;
 
@@ -146,7 +146,7 @@ int GoFile_Rename(TFileStore *FS, const char *OldPath, const char *NewPath)
 }
 
 
-int GoFile_Copy(TFileStore *FS, const char *OldPath, const char *NewPath)
+static int GoFile_Copy(TFileStore *FS, const char *OldPath, const char *NewPath)
 {
 
     return(TRUE);
@@ -154,7 +154,7 @@ int GoFile_Copy(TFileStore *FS, const char *OldPath, const char *NewPath)
 
 
 
-int GoFile_MkDir(TFileStore *FS, const char *Path)
+static int GoFile_MkDir(TFileStore *FS, const char *Path)
 {
 
     return(TRUE);
@@ -162,7 +162,7 @@ int GoFile_MkDir(TFileStore *FS, const char *Path)
 
 
 
-ListNode *GoFile_ListDir(TFileStore *FS, const char *Path)
+static ListNode *GoFile_ListDir(TFileStore *FS, const char *Path)
 {
     ListNode *Items;
     char *Tempstr=NULL;
@@ -196,7 +196,7 @@ ListNode *GoFile_ListDir(TFileStore *FS, const char *Path)
 
 
 
-char *GoFile_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+static char *GoFile_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
     int total, avail, used;
 
@@ -213,7 +213,7 @@ char *GoFile_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char
 }
 
 
-int GoFile_Connect(TFileStore *FS)
+static int GoFile_Connect(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     char *ptr;

@@ -1,12 +1,12 @@
 #include "http.h"
-#include "fileitem.h"
-#include "ui.h"
 #include "webdav.h"
-#include "list_content_type.h"
-#include "errors_and_logging.h"
-#include "password.h"
+#include "../fileitem.h"
+#include "../ui.h"
+#include "../list_content_type.h"
+#include "../errors_and_logging.h"
+#include "../password.h"
 
-static char *HTTPSetConfig(char *RetStr, TFileStore *FS, const char *Method, int Depth, const char *ContentType, int ContentLength, const char *ExtraArgs)
+static char *HTTP_SetConfig(char *RetStr, TFileStore *FS, const char *Method, int Depth, const char *ContentType, int ContentLength, const char *ExtraArgs)
 {
     char *Tempstr=NULL;
 
@@ -34,12 +34,12 @@ static char *HTTPSetConfig(char *RetStr, TFileStore *FS, const char *Method, int
 }
 
 
-STREAM *HTTPOpenURL(TFileStore *FS, const char *Method, const char *URL, const char *ExtraArgs, const char *ContentType, int ContentSize, int DavDepth)
+STREAM *HTTP_OpenURL(TFileStore *FS, const char *Method, const char *URL, const char *ExtraArgs, const char *ContentType, int ContentSize, int DavDepth)
 {
     char *FullURL=NULL, *Args=NULL, *Tempstr=NULL;
     STREAM *S;
 
-    Args=HTTPSetConfig(Args, FS, Method, DavDepth, ContentType, ContentSize, ExtraArgs);
+    Args=HTTP_SetConfig(Args, FS, Method, DavDepth, ContentType, ContentSize, ExtraArgs);
     Tempstr=MCopyStr(Tempstr, Method, " ", URL, NULL);
     HandleEvent(FS, UI_OUTPUT_DEBUG, Tempstr, "", "");
 
@@ -61,7 +61,7 @@ STREAM *HTTPOpenURL(TFileStore *FS, const char *Method, const char *URL, const c
 }
 
 
-int HTTPCheckResponseCode(STREAM *S)
+int HTTP_CheckResponseCode(STREAM *S)
 {
     const char *ptr;
     int RetVal=FALSE, code;
@@ -101,28 +101,29 @@ int HTTPCheckResponseCode(STREAM *S)
 
 
 
-int HTTPBasicCommand(TFileStore *FS, const char *Target, const char *Method, const char *ExtraArgs)
+
+int HTTP_BasicCommand(TFileStore *FS, const char *Target, const char *Method, const char *ExtraArgs)
 {
     int RetVal=FALSE, i;
     char *Tempstr=NULL, *Args=NULL, *URL=NULL;
     const char *ptr;
     STREAM *S;
 
-    S=HTTPOpenURL(FS, Method, Target, ExtraArgs, "", 0, 0);
+    S=HTTP_OpenURL(FS, Method, Target, ExtraArgs, "", 0, 0);
     if (S)
     {
-        RetVal=HTTPCheckResponseCode(S);
+        RetVal=HTTP_CheckResponseCode(S);
         if (RetVal != TRUE)
         {
             Tempstr=MCopyStr(Tempstr, STREAMGetValue(S, "HTTP:ResponseCode"), " ", STREAMGetValue(S, "HTTP:ResponseReason"), NULL);
             HandleEvent(FS, RetVal, Tempstr, "", "");
         }
 
-        if (StrValid(STREAMGetValue(S, "HTTP:DAV"))) 
-				{
-								FS->Type=FILESTORE_WEBDAV;
-    						FS->GetValue=WebDav_GetValue;
-				}
+        if (StrValid(STREAMGetValue(S, "HTTP:DAV")))
+        {
+            FS->Type=FILESTORE_WEBDAV;
+            FS->GetValue=WebDav_GetValue;
+        }
 
         FileStoreRecordCipherDetails(FS, S);
 
@@ -140,32 +141,32 @@ int HTTPBasicCommand(TFileStore *FS, const char *Target, const char *Method, con
 }
 
 
-int HTTP_Unlink_Path(TFileStore *FS, const char *Target)
+static int HTTP_Unlink_Path(TFileStore *FS, const char *Target)
 {
     int result;
 
-    result=HTTPBasicCommand(FS, Target, "DELETE", "");
+    result=HTTP_BasicCommand(FS, Target, "DELETE", "");
     return(result);
 }
 
 
-int HTTP_MkDir(TFileStore *FS, const char *Path, int Mode)
+static int HTTP_MkDir(TFileStore *FS, const char *Path, int Mode)
 {
     int result;
 
-    result=HTTPBasicCommand(FS, Path, "MKCOL", "");
+    result=HTTP_BasicCommand(FS, Path, "MKCOL", "");
     return(result);
 }
 
 
-int HTTP_Rename_Path(TFileStore *FS, const char *Path, const char *NewPath)
+static int HTTP_Rename_Path(TFileStore *FS, const char *Path, const char *NewPath)
 {
     char *Tempstr=NULL, *URL=NULL;
     int result;
 
     URL=MCopyStr(URL, FS->URL, NewPath, NULL);
     Tempstr=MCopyStr(Tempstr, "Destination=", URL, " Depth=infinity", NULL);
-    result=HTTPBasicCommand(FS, Path, "MOVE", Tempstr);
+    result=HTTP_BasicCommand(FS, Path, "MOVE", Tempstr);
 
     Destroy(Tempstr);
     Destroy(URL);
@@ -174,13 +175,6 @@ int HTTP_Rename_Path(TFileStore *FS, const char *Path, const char *NewPath)
 }
 
 
-
-int IsDownloadableURL(const char *URL)
-{
-    if (*URL=='#') return(FALSE);
-    if (strncmp(URL, "javascript:", 11)==0) return(FALSE);
-    return(TRUE);
-}
 
 
 static int HTTP_Internal_ListDir(TFileStore *FS, const char *Dir, ListNode *FileList)
@@ -193,11 +187,11 @@ static int HTTP_Internal_ListDir(TFileStore *FS, const char *Dir, ListNode *File
     if (FS->Type==FILESTORE_WEBDAV) RetVal=Webdav_ListDir(FS, Dir, FileList);
     else
     {
-        S=HTTPOpenURL(FS, "GET", Dir, "", "", 0, 0);
+        S=HTTP_OpenURL(FS, "GET", Dir, "", "", 0, 0);
         if (S)
         {
             Tempstr=STREAMReadDocument(Tempstr, S);
-            RetVal=HTTPCheckResponseCode(S);
+            RetVal=HTTP_CheckResponseCode(S);
             if (RetVal==TRUE)
             {
                 ptr=STREAMGetValue(S, "HTTP:Content-Type");
@@ -215,7 +209,7 @@ static int HTTP_Internal_ListDir(TFileStore *FS, const char *Dir, ListNode *File
 
 
 
-ListNode *HTTP_ListDir(TFileStore *FS, const char *Dir)
+static ListNode *HTTP_ListDir(TFileStore *FS, const char *Dir)
 {
     ListNode *FileList;
 
@@ -226,7 +220,7 @@ ListNode *HTTP_ListDir(TFileStore *FS, const char *Dir)
 }
 
 
-STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     char *Tempstr=NULL, *Method=NULL, *Args=NULL;
     char *Name=NULL, *Value=NULL;
@@ -241,7 +235,7 @@ STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, u
         if (*ptr==' ') break;
     }
 
-    S=HTTPOpenURL(FS, Method, Path, "", "", Size, 0);
+    S=HTTP_OpenURL(FS, Method, Path, "", "", Size, 0);
     if (S)
     {
         if (strcmp(Method, "GET")==0)
@@ -263,7 +257,7 @@ STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, u
 }
 
 
-int HTTP_CloseFile(TFileStore *FS, STREAM *S)
+static int HTTP_CloseFile(TFileStore *FS, STREAM *S)
 {
     const char *ptr;
     int RetVal=TRUE;
@@ -276,7 +270,7 @@ int HTTP_CloseFile(TFileStore *FS, STREAM *S)
             STREAMWriteLine("\r\n", S);
             STREAMFlush(S);
             STREAMCommit(S);
-            if (HTTPCheckResponseCode(S) != TRUE) RetVal=FALSE;
+            if (HTTP_CheckResponseCode(S) != TRUE) RetVal=FALSE;
         }
         STREAMClose(S);
     }
@@ -285,13 +279,13 @@ int HTTP_CloseFile(TFileStore *FS, STREAM *S)
 }
 
 
-int HTTP_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int HTTP_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMReadBytes(S, Buffer, len));
 }
 
 
-int HTTP_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int HTTP_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMWriteBytes(S, Buffer, len));
 }
@@ -301,8 +295,8 @@ static int HTTP_OpenConnection(TFileStore *FS)
 {
     int result=FALSE;
 
-    result=HTTPBasicCommand(FS, "", "OPTIONS", "");
-    if ((result != TRUE) && (! StrValid(FS->User)) ) result=HTTPBasicCommand(FS, "", "GET", "");
+    result=HTTP_BasicCommand(FS, "", "OPTIONS", "");
+    if ((result != TRUE) && (! StrValid(FS->User)) ) result=HTTP_BasicCommand(FS, "", "GET", "");
     if (result == TRUE)
     {
         result=HTTP_Internal_ListDir(FS, "/", NULL);
@@ -314,7 +308,7 @@ static int HTTP_OpenConnection(TFileStore *FS)
 
 
 
-int HTTP_Connect(TFileStore *FS)
+static int HTTP_Connect(TFileStore *FS)
 {
     const char *ptr;
     int result, len;
@@ -328,10 +322,52 @@ int HTTP_Connect(TFileStore *FS)
     }
 
     if (result==TRUE) return(TRUE);
-    if (result == ERR_FORBID) HandleEvent(FS, 0, "(filestore): HTTP connect failed: Forbidden. ", FS->URL, "");
-    else HandleEvent(FS, 0, "(filestore): HTTP connect failed.", FS->URL, "");
+    if (result == ERR_FORBID) HandleEvent(FS, 0, "$(filestore): HTTP connect failed: Forbidden. ", FS->URL, "");
+    else HandleEvent(FS, 0, "$(filestore): HTTP connect failed.", FS->URL, "");
 
     return(FALSE);
+}
+
+
+char *HTTP_GetHash(char *RetStr, TFileStore *FS, const char *Path, const char *HashType)
+{
+    STREAM *S;
+    char *Tempstr=NULL;
+
+    RetStr=CopyStr(RetStr, "");
+    Tempstr=MCopyStr(Tempstr, "Want-digest=", HashType, " ", NULL);
+    Tempstr=MCatStr(Tempstr, "Want-content-digest=", HashType, " ", NULL);
+
+    S=HTTP_OpenURL(FS, "HEAD", Path, Tempstr, "", 0, 0);
+    if (S)
+    {
+        if (HTTP_CheckResponseCode(S))
+        {
+            printf("HTTP GH: %s %s\n", STREAMGetValue(S, "Content-Digest"), STREAMGetValue(S, "Digest"));
+            if (! StrValid(RetStr)) RetStr=CopyStr(RetStr, STREAMGetValue(S, "Content-Digest"));
+            if (! StrValid(RetStr)) RetStr=CopyStr(RetStr, STREAMGetValue(S, "Digest"));
+            if ( (! StrValid(RetStr)) && (strcmp(HashType, "md5")==0) ) RetStr=CopyStr(RetStr, STREAMGetValue(S, "HTTP:Content-MD5"));
+        }
+        STREAMClose(S);
+    }
+
+    Destroy(Tempstr);
+
+    return(RetStr);
+}
+
+
+char *HTTP_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+{
+    RetStr=CopyStr(RetStr, "");
+
+    printf("GV: %s\n", ValName);
+
+    if (strcasecmp(ValName, "md5")==0) RetStr=HTTP_GetHash(RetStr, FS, Path, "md5");
+    if (strcasecmp(ValName, "sha")==0) RetStr=HTTP_GetHash(RetStr, FS, Path, "sha");
+    if (strcasecmp(ValName, "sha256")==0) RetStr=HTTP_GetHash(RetStr, FS, Path, "sha-256");
+
+    return(RetStr);
 }
 
 
@@ -349,5 +385,6 @@ int HTTP_Attach(TFileStore *FS)
     FS->WriteBytes=HTTP_WriteBytes;
     FS->UnlinkPath=HTTP_Unlink_Path;
     FS->RenamePath=HTTP_Rename_Path;
+    FS->GetValue=HTTP_GetValue;
 //FS->CurrDir=HTTP_RealPath(FS->CurrDir, ".", S);
 }

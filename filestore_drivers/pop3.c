@@ -1,10 +1,10 @@
 #include "pop3.h"
 #include "inet_protocols.h"
-#include "errors_and_logging.h"
-#include "ui.h"
-#include "password.h"
+#include "../errors_and_logging.h"
+#include "../ui.h"
+#include "../password.h"
 
-void POP3_ReadFeatures(TFileStore *FS)
+static void POP3_ReadFeatures(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL, *Token=NULL, *FeatureList=NULL;
     const char *ptr;
@@ -40,7 +40,7 @@ void POP3_ReadFeatures(TFileStore *FS)
 }
 
 
-int POP3_Login(TFileStore *FS, int Try)
+static int POP3_Login(TFileStore *FS, int Try)
 {
     char *Tempstr=NULL, *Verbiage=NULL, *Token=NULL, *LoginBanner=NULL;
     const char *ptr, *p_Pass;
@@ -74,7 +74,7 @@ int POP3_Login(TFileStore *FS, int Try)
     return(result);
 }
 
-int POP3_UnlinkPath(TFileStore *FS, const char *Path)
+static int POP3_UnlinkPath(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     int RetVal=FALSE;
@@ -92,7 +92,7 @@ int POP3_UnlinkPath(TFileStore *FS, const char *Path)
     return(RetVal);
 }
 
-STREAM *POP3_OpenFile(TFileStore *FS, const char *Path, const char *OpenMode, uint64_t Size)
+static STREAM *POP3_OpenFile(TFileStore *FS, const char *Path, const char *OpenMode, uint64_t Size)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     STREAM *S=NULL;
@@ -109,7 +109,7 @@ STREAM *POP3_OpenFile(TFileStore *FS, const char *Path, const char *OpenMode, ui
     return(S);
 }
 
-int POP3_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t Offset, uint32_t Len)
+static int POP3_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t Offset, uint32_t Len)
 {
     char *Tempstr=NULL;
     int len=0;
@@ -128,7 +128,7 @@ int POP3_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t Offset, uin
 }
 
 
-int POP3_CloseFile(TFileStore *FS, STREAM *S)
+static int POP3_CloseFile(TFileStore *FS, STREAM *S)
 {
 //don't close anything! File is sent on the control channel!
     return(TRUE);
@@ -136,7 +136,7 @@ int POP3_CloseFile(TFileStore *FS, STREAM *S)
 
 
 
-TFileItem *POP3_ListDirReadItem(TFileStore *FS, int ItemNo)
+static TFileItem *POP3_ListDirReadItem(TFileStore *FS, int ItemNo)
 {
     char *Tempstr=NULL, *Data=NULL, *Token=NULL;
     int InHeaders;
@@ -192,7 +192,7 @@ TFileItem *POP3_ListDirReadItem(TFileStore *FS, int ItemNo)
 }
 
 
-ListNode *POP3_ListDir(TFileStore *FS, const char *Path)
+static ListNode *POP3_ListDir(TFileStore *FS, const char *Path)
 {
     int result, MLSD=FALSE;
     char *Tempstr=NULL, *Data=NULL;
@@ -219,7 +219,7 @@ ListNode *POP3_ListDir(TFileStore *FS, const char *Path)
 }
 
 
-int POP3_Connect(TFileStore *FS)
+static int POP3_Connect(TFileStore *FS)
 {
     char *Proto=NULL, *Host=NULL, *PortStr=NULL, *Path=NULL, *Tempstr=NULL, *Verbiage=NULL;
     char *ptr;
@@ -281,7 +281,7 @@ int POP3_Connect(TFileStore *FS)
 
 }
 
-int POP3_DisConnect(TFileStore *FS)
+static int POP3_DisConnect(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
 

@@ -1,12 +1,12 @@
 #include "localdisk.h"
-#include "filestore.h"
-#include "fileitem.h"
 #include "inet_protocols.h"
 #include "ls_decode.h"
-#include "ui.h"
-#include "password.h"
-#include "errors_and_logging.h"
-#include "settings.h"
+#include "../filestore.h"
+#include "../fileitem.h"
+#include "../ui.h"
+#include "../password.h"
+#include "../errors_and_logging.h"
+#include "../settings.h"
 
 
 //send a command and read the response
@@ -31,7 +31,7 @@ static int FTP_SendCommand(TFileStore *FS, const char *Command, char **Verbiage)
 }
 
 
-int FTP_HasFeature(TFileStore *FS, const char *Feature)
+static int FTP_HasFeature(TFileStore *FS, const char *Feature)
 {
     char *Token=NULL;
     const char *ptr;
@@ -146,7 +146,7 @@ static char *FTP_NegotiatePassiveDataConnection(char *RetStr, TFileStore *FS)
 
 
 
-TFileItem *FTP_FileInfo(TFileStore *FS, const char *Path)
+static TFileItem *FTP_FileInfo(TFileStore *FS, const char *Path)
 {
     TFileItem *Item;
 
@@ -159,7 +159,7 @@ TFileItem *FTP_FileInfo(TFileStore *FS, const char *Path)
 
 
 
-ListNode *FTP_ListDir(TFileStore *FS, const char *Path)
+static ListNode *FTP_ListDir(TFileStore *FS, const char *Path)
 {
     int result, MLSD=FALSE;
     char *Tempstr=NULL, *URL=NULL;
@@ -209,7 +209,9 @@ ListNode *FTP_ListDir(TFileStore *FS, const char *Path)
     return(Files);
 }
 
-const char *FTP_CurrDir(TFileStore *FS)
+
+
+static const char *FTP_CurrDir(TFileStore *FS)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     int result=FALSE;
@@ -231,7 +233,7 @@ const char *FTP_CurrDir(TFileStore *FS)
 
 
 
-int FTP_ChDir(TFileStore *FS, const char *Dir)
+static int FTP_ChDir(TFileStore *FS, const char *Dir)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     int result=FALSE;
@@ -254,7 +256,7 @@ int FTP_ChDir(TFileStore *FS, const char *Dir)
 }
 
 
-int FTP_MkDir(TFileStore *FS, const char *Dir, int Mkdir)
+static int FTP_MkDir(TFileStore *FS, const char *Dir, int Mkdir)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -271,7 +273,7 @@ int FTP_MkDir(TFileStore *FS, const char *Dir, int Mkdir)
 
 
 
-int FTP_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
+static int FTP_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
 {
     int result=FALSE;
     char *Tempstr=NULL, *Verbiage=NULL;
@@ -292,7 +294,7 @@ int FTP_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
 }
 
 
-int FTP_RmDir(TFileStore *FS, const char *Path)
+static int FTP_RmDir(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -308,7 +310,7 @@ int FTP_RmDir(TFileStore *FS, const char *Path)
 }
 
 
-int FTP_Unlink(TFileStore *FS, const char *Path)
+static int FTP_Unlink(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -326,7 +328,7 @@ int FTP_Unlink(TFileStore *FS, const char *Path)
 
 
 
-int FTP_Rename(TFileStore *FS, const char *FromPath, const char *ToPath)
+static int FTP_Rename(TFileStore *FS, const char *FromPath, const char *ToPath)
 {
     int result=FALSE;
     char *Tempstr=NULL, *Verbiage=NULL, *FileName=NULL;
@@ -371,23 +373,10 @@ int FTP_Rename(TFileStore *FS, const char *FromPath, const char *ToPath)
 }
 
 
-int FtpGetDigest(TFileStore *FS, char *Path, struct stat *FStat, char *Type, char **Digest)
-{
-    char *Tempstr=NULL;
-    int result=FALSE;
-
-    Tempstr=FormatStr(Tempstr,"X%s '%s'\r\n",Type,Path);
-    SendLoggedLine(Tempstr, FS, FS->S);
-
-    if (InetReadResponse(FS->S, FS, &Tempstr,Digest, INET_OKAY)) result=TRUE;
-
-    DestroyString(Tempstr);
-
-    return(result);
-}
 
 
-int FTP_ChMod(TFileStore *FS, const char *Path, int Mode)
+
+static int FTP_ChMod(TFileStore *FS, const char *Path, int Mode)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -397,13 +386,13 @@ int FTP_ChMod(TFileStore *FS, const char *Path, int Mode)
 
     if (InetReadResponse(FS->S, FS, &Tempstr,NULL, INET_OKAY)) result=TRUE;
 
-    DestroyString(Tempstr);
+    Destroy(Tempstr);
 
     return(result);
 }
 
 
-int FTP_ChPassword(TFileStore *FS, const char *Old, const char *New)
+static int FTP_ChPassword(TFileStore *FS, const char *Old, const char *New)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -413,31 +402,67 @@ int FTP_ChPassword(TFileStore *FS, const char *Old, const char *New)
 
     if (InetReadResponse(FS->S, FS, &Tempstr,NULL, INET_OKAY)) result=TRUE;
 
-    DestroyString(Tempstr);
+    Destroy(Tempstr);
 
     return(result);
 }
 
 
-
-char *FTP_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+static char *FTP_GetDiskUsage(char *RetStr, TFileStore *FS)
 {
-    char *Tempstr=NULL, *Verbiage=NULL;
     float total=0, avail=0, used=0;
+    char *Tempstr=NULL, *Verbiage=NULL;
+
+
+    if (FTP_HasFeature(FS, "AVBL") )
+    {
+        if (FTP_SendCommand(FS, "AVBL\r\n", &Verbiage))
+        {
+
+            GetToken(Verbiage, "\\S", &Tempstr, 0);
+            avail=atof(Tempstr);
+            RetStr=FormatStr(RetStr, "total=%f avail=%f used=%f", total, avail, used);
+        }
+    }
+
+    Destroy(Tempstr);
+    Destroy(Verbiage);
+
+    return(RetStr);
+}
+
+
+
+static char *FTP_GetHash(char *RetStr, TFileStore *FS, const char *Path, const char *Type)
+{
+    char *Tempstr=NULL, *Hash=NULL;
+
+    Tempstr=MCopyStr(Tempstr, "X", Type, " ", NULL);
+    strupr(Tempstr);
+    Tempstr=MCatStr(Tempstr,"\"", Path, "\"\r\n", NULL);
+    SendLoggedLine(Tempstr, FS, FS->S);
+
+    if (InetReadResponse(FS->S, FS, &Tempstr, &Hash, INET_OKAY)) RetStr=CopyStr(RetStr, Hash);
+
+    Destroy(Tempstr);
+    Destroy(Hash);
+
+    return(RetStr);
+}
+
+
+static char *FTP_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+{
 
     RetStr=CopyStr(RetStr, "");
     if (StrValid(ValName))
     {
-        if ( (strcasecmp(ValName, "DiskQuota")==0) && FTP_HasFeature(FS, "AVBL") )
-        {
-            if (FTP_SendCommand(FS, "AVBL\r\n", &Verbiage))
-            {
-
-                GetToken(Verbiage, "\\S", &Tempstr, 0);
-                avail=atof(Tempstr);
-                RetStr=FormatStr(RetStr, "total=%f avail=%f used=%f", total, avail, used);
-            }
-        }
+        if ( (strcasecmp(ValName, "DiskQuota")==0) ) RetStr=FTP_GetDiskUsage(RetStr, FS);
+        if ( (strcasecmp(ValName, "crc")==0) ) RetStr=FTP_GetHash(RetStr, FS, Path, ValName);
+        if ( (strcasecmp(ValName, "md5")==0) ) RetStr=FTP_GetHash(RetStr, FS, Path, ValName);
+        if ( (strcasecmp(ValName, "sha1")==0) ) RetStr=FTP_GetHash(RetStr, FS, Path, ValName);
+        if ( (strcasecmp(ValName, "sha256")==0) ) RetStr=FTP_GetHash(RetStr, FS, Path, ValName);
+        if ( (strcasecmp(ValName, "sha512")==0) ) RetStr=FTP_GetHash(RetStr, FS, Path, ValName);
     }
 
     return(RetStr);
@@ -445,7 +470,7 @@ char *FTP_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *V
 
 
 
-STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     char *Tempstr=NULL, *Verbiage=NULL, *URL=NULL;
     STREAM *S=NULL;
@@ -485,7 +510,10 @@ STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, ui
         else
         {
             Tempstr=MCatStr(Tempstr," ",Verbiage,NULL);
-//  WriteLog(Tempstr);
+            HandleEvent(FS, UI_OUTPUT_ERROR, Tempstr, Path, "");
+            STREAMClose(S);
+            S=NULL;
+            //  WriteLog(Tempstr);
         }
     }
 
@@ -498,7 +526,7 @@ STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, ui
 }
 
 
-int FTP_CloseFile(TFileStore *FS, STREAM *S)
+static int FTP_CloseFile(TFileStore *FS, STREAM *S)
 {
     char *Tempstr=NULL, *Verbiage=NULL, *Path=NULL;
     int RetVal=FALSE, val;
@@ -552,16 +580,18 @@ int FTP_CloseFile(TFileStore *FS, STREAM *S)
 
 
 
-int FTP_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int FTP_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMReadBytes(S, Buffer, len));
 }
 
 
-int FTP_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int FTP_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMWriteBytes(S, Buffer, len));
 }
+
+
 
 //discover features supported
 static void FTP_ReadFeatures(TFileStore *FS)
@@ -571,7 +601,7 @@ static void FTP_ReadFeatures(TFileStore *FS)
 
     if (FTP_SendCommand(FS, "FEAT\r\n", &Verbiage))
     {
-        ptr=GetToken(Verbiage, "\n", &Token, 0);
+        ptr=GetToken(Verbiage, "\n", &Token, GETTOKEN_QUOTES);
         while (ptr)
         {
             // Features in the response start with a space
@@ -580,18 +610,11 @@ static void FTP_ReadFeatures(TFileStore *FS)
                 StripLeadingWhitespace(Token);
                 FS->Features=MCatStr(FS->Features,"'",Token,"' ", NULL);
 
-                if (strcmp(Token,"XMD5")==0)
-                {
-                    Tempstr=MCopyStr(Tempstr,GetVar(FS->Vars,"HashTypes"),"md5 ",NULL);
-                    SetVar(FS->Vars,"HashTypes",Tempstr);
-                }
-
-                if (strcmp(Token,"XSHA")==0)
-                {
-                    Tempstr=MCopyStr(Tempstr,GetVar(FS->Vars,"HashTypes"),"sha1 ",NULL);
-                    SetVar(FS->Vars,"HashTypes",Tempstr);
-                }
-
+                if (strncmp(Token,"XMD5", 4)==0) AppendVar(FS->Vars, "HashTypes", "md5");
+                else if (strncmp(Token,"XSHA1", 5)==0) AppendVar(FS->Vars, "HashTypes", "sha1");
+                else if (strncmp(Token,"XSHA256", 7)==0) AppendVar(FS->Vars, "HashTypes", "sha256");
+                else if (strncmp(Token,"XSHA512", 7)==0) AppendVar(FS->Vars, "HashTypes", "sha512");
+                else if (strncmp(Token,"XCRC", 4)==0) AppendVar(FS->Vars, "HashTypes", "crc");
                 if (strcmp(Token,"SITE CHMOD")==0) FS->ChMod=FTP_ChMod;
 
 
@@ -602,7 +625,7 @@ static void FTP_ReadFeatures(TFileStore *FS)
                       if (strcmp(Token,"SITE SYMLINK")==0) FS->Features |= FS_SYMLINKS;
                 */
             }
-            ptr=GetToken(ptr,"\n",&Token,0);
+            ptr=GetToken(ptr,"\n",&Token, GETTOKEN_QUOTES);
         }
     }
 
@@ -614,31 +637,13 @@ static void FTP_ReadFeatures(TFileStore *FS)
 
 
 
-int FTP_Disconnect(TFileStore *FS)
-{
-    char *Tempstr=NULL;
-    int result;
-
-    if (FS->S)
-    {
-        SendLoggedLine("QUIT\r\n", FS, FS->S);
-        InetReadResponse(FS->S, FS, &Tempstr, NULL, INET_OKAY);
-        STREAMClose(FS->S);
-        FS->S=NULL;
-    }
-    Destroy(Tempstr);
-
-    return(TRUE);
-}
-
-
 
 static int FTP_SendPassword(TFileStore *FS, const char *Pass, int PassLen, int Try, char **LoginBanner)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     int result=FALSE;
 
-		//Don't use STREAMWriteLoggedLine for the password, as we don't want to display it
+    //Don't use STREAMWriteLoggedLine for the password, as we don't want to display it
     STREAMWriteLine("PASS ", FS->S);
     STREAMWriteBytes(FS->S, Pass, PassLen);
     STREAMWriteLine("\r\n", FS->S);
@@ -702,7 +707,7 @@ static int FTP_Login(TFileStore *FS)
             for (Try=0; Try < 5; Try++)
             {
                 if (p_Pass==NULL) len=PasswordGet(FS, Try, &p_Pass);
-								else len=StrLen(p_Pass);
+                else len=StrLen(p_Pass);
 
                 result=FTP_SendPassword(FS, p_Pass, len, Try, &LoginBanner);
                 if (result) break;
@@ -756,7 +761,7 @@ static int FTP_ProtP(TFileStore *FS)
 
 
 
-int FTP_Connect(TFileStore *FS)
+static int FTP_Connect(TFileStore *FS)
 {
     char *Proto=NULL, *Host=NULL, *PortStr=NULL, *Path=NULL, *Tempstr=NULL, *Verbiage=NULL;
     char *ptr;
@@ -773,29 +778,30 @@ int FTP_Connect(TFileStore *FS)
         RetVal=TRUE;
 
         STREAMSetTimeout(FS->S,3000);
-        InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY);
-        if (StrLen(Verbiage) > 4) SetVar(FS->Vars,"ServerBanner",Verbiage);
-
-
-        if (StrValid(Tempstr) && (*Tempstr=='2'))
+        if (InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY))
         {
-            if (strcasecmp(Proto, "ftps")==0) FTP_AuthTLS(FS);
+            if (StrLen(Verbiage) > 4) SetVar(FS->Vars,"ServerBanner",Verbiage);
 
-            RetVal=FTP_Login(FS);
-            while (! RetVal)
+
+            if (StrValid(Tempstr) && (*Tempstr=='2'))
             {
-                FS->Pass=UI_AskPassword(FS->Pass);
+                if (strcasecmp(Proto, "ftps")==0) FTP_AuthTLS(FS);
+
                 RetVal=FTP_Login(FS);
-                HandleEvent(FS, 0, "$(filestore): Login Failed.", FS->URL, "");
+                while (! RetVal)
+                {
+                    FS->Pass=UI_AskPassword(FS->Pass);
+                    RetVal=FTP_Login(FS);
+                    HandleEvent(FS, 0, "$(filestore): Login Failed.", FS->URL, "");
+                }
+            }
+            else
+            {
+                SetVar(FS->Vars,"ServerError",Verbiage);
+                HandleEvent(FS, 0, "$(filestore): FTP server error.", FS->URL, "");
             }
         }
-        else
-        {
-            SetVar(FS->Vars,"ServerError",Verbiage);
-            HandleEvent(FS, 0, "$(filestore): FTP server error.", FS->URL, "");
-        }
     }
-    else HandleEvent(FS, 0, "$(filestore): Connection Failed.", FS->URL, "");
 
 
     if (RetVal)
@@ -804,9 +810,11 @@ int FTP_Connect(TFileStore *FS)
         FTP_CurrDir(FS);
         if (FS->Flags & FILESTORE_TLS) FTP_ProtP(FS);
         if (FTP_HasFeature(FS, "AVBL")) FS->Flags |= FILESTORE_USAGE;
+        FileStoreGetTimeFromFile(FS);
     }
     else
     {
+        HandleEvent(FS, 0, "$(filestore): Connection Failed.", FS->URL, "");
         STREAMClose(FS->S);
         FS->S=NULL;
     }
@@ -821,6 +829,25 @@ int FTP_Connect(TFileStore *FS)
 
     return(RetVal);
 }
+
+
+static int FTP_Disconnect(TFileStore *FS)
+{
+    char *Tempstr=NULL;
+    int result;
+
+    if (FS->S)
+    {
+        SendLoggedLine("QUIT\r\n", FS, FS->S);
+        InetReadResponse(FS->S, FS, &Tempstr, NULL, INET_OKAY);
+        STREAMClose(FS->S);
+        FS->S=NULL;
+    }
+    Destroy(Tempstr);
+
+    return(TRUE);
+}
+
 
 
 int FTP_Attach(TFileStore *FS)

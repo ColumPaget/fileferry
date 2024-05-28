@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+
+int IsDownloadableURL(const char *URL);
 void HTML_ListDir(ListNode *FileList, const char *HTML);
 
 #endif

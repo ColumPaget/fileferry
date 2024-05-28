@@ -1,7 +1,7 @@
 #include "settings.h"
 #include "filestore.h"
 #include "saved_filestores.h"
-#include "filestore_drivers.h"
+#include "filestore_drivers/filestore_drivers.h"
 #include "commands.h"
 #include "help.h"
 
@@ -11,6 +11,7 @@ TSettings *Settings=NULL;
 #define ACT_LIST_FILESTORES 1
 #define ACT_ADD_FILESTORE 2
 #define ACT_LIST_DRIVERS  3
+#define ACT_LIST_COMMANDS 4
 
 
 
@@ -94,6 +95,7 @@ int ParseCommandLine(int argc, const char *argv[])
 
     if (strcmp(arg, "-filestores")==0) Act=ACT_LIST_FILESTORES;
     else if (strcmp(arg, "-drivers")==0) Act=ACT_LIST_DRIVERS;
+    else if (strcmp(arg, "-commands")==0) Act=ACT_LIST_COMMANDS;
     else if (strcmp(arg, "-add")==0) Act=ACT_ADD_FILESTORE;
     else
     {
@@ -155,6 +157,10 @@ int ParseCommandLine(int argc, const char *argv[])
 
     case ACT_ADD_FILESTORE:
         ParseCommandLineAddFilestore(argc, argv);
+        break;
+
+    case ACT_LIST_COMMANDS:
+        HelpCommandList();
         break;
 
     case ACT_FILEFERRY:

@@ -1,6 +1,15 @@
 #include "html.h"
-#include "http.h"
+//#include "http.h"
 #include "fileitem.h"
+
+
+int IsDownloadableURL(const char *URL)
+{
+    if (*URL=='#') return(FALSE);
+    if (strncmp(URL, "javascript:", 11)==0) return(FALSE);
+    return(TRUE);
+}
+
 
 static void HTML_ListDir_HTMLTag(ListNode *FileList, const char *Args)
 {

@@ -1,13 +1,13 @@
 #include "filesanywhere.h"
-#include "fileitem.h"
 #include "http.h"
-#include "ui.h"
+#include "../fileitem.h"
+#include "../ui.h"
 
 #define LOGIN_URL "http://api.filesanywhere.com/AccountLogin"
 #define API_KEY "40D380BA-4E80-46D9-8629-6A2F229DBA94"
 
 
-char *FilesAnywhere_Path(char *FAWPath, const char *Path)
+static char *FilesAnywhere_Path(char *FAWPath, const char *Path)
 {
     FAWPath=CopyStr(FAWPath, Path);
     strrep(FAWPath, '/', '\\');
@@ -16,7 +16,7 @@ char *FilesAnywhere_Path(char *FAWPath, const char *Path)
 }
 
 
-int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SOAPAction, char **ResponseData)
+static int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SOAPAction, char **ResponseData)
 {
     char *Tempstr=NULL, *PostData=NULL;
     const char *ptr;
@@ -34,7 +34,7 @@ int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SOAPActio
     {
         STREAMWriteLine(PostData, S);
         STREAMCommit(S);
-        RetVal=HTTPCheckResponseCode(S);
+        RetVal=HTTP_CheckResponseCode(S);
         *ResponseData=STREAMReadDocument(*ResponseData, S);
         //printf("\n%s\n", *ResponseData);
         STREAMClose(S);
@@ -49,7 +49,7 @@ int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SOAPActio
 
 
 
-TFileItem *FilesAnywhere_FileInfo(TFileStore *FS, const char *Path)
+static TFileItem *FilesAnywhere_FileInfo(TFileStore *FS, const char *Path)
 {
     TFileItem *Item;
 
@@ -57,7 +57,7 @@ TFileItem *FilesAnywhere_FileInfo(TFileStore *FS, const char *Path)
 }
 
 
-TFileItem *FilesAnywhere_ReadFileEntry(const char **XML)
+static TFileItem *FilesAnywhere_ReadFileEntry(const char **XML)
 {
     char *Token=NULL, *TagName=NULL, *TagData=NULL;
     const char *ptr;
@@ -117,7 +117,7 @@ TFileItem *FilesAnywhere_ReadFileEntry(const char **XML)
 
 
 
-ListNode *FilesAnywhere_ListDir(TFileStore *FS, const char *Path)
+static ListNode *FilesAnywhere_ListDir(TFileStore *FS, const char *Path)
 {
     ListNode *Files=NULL;
     char *Tempstr=NULL, *XML=NULL;
@@ -151,7 +151,7 @@ ListNode *FilesAnywhere_ListDir(TFileStore *FS, const char *Path)
 
 
 
-int FilesAnywhere_MkDir(TFileStore *FS, const char *Dir, int Mode)
+static int FilesAnywhere_MkDir(TFileStore *FS, const char *Dir, int Mode)
 {
     char *Tempstr=NULL, *XML=NULL;
     int result=FALSE;
@@ -166,12 +166,11 @@ int FilesAnywhere_MkDir(TFileStore *FS, const char *Dir, int Mode)
 
     if (result==TRUE) return(TRUE);
     return(FALSE);
-
 }
 
 
 
-int FilesAnywhere_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
+static int FilesAnywhere_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
 {
     int result=FALSE;
     char *Tempstr=NULL, *Verbiage=NULL;
@@ -182,6 +181,7 @@ int FilesAnywhere_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
 
     return(result);
 }
+
 
 static int FilesAnywhere_DeleteItem(TFileStore *FS, const char *Path, int Type, char **RetStr)
 {
@@ -201,7 +201,7 @@ static int FilesAnywhere_DeleteItem(TFileStore *FS, const char *Path, int Type, 
 }
 
 
-int FilesAnywhere_Unlink(TFileStore *FS, const char *Path)
+static int FilesAnywhere_Unlink(TFileStore *FS, const char *Path)
 {
     int result=FALSE, RetVal=FALSE;
     char *Tempstr=NULL, *XML=NULL;
@@ -238,7 +238,7 @@ int FilesAnywhere_Unlink(TFileStore *FS, const char *Path)
 
 
 
-int FilesAnywhere_Rename(TFileStore *FS, const char *FromPath, const char *ToPath)
+static int FilesAnywhere_Rename(TFileStore *FS, const char *FromPath, const char *ToPath)
 {
     char *Tempstr=NULL, *XML=NULL;
     char *QuotedTo=NULL, *QuotedFrom=NULL;
@@ -299,7 +299,7 @@ int FilesAnywhere_Rename(TFileStore *FS, const char *FromPath, const char *ToPat
 
 
 
-int FilesAnywhere_ChMod(TFileStore *FS, const char *Path, int Mode)
+static int FilesAnywhere_ChMod(TFileStore *FS, const char *Path, int Mode)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -310,7 +310,7 @@ int FilesAnywhere_ChMod(TFileStore *FS, const char *Path, int Mode)
 }
 
 
-int FilesAnywhere_ChPassword(TFileStore *FS, const char *Old, const char *New)
+static int FilesAnywhere_ChPassword(TFileStore *FS, const char *Old, const char *New)
 {
     char *Tempstr=NULL;
     int result=FALSE;
@@ -325,7 +325,7 @@ int FilesAnywhere_ChPassword(TFileStore *FS, const char *Old, const char *New)
 
 
 
-STREAM *FilesAnywhere_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *FilesAnywhere_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
 {
     char *Tempstr=NULL, *URL=NULL, *XML=NULL;
     char *TagName=NULL, *TagData=NULL;
@@ -375,7 +375,7 @@ STREAM *FilesAnywhere_OpenFile(TFileStore *FS, const char *Path, const char *Ope
             if (StrLen(URL))
             {
                 S=STREAMOpen(URL, "r");
-                if (HTTPCheckResponseCode(S) != TRUE)
+                if (HTTP_CheckResponseCode(S) != TRUE)
                 {
                     STREAMClose(S);
                     S=NULL;
@@ -395,7 +395,7 @@ STREAM *FilesAnywhere_OpenFile(TFileStore *FS, const char *Path, const char *Ope
 }
 
 
-int FilesAnywhere_CloseFile(TFileStore *FS, STREAM *S)
+static int FilesAnywhere_CloseFile(TFileStore *FS, STREAM *S)
 {
     if (S) STREAMClose(S);
 
@@ -404,13 +404,13 @@ int FilesAnywhere_CloseFile(TFileStore *FS, STREAM *S)
 
 
 
-int FilesAnywhere_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
+static int FilesAnywhere_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
     return(STREAMReadBytes(S, Buffer, len));
 }
 
 
-int FilesAnywhere_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset,  uint32_t Len)
+static int FilesAnywhere_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset,  uint32_t Len)
 {
     int result=-1, BytesSent, EncodedLen, val;
     char *Base64=NULL;
@@ -452,7 +452,7 @@ int FilesAnywhere_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t o
 }
 
 
-int FilesAnywhere_Disconnect(TFileStore *FS)
+static int FilesAnywhere_Disconnect(TFileStore *FS)
 {
     char *Tempstr=NULL;
     int result;
@@ -534,7 +534,7 @@ static int FilesAnywhere_Login(TFileStore *FS)
 </soap:Envelope>
 */
 
-char *FilesAnywhere_GetDiskQuota(char *RetStr, TFileStore *FS, const char *Path)
+static char *FilesAnywhere_GetDiskQuota(char *RetStr, TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL, *XML=NULL, *Name=NULL, *Value=NULL;
     const char *ptr;
@@ -580,7 +580,7 @@ char *FilesAnywhere_GetDiskQuota(char *RetStr, TFileStore *FS, const char *Path)
 
 
 
-char *FilesAnywhere_GetSharedLink(char *RetStr, TFileStore *FS, const char *Path)
+static char *FilesAnywhere_GetSharedLink(char *RetStr, TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL, *XML=NULL, *FType=NULL;
     char *TagName=NULL, *TagData=NULL;
@@ -615,7 +615,7 @@ char *FilesAnywhere_GetSharedLink(char *RetStr, TFileStore *FS, const char *Path
 
 
 
-char *FilesAnywhere_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+static char *FilesAnywhere_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
     RetStr=CopyStr(RetStr, "");
     if (strcmp(ValName, "DiskQuota")==0) RetStr=FilesAnywhere_GetDiskQuota(RetStr, FS, Path);
@@ -626,7 +626,7 @@ char *FilesAnywhere_GetValue(char *RetStr, TFileStore *FS, const char *Path, con
 
 
 
-int FilesAnywhere_Connect(TFileStore *FS)
+static int FilesAnywhere_Connect(TFileStore *FS)
 {
     int RetVal=FALSE;
 

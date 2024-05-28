@@ -20,6 +20,8 @@ extern STREAM *StdIO;
 extern uint64_t ProcessStartTime;
 extern time_t Now;
 
+
+void AppendVar(ListNode *Vars, const char *VarName, const char *Value);
 void ClipExtension(char *Path);
 char *CopyPathChangeExtn(char *RetStr, const char *Path, const char *NewExtn, int Flags);
 int FileInPatternList(const char *Path, const char *PatternList);

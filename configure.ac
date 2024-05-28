@@ -17,6 +17,7 @@ AC_CHECK_LIB(ssl,SSL_library_init,,)
 AC_CHECK_LIB(cap,cap_init,,)
 
 
+
 if test "$cf_system_libuseful" != "no"
 then
 	AC_CHECK_LIB([Useful-5],GetToken,[cf_have_libUseful5=yes],[cf_have_libUseful5=no])
@@ -52,4 +53,5 @@ fi
 
 dnl read Makefile.in and write Makefile
 AC_OUTPUT(Makefile)
+AC_OUTPUT([filestore_drivers/Makefile])
 

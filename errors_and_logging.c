@@ -26,8 +26,10 @@ void EmailError(TFileStore *FS, int ErrorType, const char *Path, const char *Des
 void HandleEvent(TFileStore *FS, int ErrorType, const char *Description, const char *Path, const char *Dest)
 {
     char *Tempstr=NULL;
-    ListNode *Vars;
+    ListNode *Vars=NULL;
 
+		if (! (Settings->Flags & SETTING_NOERROR))
+		{
     Vars=ListCreate();
     SetVar(Vars, "path", Path);
     SetVar(Vars, "dest", Dest);
@@ -39,6 +41,7 @@ void HandleEvent(TFileStore *FS, int ErrorType, const char *Description, const c
     if (Settings->Flags & SETTING_SYSLOG) syslog(LOG_ERR, "%s", Tempstr);
     if (StrLen(Settings->EmailForErrors)) EmailError(FS, ErrorType, Path, Description);
 //if (StrLen(Settings->WebhookForErrors)) WebhookError(FS, ErrorType, Path, Description);
+		}
 
     ListDestroy(Vars, Destroy);
     Destroy(Tempstr);
@@ -53,17 +56,24 @@ void LogInit()
 
 int SendLoggedLine(const char *Line, TFileStore *FS, STREAM *S)
 {
-    char *Tempstr=NULL;
+    char *Tempstr=NULL, *Token=NULL;
+    const char *ptr;
     int result;
 
     result=STREAMWriteLine(Line, S);
     STREAMFlush(S);
 
-    Tempstr=MCopyStr(Tempstr, "C>>S ", Line, NULL);
+    ptr=GetToken(Line, "\n", &Token, 0);
+    while (ptr)
+    {
+        Tempstr=MCatStr(Tempstr, "C>>S ", Token, "\n", NULL);
+        ptr=GetToken(ptr, "\n", &Token, 0);
+    }
     StripCRLF(Tempstr);
     HandleEvent(FS, UI_OUTPUT_DEBUG, Tempstr, S->Path, "");
 
     Destroy(Tempstr);
+    Destroy(Token);
 
     return(result);
 }

@@ -1,13 +1,13 @@
 #include "localdisk.h"
-#include "fileitem.h"
-#include "settings.h"
-#include "commands.h"
 #include <glob.h>
 #include <sys/stat.h>
+#include "../fileitem.h"
+#include "../settings.h"
+#include "../commands.h"
 
 ListNode *LockFDs=NULL;
 
-TFileItem *LocalDisk_FileInfo(TFileStore *FS, const char *Path)
+static TFileItem *LocalDisk_FileInfo(TFileStore *FS, const char *Path)
 {
     TFileItem *Item;
     struct stat Stat;
@@ -25,7 +25,7 @@ TFileItem *LocalDisk_FileInfo(TFileStore *FS, const char *Path)
     return(Item);
 }
 
-ListNode *LocalDisk_ListDir(TFileStore *FS, const char *Path)
+static ListNode *LocalDisk_ListDir(TFileStore *FS, const char *Path)
 {
     ListNode *FileList;
     char *Tempstr=NULL;
@@ -50,7 +50,8 @@ ListNode *LocalDisk_ListDir(TFileStore *FS, const char *Path)
     return(FileList);
 }
 
-int LocalDisk_MkDir(TFileStore *FS, const char *Dir, int Mode)
+
+static int LocalDisk_MkDir(TFileStore *FS, const char *Dir, int Mode)
 {
     if (mkdir(Dir, Mode)==0) return(TRUE);
     if (errno==EEXIST) return(ERR_EXISTS);
@@ -58,7 +59,7 @@ int LocalDisk_MkDir(TFileStore *FS, const char *Dir, int Mode)
 }
 
 
-int LocalDisk_Unlink(TFileStore *FS, const char *Path)
+static int LocalDisk_Unlink(TFileStore *FS, const char *Path)
 {
     if (unlink(Path)==0) return(TRUE);
     if (rmdir(Path)==0) return(TRUE);
@@ -66,7 +67,7 @@ int LocalDisk_Unlink(TFileStore *FS, const char *Path)
 }
 
 
-int LocalDisk_Lock(TFileStore *FS, const char *Path, int Flags)
+static int LocalDisk_Lock(TFileStore *FS, const char *Path, int Flags)
 {
     int *fd;
     struct flock Lock;
@@ -93,7 +94,7 @@ int LocalDisk_Lock(TFileStore *FS, const char *Path, int Flags)
 }
 
 
-int LocalDisk_UnLock(TFileStore *FS, const char *Path)
+static int LocalDisk_UnLock(TFileStore *FS, const char *Path)
 {
     int *fd;
     ListNode *Curr;
@@ -112,28 +113,30 @@ int LocalDisk_UnLock(TFileStore *FS, const char *Path)
 }
 
 
-int LocalDisk_Rename(TFileStore *FS, const char *From, const char *To)
+static int LocalDisk_Rename(TFileStore *FS, const char *From, const char *To)
 {
     if (rename(From, To)==0) return(TRUE);
     LogToFile(Settings->LogFile, "LOCAL RENAME FAIL: [%s] > [%s] %s", From, To, strerror(errno));
     return(FALSE);
 }
 
-int LocalDisk_ChMod(TFileStore *FS, const char *Path, int Mode)
+static int LocalDisk_ChMod(TFileStore *FS, const char *Path, int Mode)
 {
     if (chmod(Path, Mode)==0) return(TRUE);
     return(FALSE);
 }
 
 
-char *LocalDisk_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *Name)
+static char *LocalDisk_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *Name)
 {
     RetStr=CopyStr(RetStr, "");
 
-    if (strcasecmp(Name, "crc")==0) HashFile(&RetStr, "crc", Path, ENCODE_HEX);
+    if (strcasecmp(Name, "crc")==0) HashFile(&RetStr, "crc32", Path, ENCODE_HEX);
     if (strcasecmp(Name, "md5")==0) HashFile(&RetStr, "md5", Path, ENCODE_HEX);
+    if (strcasecmp(Name, "sha")==0) HashFile(&RetStr, "sha1", Path, ENCODE_HEX);
     if (strcasecmp(Name, "sha1")==0) HashFile(&RetStr, "sha1", Path, ENCODE_HEX);
     if (strcasecmp(Name, "sha256")==0) HashFile(&RetStr, "sha256", Path, ENCODE_HEX);
+    if (strcasecmp(Name, "sha512")==0) HashFile(&RetStr, "sha512", Path, ENCODE_HEX);
 
     return(RetStr);
 }
@@ -176,7 +179,7 @@ int LocalDisk_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offse
 
 
 
-int LocalDisk_Connect(TFileStore *FS)
+static int LocalDisk_Connect(TFileStore *FS)
 {
     char *ptr;
 
