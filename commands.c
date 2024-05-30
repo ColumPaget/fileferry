@@ -78,13 +78,13 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     else if (strcmp(Switch, "-newer")==0)
     {
         CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
-				if (! StrValid(Token)) Token=CopyStr(Token, "?");
+        if (! StrValid(Token)) Token=CopyStr(Token, "?");
         SetVar(Cmd->Vars, "Time:Newer", Token);
     }
     else if (strcmp(Switch, "-older")==0)
     {
         CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
-				if (! StrValid(Token)) Token=CopyStr(Token, "?");
+        if (! StrValid(Token)) Token=CopyStr(Token, "?");
         SetVar(Cmd->Vars, "Time:Older", Token);
     }
     else if (strcmp(Switch, "-mtime")==0)
@@ -137,7 +137,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         break;
 
     case CMD_SHOW:
-				//special case where sixel can be set at the session-wide level
+        //special case where sixel can be set at the session-wide level
         if (Settings->Flags & SETTING_SIXEL) Cmd->Flags |= CMD_FLAG_SIXEL;
 
         if (strcmp(Switch, "-img")==0) Cmd->Flags |= CMD_FLAG_IMG;
@@ -218,6 +218,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
             CommandLine=GetToken(CommandLine, " ", &Token, GETTOKEN_QUOTES);
             SetVar(Cmd->Vars, "DestBackups", Token);
         }
+        else if (strcmp(Switch, "-resume")==0) Cmd->Flags |= CMD_FLAG_RESUME;
         break;
     }
 
@@ -263,6 +264,10 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "lcp")==0) Cmd=CMD_LCOPY;
     else if (strcmp(Str, "copy")==0) Cmd=CMD_COPY;
     else if (strcmp(Str, "lcopy")==0) Cmd=CMD_LCOPY;
+    else if (strcmp(Str, "ln")==0) Cmd=CMD_LINK;
+    else if (strcmp(Str, "ln")==0) Cmd=CMD_LLINK;
+    else if (strcmp(Str, "link")==0) Cmd=CMD_LINK;
+    else if (strcmp(Str, "llink")==0) Cmd=CMD_LLINK;
     else if (strcmp(Str, "mv")==0) Cmd=CMD_RENAME;
     else if (strcmp(Str, "lmv")==0) Cmd=CMD_LRENAME;
     else if (strcmp(Str, "move")==0) Cmd=CMD_RENAME;
@@ -360,7 +365,11 @@ TCommand *CommandParse(const char *Str)
 
                 //some commands have 'src' and 'dest'
                 case CMD_COPY:
+                case CMD_LCOPY:
                 case CMD_RENAME:
+                case CMD_LRENAME:
+                case CMD_LINK:
+                case CMD_LLINK:
                 case CMD_CHPASSWORD:
                     if (StrValid(Cmd->Target)) Cmd->Dest=CopyStr(Cmd->Dest, Token);
                     else Cmd->Target=CopyStr(Cmd->Target, Token);
@@ -480,32 +489,32 @@ static void CommandGetValueGlob(TFileStore *FS, const char *ValueName, TCommand 
 
 int CommandHashCompare(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath)
 {
-char *Token=NULL, *RemoteHash=NULL, *LocalHash=NULL;
-const char *ptr;
-int result=TRUE;
+    char *Token=NULL, *RemoteHash=NULL, *LocalHash=NULL;
+    const char *ptr;
+    int result=TRUE;
 
-ptr=GetVar(RemoteFS->Vars, "HashTypes");
-if (! StrValid(ptr)) return(TRUE);
+    ptr=GetVar(RemoteFS->Vars, "HashTypes");
+    if (! StrValid(ptr)) return(TRUE);
 
-ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
-while (ptr)
-{
-if (RemoteFS->GetValue)
-{
-  LocalHash=LocalFS->GetValue(LocalHash, LocalFS, LocalPath, Token);
-  RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemotePath, Token);
+    ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
+    while (ptr)
+    {
+        if (RemoteFS->GetValue)
+        {
+            LocalHash=LocalFS->GetValue(LocalHash, LocalFS, LocalPath, Token);
+            RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemotePath, Token);
 
-	if (strcasecmp(RemoteHash, LocalHash) != 0) result=FALSE;
-	break;
-}
-ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
-}
+            if (strcasecmp(RemoteHash, LocalHash) != 0) result=FALSE;
+            break;
+        }
+        ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
+    }
 
-Destroy(RemoteHash);
-Destroy(LocalHash);
-Destroy(Token);
+    Destroy(RemoteHash);
+    Destroy(LocalHash);
+    Destroy(Token);
 
-return(result);
+    return(result);
 }
 
 
@@ -513,8 +522,8 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 {
     ListNode *LocalDir, *RemoteDir, *Curr, *Node;
     TFileItem *LocalItem, *RemoteItem;
-		char *RemoteTime=NULL, *LocalTime=NULL;
-		int diff=0, match=0;
+    char *RemoteTime=NULL, *LocalTime=NULL;
+    int diff=0, match=0;
 
     LocalDir=FileStoreGlob(LocalFS, Cmd->Target);
     RemoteDir=FileStoreGlob(RemoteFS, Cmd->Target);
@@ -528,39 +537,39 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         {
             RemoteItem=(TFileItem *) Node->Item;
 
-						LocalTime=CopyStr(LocalTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", LocalItem->mtime, NULL));
-						RemoteTime=CopyStr(RemoteTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", RemoteItem->mtime, NULL));
-            if (LocalItem->size != RemoteItem->size) 
-						{
-								printf("%-30s   size difference   local:%llu    remote:%llu\n", Curr->Tag, LocalItem->size, RemoteItem->size);
-								diff++;
-						}
-						else if (StrValid(GetVar(Cmd->Vars, "Time:Newer")) && (LocalItem->mtime < RemoteItem->mtime))
-						{
-								printf("%-30s   remote newer      local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
-								diff++;
-						}
-						else if (StrValid(GetVar(Cmd->Vars, "Time:Older")) && (LocalItem->mtime > RemoteItem->mtime))
-						{
-								printf("%-30s   local newer       local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
-								diff++;
-						}
-						else if (! CommandHashCompare(LocalFS, RemoteFS, LocalItem->path, RemoteItem->path))
-						{
-								printf("%-30s   hash difference\n", Curr->Tag);
-								diff++;
-						}
-						else 
-						{
-							if (Cmd->Flags & CMD_FLAG_ALL) printf("%-30s   match\n", Curr->Tag);
-							match++;	
-						}
+            LocalTime=CopyStr(LocalTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", LocalItem->mtime, NULL));
+            RemoteTime=CopyStr(RemoteTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", RemoteItem->mtime, NULL));
+            if (LocalItem->size != RemoteItem->size)
+            {
+                printf("%-30s   size difference   local:%llu    remote:%llu\n", Curr->Tag, LocalItem->size, RemoteItem->size);
+                diff++;
+            }
+            else if (StrValid(GetVar(Cmd->Vars, "Time:Newer")) && (LocalItem->mtime < RemoteItem->mtime))
+            {
+                printf("%-30s   remote newer      local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
+                diff++;
+            }
+            else if (StrValid(GetVar(Cmd->Vars, "Time:Older")) && (LocalItem->mtime > RemoteItem->mtime))
+            {
+                printf("%-30s   local newer       local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
+                diff++;
+            }
+            else if (! CommandHashCompare(LocalFS, RemoteFS, LocalItem->path, RemoteItem->path))
+            {
+                printf("%-30s   hash difference\n", Curr->Tag);
+                diff++;
+            }
+            else
+            {
+                if (Cmd->Flags & CMD_FLAG_ALL) printf("%-30s   match\n", Curr->Tag);
+                match++;
+            }
         }
-        else 
-				{
-					printf("%-30s   local only\n", Curr->Tag);
-					diff++;
-				}
+        else
+        {
+            printf("%-30s   local only\n", Curr->Tag);
+            diff++;
+        }
         Curr=ListGetNext(Curr);
     }
 
@@ -570,18 +579,18 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         RemoteItem=(TFileItem *) Curr->Item;
         Node=ListFindNamedItem(LocalDir, Curr->Tag);
         if (! Node)
-				{
-					printf("%s   remote only\n", Curr->Tag);
-					diff++;
-				}
+        {
+            printf("%s   remote only\n", Curr->Tag);
+            diff++;
+        }
         Curr=ListGetNext(Curr);
     }
 
-printf("%d items differ %d items match\n", diff, match);
+    printf("%d items differ %d items match\n", diff, match);
 
 
-Destroy(RemoteTime);
-Destroy(LocalTime);
+    Destroy(RemoteTime);
+    Destroy(LocalTime);
 }
 
 
@@ -665,6 +674,15 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
     case CMD_LCOPY:
         result=CommandGlobAndProcess(LocalFS, CMD_TYPE_DEST, Cmd, FileStoreCopyFile);
         break;
+
+    case CMD_LINK:
+        result=CommandGlobAndProcess(RemoteFS, CMD_TYPE_DEST, Cmd, FileStoreLinkPath);
+        break;
+
+    case CMD_LLINK:
+        result=CommandGlobAndProcess(LocalFS, CMD_TYPE_DEST, Cmd, FileStoreLinkPath);
+        break;
+
 
     case CMD_LS:
         UI_OutputDirList(RemoteFS, Cmd);

@@ -14,6 +14,7 @@
 #define FILESTORE_FOLDERS 1024
 #define FILESTORE_USAGE 2048
 #define FILESTORE_SHARELINK 4096
+#define FILESTORE_RESUME_TRANSFERS 8192
 #define FILESTORE_NO_DIR_LIST SETTING_NO_DIR_LIST
 
 // we do not use 'setuid', 'setgid' or 'set sticky bit' in mkdir so we can
@@ -64,6 +65,7 @@ typedef struct t_struct_fs
     WRITEFILE_FUNC WriteBytes;
     RENAME_FUNC RenamePath;
     RENAME_FUNC CopyPath;
+    RENAME_FUNC LinkPath;
     PATH_FUNC ChDir;
     PATH_FUNC UnlinkPath;
     CHMOD_FUNC ChMod;
@@ -105,6 +107,7 @@ int FileStoreUnLock(TFileStore *FS, const char *Path);
 int FileStoreChPassword(TFileStore *FS, const char *OldPassword, const char *NewPassword);
 char *FileStoreGetValue(char *RetStr, TFileStore *FS, const char *Path, const char *Value);
 int FileStoreCopyFile(TFileStore *FS, const char *Path, const char *Dest);
+int FileStoreLinkPath(TFileStore *FS, const char *Path, const char *Dest);
 TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path);
 void FileStoreOutputDiskQuota(TFileStore *FS);
 void FileStoreOutputSupportedFeatures(TFileStore *FS);

@@ -361,8 +361,6 @@ char *HTTP_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *
 {
     RetStr=CopyStr(RetStr, "");
 
-    printf("GV: %s\n", ValName);
-
     if (strcasecmp(ValName, "md5")==0) RetStr=HTTP_GetHash(RetStr, FS, Path, "md5");
     if (strcasecmp(ValName, "sha")==0) RetStr=HTTP_GetHash(RetStr, FS, Path, "sha");
     if (strcasecmp(ValName, "sha256")==0) RetStr=HTTP_GetHash(RetStr, FS, Path, "sha-256");

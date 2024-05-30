@@ -390,10 +390,6 @@ void UI_MainLoop(TFileStore *LocalFS, TFileStore *RemoteFS)
     TCommand *Cmd;
     const char *ptr;
 
-    if (StrValid(RemoteFS->Features) && (Settings->Flags & SETTING_VERBOSE)) UI_Output(0, "Features: %s\n", RemoteFS->Features);
-    ptr=GetVar(RemoteFS->Vars, "LoginBanner");
-    if (StrValid(ptr)) printf("%s\n", ptr);
-
     Cmd=UI_ReadCommand(RemoteFS);
     while (Cmd->Type != CMD_QUIT)
     {

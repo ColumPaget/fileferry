@@ -4,6 +4,7 @@
 #include "../fileitem.h"
 #include "../settings.h"
 #include "../commands.h"
+#include "../file_transfer.h"
 
 ListNode *LockFDs=NULL;
 
@@ -149,11 +150,27 @@ STREAM *LocalDisk_OpenFile(TFileStore *FS, const char *Path, const char *OpenFla
 {
     STREAM *S;
     char *Tempstr=NULL;
+    uint64_t Offset=0;
+    int Flags;
+
 
     if (*Path != '/') Tempstr=MCopyStr(Tempstr, FS->CurrDir, "/", Path, NULL);
     else Tempstr=CopyStr(Tempstr, Path);
 
-    S=STREAMOpen(Tempstr, OpenFlags);
+    Flags=FileTransferParseOpenFlags(OpenFlags, NULL, &Offset);
+
+    if (Flags & XFER_FLAG_WRITE)
+    {
+        //using rw gives us a writeable file that isn't truncated,
+        if (Offset > 0) S=STREAMOpen(Tempstr, "rw");
+        else S=STREAMOpen(Tempstr, "w");
+    }
+    else S=STREAMOpen(Tempstr, "r");
+
+
+    if (S && (Offset > 0)) STREAMSeek(S, (size_t) Offset, SEEK_SET);
+
+
     Destroy(Tempstr);
 
     return(S);
@@ -199,7 +216,7 @@ static int LocalDisk_Connect(TFileStore *FS)
 int LocalDisk_Attach(TFileStore *FS)
 {
 
-    FS->Flags |= FILESTORE_FOLDERS;
+    FS->Flags |= FILESTORE_FOLDERS | FILESTORE_RESUME_TRANSFERS;
 
     FS->Connect=LocalDisk_Connect;
     FS->ListDir=LocalDisk_ListDir;

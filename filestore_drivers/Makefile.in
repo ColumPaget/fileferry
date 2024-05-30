@@ -55,4 +55,4 @@ synology.o: synology.h synology.c
 
 
 clean:
-	rm *.o *.a
+	rm *.o *.a *.orig 

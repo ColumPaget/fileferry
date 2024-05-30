@@ -3,6 +3,7 @@
 #include "ls_decode.h"
 #include "../filestore.h"
 #include "../fileitem.h"
+#include "../file_transfer.h"
 #include "../ui.h"
 #include "../password.h"
 #include "../errors_and_logging.h"
@@ -102,6 +103,7 @@ static STREAM *FTP_MakePassiveDataConnection(TFileStore *FS, const char *URL)
         //if (FS->Settings & FS_TRANSFER_TYPES)  STREAMAddStandardDataProcessor(S,"compression","zlib","");
         //if (Settings.Flags & FLAG_VERBOSE) printf("Data Connection OKAY: %s",URL);
     }
+    else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore): DataConnection Failed.", FS->URL, "");
 
     return(S);
 }
@@ -273,7 +275,7 @@ static int FTP_MkDir(TFileStore *FS, const char *Dir, int Mkdir)
 
 
 
-static int FTP_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
+static int FTP_Symlink(TFileStore *FS, const char *FromPath, const char *ToPath)
 {
     int result=FALSE;
     char *Tempstr=NULL, *Verbiage=NULL;
@@ -283,7 +285,7 @@ static int FTP_Symlink(TFileStore *FS, char *FromPath, char *ToPath)
 
     if (InetReadResponse(FS->S, FS, &Tempstr,&Verbiage, INET_OKAY))
     {
-        //HandleEventMessage(Settings.Flags,"%s %s\n",Tempstr,Verbiage);
+        HandleEvent(FS, UI_OUTPUT_ERROR, Tempstr, Verbiage, "");
         result=TRUE;
     }
 
@@ -474,12 +476,24 @@ static STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFl
 {
     char *Tempstr=NULL, *Verbiage=NULL, *URL=NULL;
     STREAM *S=NULL;
+    int Flags;
+    uint64_t Offset;
 
+    Flags=FileTransferParseOpenFlags(OpenFlags, NULL, &Offset);
     URL=FTP_NegotiatePassiveDataConnection(URL, FS);
     if (StrValid(URL))
     {
-        GetToken(OpenFlags, " ", &Tempstr, 0);
-        if (StrValid(Tempstr) && (Tempstr[0]=='w'))
+
+        // for either direction
+        if (Flags & XFER_FLAG_RESUME)
+        {
+            Tempstr=FormatStr(Tempstr,"REST %d\r\n", Offset);
+            SendLoggedLine(Tempstr, FS, FS->S);
+            InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY);
+        }
+
+
+        if (Flags & XFER_FLAG_UPLOAD)
         {
             STREAMSetFlushType(FS->S, FLUSH_ALWAYS, 0, 0);
             Tempstr=FormatStr(Tempstr, "STOR %s\r\n", Path);
@@ -487,16 +501,6 @@ static STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFl
         }
         else
         {
-            /*
-                  if ((Flags & OPEN_RESUME) && (FI->ResumePoint > 0))
-                  {
-                    Tempstr=FormatStr(Tempstr,"REST %d\r\n",FI->ResumePoint);
-                    SendLoggedLine(Tempstr,FS->S);
-                    printf("%s\n",Tempstr);
-                    InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY);
-                  }
-            */
-
             Tempstr=FormatStr(Tempstr, "RETR %s\r\n", Path);
             SendLoggedLine(Tempstr, FS, FS->S);
         }
@@ -615,14 +619,14 @@ static void FTP_ReadFeatures(TFileStore *FS)
                 else if (strncmp(Token,"XSHA256", 7)==0) AppendVar(FS->Vars, "HashTypes", "sha256");
                 else if (strncmp(Token,"XSHA512", 7)==0) AppendVar(FS->Vars, "HashTypes", "sha512");
                 else if (strncmp(Token,"XCRC", 4)==0) AppendVar(FS->Vars, "HashTypes", "crc");
-                if (strcmp(Token,"SITE CHMOD")==0) FS->ChMod=FTP_ChMod;
+                else if (strcmp(Token,"REST STREAM")==0) FS->Flags |= FILESTORE_RESUME_TRANSFERS;
+                else if (strcmp(Token,"SITE CHMOD")==0) FS->ChMod=FTP_ChMod;
+                else if (strcmp(Token,"SITE SYMLINK")==0) FS->LinkPath=FTP_Symlink;
 
 
                 /*
                       if (strcmp(Token,"MODE Z")==0) FS->Features |= FS_TRANSFER_TYPES;
-                      if (strcmp(Token,"REST STREAM")==0) FS->Features |= FS_RESUME_TRANSFERS;
 
-                      if (strcmp(Token,"SITE SYMLINK")==0) FS->Features |= FS_SYMLINKS;
                 */
             }
             ptr=GetToken(ptr,"\n",&Token, GETTOKEN_QUOTES);
@@ -657,11 +661,7 @@ static int FTP_SendPassword(TFileStore *FS, const char *Pass, int PassLen, int T
         if (StrLen(Verbiage) > 4) *LoginBanner=MCatStr(*LoginBanner,"\n",Verbiage,NULL);
         result=TRUE;
     }
-    else
-    {
-        //HandleEventMessage(Settings.Flags,"LOGIN ERROR: %s",Verbiage);
-        SetVar(FS->Vars,"Error",Verbiage);
-    }
+    else SetVar(FS->Vars,"Error",Verbiage);
 
     Destroy(Tempstr);
     Destroy(Verbiage);
@@ -760,6 +760,19 @@ static int FTP_ProtP(TFileStore *FS)
 }
 
 
+static int FTP_TransferType(TFileStore *FS, const char *Type)
+{
+    char *Tempstr=NULL, *Verbiage=NULL;
+
+    Tempstr=MCopyStr(Tempstr, "TYPE ", Type, "\r\n", NULL);
+    SendLoggedLine(Tempstr, FS, FS->S);
+    InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY);
+
+    Destroy(Tempstr);
+    Destroy(Verbiage);
+}
+
+
 
 static int FTP_Connect(TFileStore *FS)
 {
@@ -783,23 +796,21 @@ static int FTP_Connect(TFileStore *FS)
             if (StrLen(Verbiage) > 4) SetVar(FS->Vars,"ServerBanner",Verbiage);
 
 
-            if (StrValid(Tempstr) && (*Tempstr=='2'))
-            {
-                if (strcasecmp(Proto, "ftps")==0) FTP_AuthTLS(FS);
+            if (strcasecmp(Proto, "ftps")==0) FTP_AuthTLS(FS);
 
-                RetVal=FTP_Login(FS);
-                while (! RetVal)
-                {
-                    FS->Pass=UI_AskPassword(FS->Pass);
-                    RetVal=FTP_Login(FS);
-                    HandleEvent(FS, 0, "$(filestore): Login Failed.", FS->URL, "");
-                }
-            }
-            else
+            RetVal=FTP_Login(FS);
+            while (! RetVal)
             {
-                SetVar(FS->Vars,"ServerError",Verbiage);
-                HandleEvent(FS, 0, "$(filestore): FTP server error.", FS->URL, "");
+                FS->Pass=UI_AskPassword(FS->Pass);
+                RetVal=FTP_Login(FS);
+                HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore): Login Failed.", FS->URL, "");
             }
+
+        }
+        else
+        {
+            SetVar(FS->Vars,"ServerError",Verbiage);
+            HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore): FTP server error.", FS->URL, "");
         }
     }
 
@@ -810,11 +821,12 @@ static int FTP_Connect(TFileStore *FS)
         FTP_CurrDir(FS);
         if (FS->Flags & FILESTORE_TLS) FTP_ProtP(FS);
         if (FTP_HasFeature(FS, "AVBL")) FS->Flags |= FILESTORE_USAGE;
+        FTP_TransferType(FS, "I");
         FileStoreGetTimeFromFile(FS);
     }
     else
     {
-        HandleEvent(FS, 0, "$(filestore): Connection Failed.", FS->URL, "");
+        HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore): Connection Failed.", FS->URL, "");
         STREAMClose(FS->S);
         FS->S=NULL;
     }

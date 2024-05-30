@@ -306,6 +306,7 @@ static char *DropBox_GetValue(char *RetStr, TFileStore *FS, const char *Path, co
 static OAUTH *DropBox_OAuth(TFileStore *FS, OAUTH *Ctx, int Force)
 {
     char *Tempstr=NULL;
+    int result;
 
     if (Force || (! OAuthLoad(Ctx, FS->URL, "")) )
     {
@@ -317,11 +318,14 @@ static OAUTH *DropBox_OAuth(TFileStore *FS, OAUTH *Ctx, int Force)
         fflush(NULL);
 
         Tempstr=SetStrLen(Tempstr,1024);
-        read(0,Tempstr,1024);
-        StripTrailingWhitespace(Tempstr);
-        StripTrailingWhitespace(Tempstr);
-        SetVar(Ctx->Vars, "code", Tempstr);
-        OAuthFinalize(Ctx, "https://api.dropbox.com/oauth2/token");
+        result=read(0,Tempstr,1024);
+        if (result > 0)
+        {
+            StripTrailingWhitespace(Tempstr);
+            StripTrailingWhitespace(Tempstr);
+            SetVar(Ctx->Vars, "code", Tempstr);
+            OAuthFinalize(Ctx, "https://api.dropbox.com/oauth2/token");
+        }
     }
 
     printf("AccessToken: %s RefreshToken: %s\n",Ctx->AccessToken, Ctx->RefreshToken);

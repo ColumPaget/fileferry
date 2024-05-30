@@ -9,6 +9,39 @@
 #include "filestore_dirlist.h"
 
 
+int FileTransferParseOpenFlags(const char *Str, uint64_t *Size, uint64_t *Offset)
+{
+    const char *ptr;
+    char *Name=NULL, *Value=NULL;
+    int Flags=0;
+
+    for (ptr=Str; (*ptr !='\0') && (*ptr !=' '); ptr++)
+    {
+        switch (*ptr)
+        {
+        case 'w':
+            Flags |= XFER_FLAG_UPLOAD;
+            break;
+        case 'R':
+            Flags |= XFER_FLAG_RESUME;
+            break;
+        }
+    }
+
+    while (isspace(*ptr)) ptr++;
+    ptr=GetNameValuePair(ptr, " ", "=", &Name, &Value);
+    while (ptr)
+    {
+        if (Size && (strcasecmp(Name, "size")==0)) *Size=strtoll(Value, NULL, 10);
+        if (Offset && (strcasecmp(Name, "offset")==0)) *Offset=strtoll(Value, NULL, 10);
+        ptr=GetNameValuePair(ptr, " ", "=", &Name, &Value);
+    }
+
+    Destroy(Name);
+    Destroy(Value);
+
+    return(Flags);
+}
 
 
 void FileTransferDestroy(void *p_Xfer)
@@ -40,6 +73,7 @@ void FileTransferDestroy(void *p_Xfer)
 TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileStore *ToFS, TFileItem *FI)
 {
     TFileTransfer *Xfer;
+    TFileItem *DestFI;
     const char *p_Var, *p_DestName;
 
     Xfer=(TFileTransfer *) calloc(1, sizeof(TFileTransfer));
@@ -63,6 +97,16 @@ TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileS
         p_Var=FromFS->Encrypt;
         if (StrValid(Cmd->EncryptKey)) p_Var=Cmd->EncryptKey;
         if (StrValid(p_Var)) Xfer->EncryptKey=CopyStr(Xfer->EncryptKey, p_Var);
+
+        if (
+             (Cmd->Flags & CMD_FLAG_RESUME) &&
+	     (FromFS->Flags & FILESTORE_RESUME_TRANSFERS) &&
+	     (ToFS->Flags & FILESTORE_RESUME_TRANSFERS)
+           )
+        {
+            DestFI=FileStoreGetFileInfo(ToFS, FI->name);
+            if (DestFI) Xfer->Offset=DestFI->size;
+        }
     }
 
     Xfer->FromFS=FromFS;
@@ -327,16 +371,23 @@ int TransferFile(TFileTransfer *Xfer)
     //file for upload, then use the path to that rather than the path to the origin file
     if (StrValid(Xfer->PreProcessedPath)) p_Path=Xfer->PreProcessedPath;
     else p_Path=Xfer->Path;
+    SrcPath=FileStoreReformatPath(SrcPath, p_Path, FromFS);
 
-    Tempstr=FileStoreReformatPath(Tempstr, p_Path, FromFS);
-    FromS=FromFS->OpenFile(FromFS, Tempstr, "r", 0);
+    //if we are starting at an offset, inform the filestore driver of that
+    if (Xfer->Offset > 0) Tempstr=FormatStr(Tempstr, "rR offset=%llu", Xfer->Offset);
+    else Tempstr=CopyStr(Tempstr, "r");
+
+    FromS=FromFS->OpenFile(FromFS, SrcPath, Tempstr, 0);
 
     if (! FromS) RetVal=XFER_SOURCE_FAIL;
     else
     {
 
         Name=FileStoreReformatPath(Name, GetBasename(Xfer->TransferName), ToFS);
-        ToS=ToFS->OpenFile(ToFS, Name, "w", Xfer->Size);
+        if (Xfer->Offset > 0) Tempstr=FormatStr(Tempstr, "wR offset=%llu", Xfer->Offset);
+        else Tempstr=CopyStr(Tempstr, "w");
+
+        ToS=ToFS->OpenFile(ToFS, Name, Tempstr, Xfer->Size);
         if (! ToS)
         {
             RetVal=XFER_DEST_FAIL;

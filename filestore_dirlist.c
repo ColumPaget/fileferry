@@ -62,6 +62,7 @@ void FileStoreDirListClear(TFileStore *FS)
 
 ListNode *FileStoreDirListRefresh(TFileStore *FS, int Flags)
 {
+
     //if we already have a dir listing, use that
     if ( (! Flags) && (ListSize(FS->DirList) >0) ) return(FS->DirList);
 

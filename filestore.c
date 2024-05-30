@@ -472,6 +472,45 @@ int FileStoreCopyFile(TFileStore *FS, const char *Path, const char *Dest)
 }
 
 
+int FileStoreLinkPath(TFileStore *FS, const char *Path, const char *Dest)
+{
+    char *Arg1=NULL, *Arg2=NULL;
+    TFileItem *FI;
+    ListNode *Node;
+    int result=FALSE, i;
+
+    if (FS->LinkPath)
+    {
+        Arg1=FileStoreReformatPath(Arg1, Path, FS);
+        Arg2=FileStoreReformatDestination(Arg2, Dest, GetBasename(Path), FS);
+
+        result=FS->LinkPath(FS, Arg1, Arg2);
+
+        if (result==TRUE)
+        {
+            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) LINK: $(path) $(dest)", Path, Arg2);
+            Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
+            if (Node)
+            {
+                FI=FileItemClone((TFileItem *) Node->Item);
+                FileStoreDirListRemoveItem(FS, Path);
+                FI->path=CopyStr(FI->path, Dest);
+                FI->name=CopyStr(FI->name, GetBasename(Dest));
+                ListAddNamedItem(FS->DirList, FI->name, FI);
+            }
+
+        }
+        else HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) LINK FAILED: $(path) $(dest)", Path, Arg2);
+    }
+    else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support links/symlinks");
+
+    Destroy(Arg1);
+    Destroy(Arg2);
+
+    return(result);
+}
+
+
 
 int FileStoreChMod(TFileStore *FS, const char *ModeStr, const char *Path)
 {
@@ -544,11 +583,11 @@ void FileStoreGetTimeFromFile(TFileStore *FS)
     ListNode *Curr;
     TFileItem *FI;
     char *Tempstr=NULL;
-		int StoredFlags;
+    int StoredFlags;
 
-		//suppress errors while we are doing these 'automatic' tests and transfers
-		StoredFlags=Settings->Flags;
-		Settings->Flags |= SETTING_NOERROR;
+    //suppress errors while we are doing these 'automatic' tests and transfers
+    StoredFlags=Settings->Flags;
+    Settings->Flags |= SETTING_NOERROR;
     S=FS->OpenFile(FS, ".fileferry.timetest", "w", 0);
     if (S)
     {
@@ -574,7 +613,7 @@ void FileStoreGetTimeFromFile(TFileStore *FS)
             if (StrValid(Tempstr)) SetVar(FS->Vars, "HashTypes", "sha256");
         }
     }
-		Settings->Flags=StoredFlags;
+    Settings->Flags=StoredFlags;
 
     Destroy(Tempstr);
 }
@@ -717,17 +756,22 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS)
 {
     const char *ptr;
 
+    if (StrValid(GetVar(FS->Vars, "SSL:CipherDetails"))) FileStoreOutputCipherDetails(FS, UI_OUTPUT_VERBOSE);
     if (! FS->Flags & FILESTORE_FOLDERS) UI_Output(0, "This filestore does not support directories/folders");
     if (FS->Flags & FILESTORE_SHARELINK) UI_Output(0, "This filestore supports link sharing via the 'share' command");
+    if (FS->Flags & FILESTORE_RESUME_TRANSFERS) UI_Output(0, "This filestore supports resuming transfers via 'get -resume'");
     if (FS->Flags & FILESTORE_USAGE) UI_Output(0, "This filestore supports disk-usage/quota reporting via the 'info usage' command");
     if (! FS->ReadBytes) UI_Output(0, "This filestore does NOT support downloads (write only)");
     if (! FS->WriteBytes) UI_Output(0, "This filestore does NOT support uploads (read only)");
     if (! FS->UnlinkPath) UI_Output(0, "This filestore does NOT support deleting files");
+    if (! FS->MkDir) UI_Output(0, "This filestore does NOT support creating folders/directories");
     if (! FS->RenamePath) UI_Output(0, "This filestore does NOT support moving/renaming files");
-    if (! FS->MkDir) UI_Output(0, "This filestore does NOT support folders/directories");
+    if (FS->LinkPath) UI_Output(0, "This filestore supports links/symlinks");
+    else UI_Output(0, "This filestore does NOT support links/symlinks");
     ptr=GetVar(FS->Vars, "HashTypes");
     if (StrValid(ptr)) UI_Output(0, "This filestore supports checksum/hashing using %s", ptr);
     if (StrValid(FS->Features)) UI_Output(0, "Protocol Supported Features: %s", FS->Features);
+    if (StrValid(GetVar(FS->Vars, "ProtocolVersion"))) UI_Output(0, "Protocol Version: %s", GetVar(FS->Vars, "ProtocolVersion"));
 }
 
 TFileStore *FileStoreConnect(const char *Config)
@@ -759,12 +803,16 @@ TFileStore *FileStoreConnect(const char *Config)
                     FS->Flags |= FILESTORE_CONNECTED;
                     if (StrValid(Path)) FileStoreChDir(FS, Path);
 
-                    FileStoreOutputSupportedFeatures(FS);
-                    if (StrValid(GetVar(FS->Vars, "ProtocolVersion"))) UI_Output(0, "Protocol Version: %s", GetVar(FS->Vars, "ProtocolVersion"));
-                    if (StrValid(GetVar(FS->Vars, "SSL:CipherDetails"))) FileStoreOutputCipherDetails(FS, UI_OUTPUT_VERBOSE);
-                    if (StrValid(GetVar(FS->Vars, "ServerBanner"))) UI_Output(0, "%s", GetVar(FS->Vars, "ServerBanner"));
+                    //don't output any info about local 'file' filestores
+                    if (strcasecmp(Proto, "file") !=0)
+                    {
+                        if (StrValid(GetVar(FS->Vars, "ServerBanner"))) UI_Output(0, "%s", GetVar(FS->Vars, "ServerBanner"));
+                        if (StrValid(GetVar(FS->Vars, "LoginBanner"))) UI_Output(0, "%s", GetVar(FS->Vars, "LoginBanner"));
 
-                    if (FS->GetValue) FileStoreOutputDiskQuota(FS);
+                        FileStoreOutputSupportedFeatures(FS);
+                        if (FS->GetValue) FileStoreOutputDiskQuota(FS);
+                    }
+
                     FileStoreDirListRefresh(FS, 0);
                     FS->HomeDir=CopyStr(FS->HomeDir, FS->CurrDir);
                 }

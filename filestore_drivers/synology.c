@@ -407,7 +407,7 @@ static char *SYNO_CopyMoveStart(char *RetStr, TFileStore *FS, const char *FromPa
     QuotedFrom=HTTPQuote(QuotedFrom, FromPath);
     QuotedTo=HTTPQuote(QuotedTo, ToPath);
     URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.CopyMove"), "?api=SYNO.FileStation.CopyMove&version=2&method=start&path=", QuotedFrom, "&dest_folder_path=", QuotedTo, NULL);
-		if (DeleteSrc) URL=CatStr(URL, "&remove_src=true");
+    if (DeleteSrc) URL=CatStr(URL, "&remove_src=true");
 
     JSON=SYNO_FileQuery(FS, URL, "copy/move:");
     if (JSON)
@@ -460,7 +460,7 @@ static int SYNO_RenameFile(TFileStore *FS, const char *FromPath, const char *ToP
     char *URL=NULL, *QuotedFrom=NULL, *QuotedTo=NULL;
     ListNode *JSON;
     int result=FALSE;
-		const char *ptr;
+    const char *ptr;
 
     QuotedFrom=HTTPQuote(QuotedFrom, FromPath);
     QuotedTo=HTTPQuote(QuotedTo, GetBasename(ToPath));
@@ -507,8 +507,8 @@ static int SYNO_CopyMove(TFileStore *FS, const char *FromPath, const char *ToPat
         }
     }
 
-		ptr=strrchr(ToPath, '/');
-		if (ptr && (*ptr=='/')) ptr++;
+    ptr=strrchr(ToPath, '/');
+    if (ptr && (*ptr=='/')) ptr++;
     if (StrValid(ptr) && (strcmp(GetBasename(FromPath), ptr) !=0) )
     {
         result=SYNO_RenameFile(FS, From, ToPath);
@@ -523,13 +523,13 @@ static int SYNO_CopyMove(TFileStore *FS, const char *FromPath, const char *ToPat
 
 static int SYNO_Rename(TFileStore *FS, const char *FromPath, const char *ToPath)
 {
-return(SYNO_CopyMove(FS, FromPath, ToPath, TRUE));
+    return(SYNO_CopyMove(FS, FromPath, ToPath, TRUE));
 }
 
 
 static int SYNO_CopyPath(TFileStore *FS, const char *FromPath, const char *ToPath)
 {
-return(SYNO_CopyMove(FS, FromPath, ToPath, FALSE));
+    return(SYNO_CopyMove(FS, FromPath, ToPath, FALSE));
 }
 
 
