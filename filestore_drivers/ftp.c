@@ -3,7 +3,6 @@
 #include "ls_decode.h"
 #include "../filestore.h"
 #include "../fileitem.h"
-#include "../file_transfer.h"
 #include "../ui.h"
 #include "../password.h"
 #include "../errors_and_logging.h"
@@ -472,20 +471,17 @@ static char *FTP_GetValue(char *RetStr, TFileStore *FS, const char *Path, const 
 
 
 
-static STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     char *Tempstr=NULL, *Verbiage=NULL, *URL=NULL;
     STREAM *S=NULL;
-    int Flags;
-    uint64_t Offset;
 
-    Flags=FileTransferParseOpenFlags(OpenFlags, NULL, &Offset);
     URL=FTP_NegotiatePassiveDataConnection(URL, FS);
     if (StrValid(URL))
     {
 
         // for either direction
-        if (Flags & XFER_FLAG_RESUME)
+        if (OpenFlags & XFER_FLAG_RESUME)
         {
             Tempstr=FormatStr(Tempstr,"REST %d\r\n", Offset);
             SendLoggedLine(Tempstr, FS, FS->S);
@@ -493,7 +489,7 @@ static STREAM *FTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFl
         }
 
 
-        if (Flags & XFER_FLAG_UPLOAD)
+        if (OpenFlags & XFER_FLAG_WRITE)
         {
             STREAMSetFlushType(FS->S, FLUSH_ALWAYS, 0, 0);
             Tempstr=FormatStr(Tempstr, "STOR %s\r\n", Path);
@@ -615,6 +611,7 @@ static void FTP_ReadFeatures(TFileStore *FS)
                 FS->Features=MCatStr(FS->Features,"'",Token,"' ", NULL);
 
                 if (strncmp(Token,"XMD5", 4)==0) AppendVar(FS->Vars, "HashTypes", "md5");
+                else if (strncmp(Token,"XSHA", 5)==0) AppendVar(FS->Vars, "HashTypes", "sha1");
                 else if (strncmp(Token,"XSHA1", 5)==0) AppendVar(FS->Vars, "HashTypes", "sha1");
                 else if (strncmp(Token,"XSHA256", 7)==0) AppendVar(FS->Vars, "HashTypes", "sha256");
                 else if (strncmp(Token,"XSHA512", 7)==0) AppendVar(FS->Vars, "HashTypes", "sha512");
@@ -773,7 +770,6 @@ static int FTP_TransferType(TFileStore *FS, const char *Type)
 }
 
 
-
 static int FTP_Connect(TFileStore *FS)
 {
     char *Proto=NULL, *Host=NULL, *PortStr=NULL, *Path=NULL, *Tempstr=NULL, *Verbiage=NULL;
@@ -822,7 +818,7 @@ static int FTP_Connect(TFileStore *FS)
         if (FS->Flags & FILESTORE_TLS) FTP_ProtP(FS);
         if (FTP_HasFeature(FS, "AVBL")) FS->Flags |= FILESTORE_USAGE;
         FTP_TransferType(FS, "I");
-        FileStoreGetTimeFromFile(FS);
+        FileStoreTestFeatures(FS);
     }
     else
     {

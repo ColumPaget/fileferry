@@ -1,6 +1,6 @@
 #include "stdout.h"
 
-static STREAM *ShowFile_OpenSTDOUT(TFileStore *FS, const char *Path, const char *OpenType, uint64_t Size)
+static STREAM *ShowFile_OpenSTDOUT(TFileStore *FS, const char *Path, int OpenType, uint64_t Offset, uint64_t Size)
 {
     STREAM *S;
 

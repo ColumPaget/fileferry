@@ -25,7 +25,7 @@ TFileItem *FileIndexParseEntry(const char *Entry)
     const char *ptr;
     char *Name=NULL, *Value=NULL;
 
-    FI=(TFileItem *) calloc(1, sizeof(TFileItem));
+    FI=FileItemCreate("", 0, 0, 0);
     ptr=GetToken(Entry, "\\S", &FI->path, GETTOKEN_QUOTES);
     ptr=GetNameValuePair(ptr, "\\S", "=", &Name, &Value);
     while (ptr)

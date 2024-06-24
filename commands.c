@@ -57,8 +57,6 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     else if (strcmp(Switch, "-A")==0) Cmd->Flags |= CMD_FLAG_ABORT;
     else if (strcmp(Switch, "-Q")==0) Cmd->Flags |= CMD_FLAG_QUIT;
     else if (strcmp(Switch, "-F")==0) Cmd->Flags |= CMD_FLAG_FORCE;
-    else if (strcmp(Switch, "-l")==0) Cmd->Flags |= CMD_FLAG_LONG;
-    else if (strcmp(Switch, "-ll")==0) Cmd->Flags |= CMD_FLAG_LONG | CMD_FLAG_LONG_LONG;
     else if (strcmp(Switch, "-r")==0) Cmd->Flags |= CMD_FLAG_RECURSE;
     else if (strcmp(Switch, "-S")==0) Cmd->Flags |= CMD_FLAG_SORT_SIZE;
     else if (strcmp(Switch, "-page")==0) Cmd->Flags |= CMD_FLAG_PAGE;
@@ -77,15 +75,23 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     }
     else if (strcmp(Switch, "-newer")==0)
     {
-        CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
-        if (! StrValid(Token)) Token=CopyStr(Token, "?");
-        SetVar(Cmd->Vars, "Time:Newer", Token);
+        Cmd->Flags |= CMD_FLAG_NEWER;
+        if ((Cmd->Type != CMD_DIFF) && (Cmd->Type != CMD_CMP))
+        {
+            CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+            if (! StrValid(Token)) Token=CopyStr(Token, "?");
+            SetVar(Cmd->Vars, "Time:Newer", Token);
+        }
     }
     else if (strcmp(Switch, "-older")==0)
     {
-        CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
-        if (! StrValid(Token)) Token=CopyStr(Token, "?");
-        SetVar(Cmd->Vars, "Time:Older", Token);
+        Cmd->Flags |= CMD_FLAG_OLDER;
+        if ((Cmd->Type != CMD_DIFF) && (Cmd->Type != CMD_CMP))
+        {
+            CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+            if (! StrValid(Token)) Token=CopyStr(Token, "?");
+            SetVar(Cmd->Vars, "Time:Older", Token);
+        }
     }
     else if (strcmp(Switch, "-mtime")==0)
     {
@@ -114,6 +120,8 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         if (strcmp(Switch, "-t")==0) Cmd->Flags |= CMD_FLAG_SORT_TIME;
         else if (strcmp(Switch, "-lt")==0) Cmd->Flags |= CMD_FLAG_SORT_TIME | CMD_FLAG_LONG;
         else if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
+        else if (strcmp(Switch, "-l")==0) Cmd->Flags |= CMD_FLAG_LONG;
+        else if (strcmp(Switch, "-ll")==0) Cmd->Flags |= CMD_FLAG_LONG | CMD_FLAG_LONG_LONG;
         else if (strcmp(Switch, "-d")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
         else if (strcmp(Switch, "-n")==0)
         {
@@ -142,6 +150,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
 
         if (strcmp(Switch, "-img")==0) Cmd->Flags |= CMD_FLAG_IMG;
         else if (strcmp(Switch, "-sixel")==0) Cmd->Flags |= CMD_FLAG_SIXEL;
+        else if (strcmp(Switch, "-thumb")==0) Cmd->Flags |= CMD_FLAG_THUMB;
         break;
 
     case CMD_PUT:
@@ -156,6 +165,8 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     case CMD_MGET:
         if (strcmp(Switch,"-s")==0) Cmd->Flags |= CMD_FLAG_SYNC;
         else if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FORCE;
+        else if (strcmp(Switch, "-I")==0) Cmd->Flags |= CMD_FLAG_INTEGRITY;
+        else if (strcmp(Switch, "-integrity")==0) Cmd->Flags |= CMD_FLAG_INTEGRITY;
         else if (strcmp(Switch, "-n")==0)
         {
             CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
@@ -167,6 +178,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         else if (strcmp(Switch,"-gpg")==0) Cmd->EncryptType = ENCRYPT_GPG_PW;
         else if (strcmp(Switch,"-zenc")==0) Cmd->EncryptType = ENCRYPT_ZIP;
         else if (strcmp(Switch,"-7zenc")==0) Cmd->EncryptType = ENCRYPT_7ZIP;
+        else if (strcmp(Switch, "-resume")==0) Cmd->Flags |= CMD_FLAG_RESUME;
         else if (strcmp(Switch, "-t")==0) SetVar(Cmd->Vars, "DestTransferExtn", ".tmp");
         else if (strcmp(Switch, "-h")==0)
         {
@@ -218,7 +230,6 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
             CommandLine=GetToken(CommandLine, " ", &Token, GETTOKEN_QUOTES);
             SetVar(Cmd->Vars, "DestBackups", Token);
         }
-        else if (strcmp(Switch, "-resume")==0) Cmd->Flags |= CMD_FLAG_RESUME;
         break;
     }
 
@@ -297,6 +308,8 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "chpasswd")==0) Cmd=CMD_CHPASSWORD;
     else if (strcmp(Str, "passwd")==0) Cmd=CMD_CHPASSWORD;
     else if (strcmp(Str, "diff")==0) Cmd=CMD_DIFF;
+    else if (strcmp(Str, "cmp")==0) Cmd=CMD_CMP;
+    else if (strcmp(Str, "compare")==0) Cmd=CMD_CMP;
     else if (strcmp(Str, "set")==0) Cmd=CMD_SET;
     else if (strcmp(Str, "help")==0) Cmd=CMD_HELP;
     else if (strcmp(Str, "quit")==0) Cmd=CMD_QUIT;
@@ -346,7 +359,7 @@ TCommand *CommandParse(const char *Str)
                 if (strcmp(Token, "--")==0) SwitchesActive=FALSE;
                 else ptr=ParseCommandSwitch(ptr, Cmd, Token);
             }
-            else
+            else //deal with arguments that AREN'T option switches
             {
                 switch (Cmd->Type)
                 {
@@ -524,6 +537,7 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
     TFileItem *LocalItem, *RemoteItem;
     char *RemoteTime=NULL, *LocalTime=NULL;
     int diff=0, match=0;
+    int result;
 
     LocalDir=FileStoreGlob(LocalFS, Cmd->Target);
     RemoteDir=FileStoreGlob(RemoteFS, Cmd->Target);
@@ -537,32 +551,49 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         {
             RemoteItem=(TFileItem *) Node->Item;
 
-            LocalTime=CopyStr(LocalTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", LocalItem->mtime, NULL));
-            RemoteTime=CopyStr(RemoteTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", RemoteItem->mtime, NULL));
-            if (LocalItem->size != RemoteItem->size)
+            result=FileStoreCompareFileItems(LocalFS, RemoteFS, LocalItem, RemoteItem);
+
+            if (result == CMP_LOCAL_NEWER)
             {
-                printf("%-30s   size difference   local:%llu    remote:%llu\n", Curr->Tag, LocalItem->size, RemoteItem->size);
-                diff++;
+                if (! (Cmd->Flags & CMD_FLAG_OLDER)) result=CMP_MATCH;
             }
-            else if (StrValid(GetVar(Cmd->Vars, "Time:Newer")) && (LocalItem->mtime < RemoteItem->mtime))
+
+            if (result == CMP_REMOTE_NEWER)
             {
-                printf("%-30s   remote newer      local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
-                diff++;
+                if (! (Cmd->Flags & CMD_FLAG_NEWER)) result=CMP_MATCH;
             }
-            else if (StrValid(GetVar(Cmd->Vars, "Time:Older")) && (LocalItem->mtime > RemoteItem->mtime))
+
+
+            switch (result)
             {
+            case CMP_SIZE_MISMATCH:
+                printf("%-30s   size difference   local:%llu    remote:%llu\n", Curr->Tag, (long long unsigned int) LocalItem->size, (long long unsigned int)  RemoteItem->size);
+                diff++;
+                break;
+
+            case CMP_LOCAL_NEWER:
+                LocalTime=CopyStr(LocalTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", LocalItem->mtime, NULL));
+                RemoteTime=CopyStr(RemoteTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", RemoteItem->mtime, NULL));
                 printf("%-30s   local newer       local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
                 diff++;
-            }
-            else if (! CommandHashCompare(LocalFS, RemoteFS, LocalItem->path, RemoteItem->path))
-            {
+                break;
+
+            case CMP_REMOTE_NEWER:
+                LocalTime=CopyStr(LocalTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", LocalItem->mtime, NULL));
+                RemoteTime=CopyStr(RemoteTime, GetDateStrFromSecs("%Y-%m-%dT%H:%M:%S", RemoteItem->mtime, NULL));
+                printf("%-30s   remote newer      local:%s    remote:%s\n", Curr->Tag, LocalTime, RemoteTime);
+                diff++;
+                break;
+
+            case CMP_HASH_MISMATCH:
                 printf("%-30s   hash difference\n", Curr->Tag);
                 diff++;
-            }
-            else
-            {
+                break;
+
+            case CMP_MATCH:
                 if (Cmd->Flags & CMD_FLAG_ALL) printf("%-30s   match\n", Curr->Tag);
                 match++;
+                break;
             }
         }
         else
@@ -791,6 +822,11 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         break;
 
     case CMD_DIFF:
+        CommandDiff(Cmd, LocalFS, RemoteFS);
+        break;
+
+    case CMD_CMP:
+        Cmd->Flags |= CMD_FLAG_ALL;
         CommandDiff(Cmd, LocalFS, RemoteFS);
         break;
     }

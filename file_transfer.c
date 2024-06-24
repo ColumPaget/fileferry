@@ -9,40 +9,6 @@
 #include "filestore_dirlist.h"
 
 
-int FileTransferParseOpenFlags(const char *Str, uint64_t *Size, uint64_t *Offset)
-{
-    const char *ptr;
-    char *Name=NULL, *Value=NULL;
-    int Flags=0;
-
-    for (ptr=Str; (*ptr !='\0') && (*ptr !=' '); ptr++)
-    {
-        switch (*ptr)
-        {
-        case 'w':
-            Flags |= XFER_FLAG_UPLOAD;
-            break;
-        case 'R':
-            Flags |= XFER_FLAG_RESUME;
-            break;
-        }
-    }
-
-    while (isspace(*ptr)) ptr++;
-    ptr=GetNameValuePair(ptr, " ", "=", &Name, &Value);
-    while (ptr)
-    {
-        if (Size && (strcasecmp(Name, "size")==0)) *Size=strtoll(Value, NULL, 10);
-        if (Offset && (strcasecmp(Name, "offset")==0)) *Offset=strtoll(Value, NULL, 10);
-        ptr=GetNameValuePair(ptr, " ", "=", &Name, &Value);
-    }
-
-    Destroy(Name);
-    Destroy(Value);
-
-    return(Flags);
-}
-
 
 void FileTransferDestroy(void *p_Xfer)
 {
@@ -73,13 +39,31 @@ void FileTransferDestroy(void *p_Xfer)
 TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileStore *ToFS, TFileItem *FI)
 {
     TFileTransfer *Xfer;
-    TFileItem *DestFI;
     const char *p_Var, *p_DestName;
+    TFileItem *DestFI;
 
     Xfer=(TFileTransfer *) calloc(1, sizeof(TFileTransfer));
 
     Xfer->EncryptType = Cmd->EncryptType;
     if (Cmd->Flags & CMD_FLAG_FORCE) Xfer->Flags |= XFER_FLAG_FORCE;
+    if (Cmd->Flags & CMD_FLAG_THUMB) Xfer->Flags |= XFER_FLAG_THUMB;
+
+
+
+    if (
+        (Cmd->Flags & CMD_FLAG_RESUME) &&
+        (FromFS->Flags & FILESTORE_RESUME_TRANSFERS) &&
+        (ToFS->Flags & FILESTORE_RESUME_TRANSFERS)
+    )
+    {
+        DestFI=FileStoreGetFileInfo(ToFS, FI->name);
+        if (DestFI) 
+	{
+		Xfer->Offset=DestFI->size;
+    		Xfer->Flags |= XFER_FLAG_RESUME;
+	}
+    }
+
 
 
     if (Cmd->Type==CMD_PUT)
@@ -97,16 +81,6 @@ TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileS
         p_Var=FromFS->Encrypt;
         if (StrValid(Cmd->EncryptKey)) p_Var=Cmd->EncryptKey;
         if (StrValid(p_Var)) Xfer->EncryptKey=CopyStr(Xfer->EncryptKey, p_Var);
-
-        if (
-             (Cmd->Flags & CMD_FLAG_RESUME) &&
-	     (FromFS->Flags & FILESTORE_RESUME_TRANSFERS) &&
-	     (ToFS->Flags & FILESTORE_RESUME_TRANSFERS)
-           )
-        {
-            DestFI=FileStoreGetFileInfo(ToFS, FI->name);
-            if (DestFI) Xfer->Offset=DestFI->size;
-        }
     }
 
     Xfer->FromFS=FromFS;
@@ -142,7 +116,6 @@ TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileS
         if (StrValid(p_Var)) Xfer->SourceFinalName=CopyPathChangeExtn(Xfer->SourceFinalName, p_DestName, p_Var, EXTN_APPEND);
     }
 
-
     p_Var=GetVar(Cmd->Vars, "PostTransferHookScript");
     if (StrValid(p_Var)) Xfer->PostHookScript=MCopyStr(Xfer->PostHookScript, p_DestName, p_Var, NULL);
 
@@ -170,7 +143,7 @@ int TransferPreProcess(TFileTransfer *Xfer)
 
     if (FileStoreItemExists(Xfer->ToFS, Xfer->DestFinalName, 0))
     {
-        if (! (Xfer->Flags & XFER_FLAG_FORCE)) return(XFER_DEST_EXISTS);
+        if (! (Xfer->Flags & (XFER_FLAG_FORCE | XFER_FLAG_RESUME))) return(XFER_DEST_EXISTS);
     }
 
     if (StrValid(Xfer->PreHookScript))
@@ -371,23 +344,15 @@ int TransferFile(TFileTransfer *Xfer)
     //file for upload, then use the path to that rather than the path to the origin file
     if (StrValid(Xfer->PreProcessedPath)) p_Path=Xfer->PreProcessedPath;
     else p_Path=Xfer->Path;
-    SrcPath=FileStoreReformatPath(SrcPath, p_Path, FromFS);
 
-    //if we are starting at an offset, inform the filestore driver of that
-    if (Xfer->Offset > 0) Tempstr=FormatStr(Tempstr, "rR offset=%llu", Xfer->Offset);
-    else Tempstr=CopyStr(Tempstr, "r");
-
-    FromS=FromFS->OpenFile(FromFS, SrcPath, Tempstr, 0);
+    Tempstr=FileStoreReformatPath(Tempstr, p_Path, FromFS);
+    FromS=FromFS->OpenFile(FromFS, Tempstr, XFER_FLAG_READ | (Xfer->Flags & XFER_FLAGS_OPEN_FILE), Xfer->Offset, 0);
 
     if (! FromS) RetVal=XFER_SOURCE_FAIL;
     else
     {
-
         Name=FileStoreReformatPath(Name, GetBasename(Xfer->TransferName), ToFS);
-        if (Xfer->Offset > 0) Tempstr=FormatStr(Tempstr, "wR offset=%llu", Xfer->Offset);
-        else Tempstr=CopyStr(Tempstr, "w");
-
-        ToS=ToFS->OpenFile(ToFS, Name, Tempstr, Xfer->Size);
+        ToS=ToFS->OpenFile(ToFS, Name, XFER_FLAG_WRITE | (Xfer->Flags & XFER_FLAGS_OPEN_FILE), Xfer->Offset, Xfer->Size);
         if (! ToS)
         {
             RetVal=XFER_DEST_FAIL;
@@ -462,6 +427,22 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
                 UI_Output(UI_OUTPUT_SUCCESS, "TRANSFERRED: %s (%sb) in %ds                           ", FI->name, ToMetric(Xfer->Downloaded, 1), time(NULL) - Xfer->StartTime);
                 if (Xfer->Flags & XFER_FLAG_DOWNLOAD) HandleEvent(FromFS, 0, "$(filestore): Downloaded: $(path)", Xfer->Path, "");
                 else HandleEvent(ToFS, 0, "$(filestore): Uploaded: $(path)", Xfer->Path, "");
+
+                if (Cmd->Flags & CMD_FLAG_INTEGRITY)
+                {
+                    switch(FileStoreCompareFiles(FromFS, ToFS, GetBasename(Xfer->Path), GetBasename(Xfer->Path)))
+                    {
+                    case CMP_MATCH:
+                    case CMP_LOCAL_NEWER:
+                    case CMP_REMOTE_NEWER:
+                        HandleEvent(ToFS, 0, "$(filestore): Transfer integrity confirmed", "", "");
+                        break;
+
+                    default:
+                        HandleEvent(ToFS, 0, "$(filestore): Transfer integrity check failed", "", "");
+                        break;
+                    }
+                }
                 break;
             }
 

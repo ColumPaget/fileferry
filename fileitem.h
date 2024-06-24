@@ -1,4 +1,3 @@
-
 #ifndef FILEFERRY_FILEITEM_H
 #define FILEFERRY_FILEITEM_H
 

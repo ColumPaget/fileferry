@@ -60,7 +60,7 @@ static int GoFile_Info(TFileStore *FS)
 }
 
 
-static STREAM *GoFile_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *GoFile_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     char *URL=NULL, *Tempstr=NULL, *Boundary=NULL;
     char *Page=NULL;

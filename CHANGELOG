@@ -1,0 +1,19 @@
+v3.0 (2024-06-24)
+   * added resumable transfers for ftp and http/https
+   * added synology NAS driver
+   * added 'diff', 'cmp' and 'exists' commands
+   * ftp hashing via XMD5 XSHA1 etc should now work
+   * detect webdav/http hosts that offer md5 hashing via 'ETag:' header
+   * ftp now uses binary (image) transfers explicity, rather than going with server default
+   * MSDos directory format working for FTP
+   * ftp 'anonymous' login support
+   * added 'exists' command, other improvements
+   * added -largest -smallest
+   * add directory caching, stats/lstats command
+
+v2.0 (2023-07-13)
+   * added 'nols' mode 
+   * added '-n' option for transfers
+
+v1.0 (2023-04-30)
+   * initial commit

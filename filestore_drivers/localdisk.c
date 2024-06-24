@@ -15,8 +15,16 @@ static TFileItem *LocalDisk_FileInfo(TFileStore *FS, const char *Path)
     int Type=FTYPE_FILE;
     int result;
 
-    result=stat(Path, &Stat);
-    Item=FileItemCreate(Path, 0, Stat.st_size, Stat.st_mode);
+    if (stat(Path, &Stat) !=0) return(NULL);
+
+    if (S_ISDIR(Stat.st_mode)) Type=FTYPE_DIR;
+    else if (S_ISLNK(Stat.st_mode)) Type=FTYPE_LINK;
+    else if (S_ISBLK(Stat.st_mode)) Type=FTYPE_BLOCKDEV;
+    else if (S_ISCHR(Stat.st_mode)) Type=FTYPE_CHARDEV;
+    else if (S_ISFIFO(Stat.st_mode)) Type=FTYPE_FIFO;
+    else if (S_ISSOCK(Stat.st_mode)) Type=FTYPE_SOCKET;
+
+    Item=FileItemCreate(Path, Type, Stat.st_size, Stat.st_mode);
     Item->uid=Stat.st_uid;
     Item->gid=Stat.st_gid;
     Item->atime=Stat.st_atime;
@@ -146,31 +154,24 @@ static char *LocalDisk_GetValue(char *RetStr, TFileStore *FS, const char *Path, 
 
 
 
-STREAM *LocalDisk_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+STREAM *LocalDisk_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     STREAM *S;
     char *Tempstr=NULL;
-    uint64_t Offset=0;
-    int Flags;
-
 
     if (*Path != '/') Tempstr=MCopyStr(Tempstr, FS->CurrDir, "/", Path, NULL);
     else Tempstr=CopyStr(Tempstr, Path);
 
-    Flags=FileTransferParseOpenFlags(OpenFlags, NULL, &Offset);
-
-    if (Flags & XFER_FLAG_WRITE)
+    if (OpenFlags & XFER_FLAG_WRITE)
     {
-        //using rw gives us a writeable file that isn't truncated,
+        //using rw gives us a writeable file that isn't truncated, which we need to do resume tranfers
         if (Offset > 0) S=STREAMOpen(Tempstr, "rw");
         else S=STREAMOpen(Tempstr, "w");
     }
     else S=STREAMOpen(Tempstr, "r");
 
 
-    if (S && (Offset > 0)) STREAMSeek(S, (size_t) Offset, SEEK_SET);
-
-
+    if (Offset > 0) STREAMSeek(S, (size_t) Offset, SEEK_SET);
     Destroy(Tempstr);
 
     return(S);

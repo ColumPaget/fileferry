@@ -5,7 +5,6 @@
 #include "settings.h"
 #include "errors_and_logging.h"
 #include "ui.h"
-#include <fnmatch.h>
 #include "filestore_drivers/filestore_drivers.h"
 
 
@@ -150,6 +149,7 @@ char *FileStoreReformatPath(char *RetStr, const char *Path, TFileStore *FS)
         break;
     }
 
+    //done to handle cases where Tempstr and RetStr are the same string
     RetStr=CopyStr(RetStr, Tempstr);
 
     Destroy(Tempstr);
@@ -194,12 +194,36 @@ char *FileStoreGetPath(char *RetStr, TFileStore *FS, const char *DestName)
         FI=(TFileItem *) Node->Item;
         RetStr=FileStoreReformatPath(RetStr, FI->path, FS);
     }
-    else RetStr=FileStoreReformatPath(RetStr, DestName, FS);
+    else
+    {
+        RetStr=FileStoreReformatPath(RetStr, DestName, FS);
+    }
 
     return(RetStr);
 }
 
 
+
+static char *FilestoreChDirConsiderItem(char *RetPath, TFileStore *FS, TFileItem *FI)
+{
+    if (FI)
+    {
+        if (FI->type == FTYPE_DIR)
+        {
+            RetPath=FileStoreReformatPath(RetPath, FI->path, FS);
+            //if the filestore has no ChDir function (e.g. http/webdav) then it's enough
+            //that this path is a directory
+            if (! FS->ChDir) return(RetPath);
+
+            //if the filestore does have a ChDir function, then we supply it the path we
+            //created in FileStoreReformatPath
+            if (FS->ChDir(FS, RetPath)) return(RetPath);
+        }
+        //if target isn't a directory then return failure
+    }
+
+    return(CopyStr(RetPath, ""));
+}
 
 static char *FileStoreAttemptChDir(char *RetPath, TFileStore *FS, const char *DestName)
 {
@@ -208,24 +232,41 @@ static char *FileStoreAttemptChDir(char *RetPath, TFileStore *FS, const char *De
 
     if (StrValid(DestName)) RetPath=FileStoreGetPath(RetPath, FS, DestName);
     else RetPath=CopyStr(RetPath, FS->HomeDir);
-    if (! FS->ChDir) return(RetPath);
-    if (FS->ChDir(FS, RetPath)) return(RetPath);
 
+    //if ChDir function exists for filestore, and works when we give it the Path
+    //then we don't need to do anything clever
+    if (FS->ChDir && FS->ChDir(FS, RetPath)) return(RetPath);
+
+    //if we get here, then either:
+    //1) The passed in path isn't the path we need to supply to the ChDir function, and we must look that up
+    //2) The filestore has no ChDir function, so we must check that the path relates to a directory
     DirList=FileStoreDirListMatch(FS, NULL, DestName);
     Curr=ListGetNext(DirList);
     while (Curr)
     {
         FI=(TFileItem *) Curr->Item;
-        if (FI->type == FTYPE_DIR)
-        {
-            RetPath=FileStoreReformatPath(RetPath, FI->path, FS);
-            if (FS->ChDir(FS, RetPath)) return(RetPath);
-        }
+        RetPath=FilestoreChDirConsiderItem(RetPath, FS, FI);
+        if (StrValid(RetPath)) return(RetPath);
         Curr=ListGetNext(Curr);
     }
 
-    RetPath=CopyStr(RetPath, "");
-    return(RetPath);
+
+
+    //handle a couple of special cases that likely *won't* be found, but which
+    //we should still consider valid even though they don't exist in file lists
+    if (! StrValid(DestName)) return(CopyStr(RetPath, FS->HomeDir));
+    if (strcmp(DestName, "..")==0) return(FileStoreReformatPath(RetPath, "..", FS));
+
+    //last chance, if we have fileinfo then we can maybe lookup details of files/directories that are not in the current
+    //directory
+    if (FS->FileInfo)
+    {
+        FI=FS->FileInfo(FS, RetPath);
+        return(FilestoreChDirConsiderItem(RetPath, FS, FI));
+    }
+
+
+    return(CopyStr(RetPath, ""));
 }
 
 
@@ -241,7 +282,7 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
         {
             FS->CurrDir=CopyStr(FS->CurrDir, Path);
             StripDirectorySlash(FS->CurrDir);
-            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHDIR: $(path)", Path, "");
+            HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) CHDIR: $(path)", Path, "");
             result=TRUE;
             FileStoreDirListClear(FS);
             FileStoreDirListRefresh(FS, 0);
@@ -268,7 +309,7 @@ int FileStoreMkDir(TFileStore *FS, const char *Path, int Mode)
         if (result==TRUE)
         {
             FileStoreDirListAddItem(FS, FTYPE_DIR, Path, Mode);
-            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) MKDIR: $(path)", Path, "");
+            HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) MKDIR: $(path)", Path, "");
         }
         else
         {
@@ -295,12 +336,12 @@ int FileStoreUnlinkItem(TFileStore *FS, TFileItem *FI)
         if (FS->UnlinkPath(FS, Tempstr)==TRUE)
         {
             FileStoreDirListRemoveItem(FS, FI->name);
-            HandleEvent(FS, 0, "$(filestore) DELETE: '$(path)'", FI->path, "");
+            HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) DELETE: '$(path)'", FI->path, "");
             result=TRUE;
         }
         else
         {
-            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) DELETE FAILED: '$(path);", FI->path, "");
+            HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) DELETE FAILED: '$(path);", FI->path, "");
         }
     }
     else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support unlink/delete");
@@ -333,7 +374,7 @@ int FileStoreRmDir(TFileStore *FS, const char *Path)
         {
             result=FileStoreUnlinkItem(FS, FI);
 
-            if (result==TRUE) HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RMDIR: $(path)", Path, "");
+            if (result==TRUE) HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) RMDIR: $(path)", Path, "");
             else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) RMDIR FAILED: $(path)", Path, "");
         }
     }
@@ -382,7 +423,7 @@ int FileStoreUnLock(TFileStore *FS, const char *Path)
 
 int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
 {
-    char *Arg1=NULL, *Arg2=NULL;
+    char *Arg1=NULL, *Arg2=NULL, *Tempstr=NULL;
     TFileItem *FI;
     ListNode *Node;
     int result=FALSE, IsMove=FALSE, i;
@@ -418,7 +459,7 @@ int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
                     ListAddNamedItem(FS->DirList, FI->name, FI);
                 }
             }
-            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) RENAME: $(path) $(dest)", Path, Arg2);
+            HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) RENAME: $(path) $(dest)", Path, Arg2);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) RENAME FAILED: $(path) $(dest)", Path, Arg2);
     }
@@ -449,7 +490,7 @@ int FileStoreCopyFile(TFileStore *FS, const char *Path, const char *Dest)
 
         if (result==TRUE)
         {
-            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) COPY: $(path) $(dest)", Path, Arg2);
+            HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) COPY: $(path) $(dest)", Path, Arg2);
             Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
             if (Node)
             {
@@ -461,7 +502,7 @@ int FileStoreCopyFile(TFileStore *FS, const char *Path, const char *Dest)
             }
 
         }
-        else HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) COPY FAILED: $(path) $(dest)", Path, Arg2);
+        else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) COPY FAILED: $(path) $(dest)", Path, Arg2);
     }
     else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support file copy");
 
@@ -488,7 +529,7 @@ int FileStoreLinkPath(TFileStore *FS, const char *Path, const char *Dest)
 
         if (result==TRUE)
         {
-            HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) LINK: $(path) $(dest)", Path, Arg2);
+            HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) LINK: $(path) $(dest)", Path, Arg2);
             Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
             if (Node)
             {
@@ -500,7 +541,7 @@ int FileStoreLinkPath(TFileStore *FS, const char *Path, const char *Dest)
             }
 
         }
-        else HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) LINK FAILED: $(path) $(dest)", Path, Arg2);
+        else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) LINK FAILED: $(path) $(dest)", Path, Arg2);
     }
     else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support links/symlinks");
 
@@ -524,8 +565,8 @@ int FileStoreChMod(TFileStore *FS, const char *ModeStr, const char *Path)
         Tempstr=FileStoreReformatPath(Tempstr, Path, FS);
         result=FS->ChMod(FS, Tempstr, Mode);
         Tempstr=FormatStr(Tempstr, "%o", Mode);
-        if (result) HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHMOD: $(path) $(dest)", Path, Tempstr);
-        else HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) CHMOD FAILED: $(path) $(dest)", Path, Tempstr);
+        if (result) HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) CHMOD: $(path) $(dest)", Path, Tempstr);
+        else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) CHMOD FAILED: $(path) $(dest)", Path, Tempstr);
     }
     else UI_Output(UI_OUTPUT_ERROR, "FileStore does not support chmod");
 
@@ -577,48 +618,105 @@ int FileStoreChPassword(TFileStore *FS, const char *Old, const char *New)
 
 
 
-void FileStoreGetTimeFromFile(TFileStore *FS)
+void FileStoreTestFeatures(TFileStore *FS)
 {
     STREAM *S;
-    ListNode *Curr;
     TFileItem *FI;
-    char *Tempstr=NULL;
-    int StoredFlags;
+    char *Tempstr=NULL, *FileContents=NULL, *Hash=NULL;
+    const char *ptr;
+    int StoredFlags, len;
 
     //suppress errors while we are doing these 'automatic' tests and transfers
     StoredFlags=Settings->Flags;
     Settings->Flags |= SETTING_NOERROR;
-    S=FS->OpenFile(FS, ".fileferry.timetest", "w", 0);
+    FileContents=GetRandomAlphabetStr(FileContents, 64);
+    len=StrLen(FileContents);
+    S=FS->OpenFile(FS, ".fileferry.timetest", XFER_FLAG_UPLOAD, 0, len);
     if (S)
     {
+        FS->WriteBytes(FS, S, FileContents, 0, len);
         FS->CloseFile(FS, S);
+
         //this chdir is done to reload directory listing, so we can
         //access timestamp of .fileferry.timetest
         FileStoreChDir(FS, ".");
 
-        Curr=ListFindNamedItem(FS->DirList, ".fileferry.timetest");
-        if (Curr)
-        {
-            FI=(TFileItem *) Curr->Item;
-            FS->TimeOffset=time(NULL) - FI->mtime;
-        }
+        FI=FileStoreGetFileInfo(FS, ".fileferry.timetest");
+        if (FI) FS->TimeOffset=time(NULL) - FI->mtime;
 
         if (FS->GetValue)
         {
-            Tempstr=FS->GetValue(Tempstr, FS,  ".fileferry.timetest", "md5");
-            if (StrValid(Tempstr)) SetVar(FS->Vars, "HashTypes", "md5");
-            Tempstr=FS->GetValue(Tempstr, FS,  ".fileferry.timetest", "sha");
-            if (StrValid(Tempstr)) SetVar(FS->Vars, "HashTypes", "sha");
-            Tempstr=FS->GetValue(Tempstr, FS,  ".fileferry.timetest", "sha256");
-            if (StrValid(Tempstr)) SetVar(FS->Vars, "HashTypes", "sha256");
+            ptr=GetVar(FS->Vars, "HashTypes");
+            if ( StrValid(ptr) && (strcmp(ptr, "detect")==0) )
+            {
+                SetVar(FS->Vars, "HashTypes", "");
+
+                Tempstr=FS->GetValue(Tempstr, FS,  ".fileferry.timetest", "md5,sha1,sha256");
+
+                HashBytes(&Hash, "md5", FileContents, StrLen(FileContents), ENCODE_HEX);
+                if (strcmp(Tempstr, Hash)==0) AppendVar(FS->Vars, "HashTypes", "md5");
+
+                HashBytes(&Hash, "sha", FileContents, StrLen(FileContents), ENCODE_HEX);
+                if (strcmp(Tempstr, Hash)==0) AppendVar(FS->Vars, "HashTypes", "sha");
+
+                HashBytes(&Hash, "sha256", FileContents, StrLen(FileContents), ENCODE_HEX);
+                if (strcmp(Tempstr, Hash)==0) AppendVar(FS->Vars, "HashTypes", "sha256");
+            }
         }
+        if (FI) FileStoreUnlinkItem(FS, FI);
     }
     Settings->Flags=StoredFlags;
 
+    Destroy(FileContents);
     Destroy(Tempstr);
+    Destroy(Hash);
 }
 
 
+int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileItem *LocalFI, TFileItem *RemoteFI)
+{
+    int RetVal=CMP_MATCH;
+    char *LocalHash=NULL, *RemoteHash=NULL, *HashType=NULL;
+    const char *ptr;
+
+    if (! LocalFI) return(CMP_NO_LOCAL);
+    if (! RemoteFI) return(CMP_NO_REMOTE);
+    if (LocalFI->size != RemoteFI->size) return(CMP_SIZE_MISMATCH);
+
+    ptr=GetVar(RemoteFS->Vars, "HashTypes");
+    if (StrValid(ptr))
+    {
+        GetToken(ptr, " ", &HashType, 0);
+        LocalHash=LocalFS->GetValue(LocalHash, LocalFS,  LocalFI->path, HashType);
+        RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemoteFI->path, HashType);
+
+        if (strcasecmp(LocalHash, RemoteHash)==0) RetVal=CMP_MATCH;
+        else RetVal=CMP_HASH_MISMATCH;
+    }
+
+    if (LocalFI->mtime < RemoteFI->mtime) RetVal=CMP_LOCAL_NEWER;
+    if (LocalFI->mtime > RemoteFI->mtime) RetVal=CMP_REMOTE_NEWER;
+
+    Destroy(LocalHash);
+    Destroy(RemoteHash);
+    Destroy(HashType);
+
+    return(RetVal);
+}
+
+
+int FileStoreCompareFiles(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath)
+{
+    TFileItem *LocalFI, *RemoteFI;
+
+    FileStoreDirListRefresh(LocalFS, DIR_FORCE);
+    FileStoreDirListRefresh(RemoteFS, DIR_FORCE);
+
+    LocalFI=FileStoreGetFileInfo(LocalFS, LocalPath);
+    RemoteFI=FileStoreGetFileInfo(RemoteFS, RemotePath);
+
+    return(FileStoreCompareFileItems(LocalFS, RemoteFS, LocalFI, RemoteFI));
+}
 
 
 
@@ -720,7 +818,7 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
 {
     char *Tempstr=NULL, *Name=NULL, *Value=NULL;
     const char *ptr;
-    float total=0, used=0, avail=0, used_perc=0, avail_perc=0;
+    double total=0, used=0, avail=0, used_perc=0, avail_perc=0;
 
     if (FS->GetValue)
     {
@@ -737,12 +835,7 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
             }
 
             //only display disk space if we have some values
-            Tempstr=MCopyStr(Tempstr, "Disk Space: total: ", ToIEC(total, 2), NULL);
-            Value=FormatStr(Value, " used: %0.1f%% (%sb) ", used * 100.0 / total, ToIEC(used, 2));
-            Tempstr=CatStr(Tempstr, Value);
-            Value=FormatStr(Value, " avail: %0.1f%% (%sb) ", avail * 100.0 / total, ToIEC(avail, 2));
-            Tempstr=CatStr(Tempstr, Value);
-            UI_Output(0, "%s", Tempstr);
+	    if ((total > 0) || (used > 0) || (avail > 0) ) UI_DisplayDiskSpace(total, used, avail);
         }
     }
 
@@ -752,6 +845,7 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
 }
 
 
+
 void FileStoreOutputSupportedFeatures(TFileStore *FS)
 {
     const char *ptr;
@@ -759,10 +853,10 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS)
     if (StrValid(GetVar(FS->Vars, "SSL:CipherDetails"))) FileStoreOutputCipherDetails(FS, UI_OUTPUT_VERBOSE);
     if (! FS->Flags & FILESTORE_FOLDERS) UI_Output(0, "This filestore does not support directories/folders");
     if (FS->Flags & FILESTORE_SHARELINK) UI_Output(0, "This filestore supports link sharing via the 'share' command");
-    if (FS->Flags & FILESTORE_RESUME_TRANSFERS) UI_Output(0, "This filestore supports resuming transfers via 'get -resume'");
     if (FS->Flags & FILESTORE_USAGE) UI_Output(0, "This filestore supports disk-usage/quota reporting via the 'info usage' command");
     if (! FS->ReadBytes) UI_Output(0, "This filestore does NOT support downloads (write only)");
     if (! FS->WriteBytes) UI_Output(0, "This filestore does NOT support uploads (read only)");
+    if (FS->Flags & FILESTORE_RESUME_TRANSFERS) UI_Output(0, "This filestore supports resuming transfers via 'get -resume'");
     if (! FS->UnlinkPath) UI_Output(0, "This filestore does NOT support deleting files");
     if (! FS->MkDir) UI_Output(0, "This filestore does NOT support creating folders/directories");
     if (! FS->RenamePath) UI_Output(0, "This filestore does NOT support moving/renaming files");
@@ -773,6 +867,8 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS)
     if (StrValid(FS->Features)) UI_Output(0, "Protocol Supported Features: %s", FS->Features);
     if (StrValid(GetVar(FS->Vars, "ProtocolVersion"))) UI_Output(0, "Protocol Version: %s", GetVar(FS->Vars, "ProtocolVersion"));
 }
+
+
 
 TFileStore *FileStoreConnect(const char *Config)
 {

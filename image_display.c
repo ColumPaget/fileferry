@@ -45,7 +45,6 @@ static char *SelectProgram(char *RetStr, const char *Candidates, const char *Ima
     val=strtol(ptr, NULL, 10);
     Tempstr=FormatStr(Tempstr, "%d", val);
     SetVar(Vars, "height", Tempstr);
-
     SetVar(Vars, "path", ImagePath);
 
     RetStr=CopyStr(RetStr, "");
@@ -80,6 +79,7 @@ void DisplayImage(TCommand *Cmd, const char *Title, const char *ImagePath)
             if (pid==0)
             {
                 system(Tempstr);
+                unlink(ImagePath);
                 _exit(0);
             }
         }

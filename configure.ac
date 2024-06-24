@@ -1,9 +1,17 @@
-AC_INIT([fileferry], [2.0])
+AC_INIT([fileferry],[3.0])
 
 AC_PROG_CC
-AC_LANG_C
+AC_LANG([C])
 AC_PROG_MAKE_SET
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro `STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  ISO C90 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_SYS_LARGEFILE
 
 
@@ -52,6 +60,8 @@ else
 fi
 
 dnl read Makefile.in and write Makefile
-AC_OUTPUT(Makefile)
-AC_OUTPUT([filestore_drivers/Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+AC_CONFIG_FILES([filestore_drivers/Makefile])
+AC_OUTPUT
 

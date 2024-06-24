@@ -19,6 +19,7 @@ int UI_TransferProgress(TFileTransfer *Xfer);
 void UI_Output(int Flags, const char *Fmt, ...);
 void UI_OutputDirList(TFileStore *FS, TCommand *Cmd);
 void UI_OutputFStat(TFileStore *FS, TCommand *Cmd);
+void UI_DisplayDiskSpace(double total, double used, double avail);
 void UI_ShowSettings();
 int UI_ShowFile(TFileStore *FromFS, TFileStore *LocalFS, TCommand *Cmd);
 

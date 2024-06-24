@@ -7,11 +7,9 @@ static void RSS_ListDir_Items(ListNode *FileList, ListNode *ItemInfo)
     const char *ptr;
     ListNode *Curr;
 
-    FI=(TFileItem *) calloc(1, sizeof(TFileItem));
     ptr=ParserGetValue(ItemInfo, "enclosure_url");
     if (! StrValid(ptr)) ptr=ParserGetValue(ItemInfo, "link");
-    FI->name=CopyStr(FI->name, GetBasename(ptr));
-    FI->path=CopyStr(FI->path, ptr);
+    FI=FileItemCreate(ptr, 0, 0, 0);
     ptr=ParserGetValue(ItemInfo, "enclosure_length");
     if (StrValid(ptr)) FI->size=atoi(ptr);
     ptr=ParserGetValue(ItemInfo, "pubDate");

@@ -123,16 +123,17 @@ int ParseCommandLine(int argc, const char *argv[])
             else if (strcmp(arg, "-nols")==0) Settings->Flags |= SETTING_NO_DIR_LIST;
             else if (strcmp(arg, "-N")==0) Settings->Flags |= SETTING_BATCH;
             else if (strcmp(arg, "-sixel")==0) Settings->Flags |= SETTING_SIXEL;
+            else if (strcmp(arg, "-integrity")==0) Settings->Flags |= SETTING_INTEGRITY_CHECK;
+            else if (strcmp(arg, "-I")==0) Settings->Flags |= SETTING_INTEGRITY_CHECK;
             else if ( (strcmp(arg, "-D")==0) || (strcmp(arg, "-debug")==0) )
             {
                 Settings->Flags |= SETTING_DEBUG;
                 LibUsefulSetValue("HTTP:Debug", "Y");
                 LibUsefulSetValue("LibUseful:Debug", "Y");
             }
-            else if (strcmp(arg, "-v")==0)
-            {
-                Settings->Flags |= SETTING_VERBOSE;
-            }
+            else if (strcmp(arg, "-v")==0) Settings->Flags |= SETTING_VERBOSE;
+            else if (strcmp(arg, "-verb")==0) Settings->Flags |= SETTING_VERBOSE;
+            else if (strcmp(arg, "-verbose")==0) Settings->Flags |= SETTING_VERBOSE;
             else if (strcmp(arg, "-version")==0) PrintVersion();
             else if (strcmp(arg, "--version")==0) PrintVersion();
             else if (strcmp(arg, "-?")==0) HelpCommandLine();
@@ -200,6 +201,7 @@ int SettingChange(const char *Name, const char *Value)
     else if (strcasecmp(Name, "debug")==0) SettingChangeBoolean(Value, SETTING_DEBUG);
     else if (strcasecmp(Name, "syslog")==0) SettingChangeBoolean(Value, SETTING_SYSLOG);
     else if (strcasecmp(Name, "nols")==0) SettingChangeBoolean(Value, SETTING_NO_DIR_LIST);
+    else if (strcasecmp(Name, "integrity")==0) SettingChangeBoolean(Value, SETTING_INTEGRITY_CHECK);
 }
 
 
@@ -247,7 +249,7 @@ int SettingsInit(int argc, const char *argv[])
     Settings->FileStoresPath=MCopyStr(Settings->FileStoresPath, GetCurrUserHomeDir(), "/.config/fileferry/filestores.conf", ":/etc/fileferry/filestores.conf", NULL);
     Settings->ImagePreviewSize=CopyStr(Settings->ImagePreviewSize, "200x200");
 
-    Settings->ImageViewers=CopyStr(Settings->ImageViewers, "display $(path),fim $(path),feh $(path),miv $(path),mage $(path),xv $(path),imlib2_view $(path),gqview $(path),qimageviewer $(path),links -g $(path)");
+    Settings->ImageViewers=CopyStr(Settings->ImageViewers, "miv2 $(path),display $(path),fim $(path),feh $(path),miv $(path),mage $(path),xv $(path),imlib2_view $(path),gqview $(path),qimageviewer $(path),links -g $(path)");
     Settings->Sixelers=CopyStr(Settings->Sixelers, "img2sixel -w $(width) $(path),convert -resize $(width)x$(height) $(path) sixel:-");
 
     if (! ParseCommandLine(argc, argv)) return(FALSE);

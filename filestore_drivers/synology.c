@@ -7,6 +7,8 @@
 #include "../settings.h"
 
 
+
+
 static int SYNO_ReadReply(TFileStore *FS, STREAM *S, PARSER **JSON)
 {
     char *Tempstr=NULL;
@@ -228,20 +230,23 @@ static void SYNO_ListDirParseItem(ListNode *FileList, ListNode *Curr)
     else FI=FileItemCreate(p_Name, FTYPE_FILE, size, 0);
     FI->path=CopyStr(FI->path, ParserGetValue(Curr, "path"));
     ptr=ParserGetValue(Curr, "additional/time/mtime");
+
     if (StrValid(ptr)) FI->mtime=atoi(ptr);
     ListAddNamedItem(FileList, FI->name, FI);
-
 }
 
 
 
-static ListNode *SYNO_ListQuery(TFileStore *FS, const char *Path, const char *Method, const char *Additional)
+static ListNode *SYNO_ListQuery(TFileStore *FS, const char *Path, const char *Additional)
 {
     char *URL=NULL, *Quoted=NULL, *Tempstr=NULL, *Token=NULL;
-    const char *ptr;
     PARSER *JSON;
+    const char *ptr, *p_Method="list";
 
+    //if path is blank, or is '/' then list shares
+    if (StrLen(Path) < 2) p_Method="list_share";
 
+    Tempstr=CopyStr(Tempstr, "");
     Quoted=HTTPQuote(Quoted, Path);
     ptr=GetToken(Additional, ",", &Token, 0);
     while (ptr)
@@ -253,7 +258,7 @@ static ListNode *SYNO_ListQuery(TFileStore *FS, const char *Path, const char *Me
     Token=MCopyStr(Token, "[", Tempstr, "]", NULL);
     Tempstr=HTTPQuote(Tempstr, Token);
 
-    URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.List"), "?api=SYNO.FileStation.List&version=2&method=", Method, "&folder_path=", Quoted, "&additional=", Tempstr, NULL);
+    URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.List"), "?api=SYNO.FileStation.List&version=2&method=", p_Method, "&folder_path=", Quoted, "&additional=", Tempstr, NULL);
 
     JSON=SYNO_FileQuery(FS, URL, "file list:");
 
@@ -266,26 +271,24 @@ static ListNode *SYNO_ListQuery(TFileStore *FS, const char *Path, const char *Me
 }
 
 
-static ListNode *SYNO_List(TFileStore *FS, const char *Path, const char *Method, const char *Additional)
+static ListNode *SYNO_List(TFileStore *FS, const char *Path, const char *Additional)
 {
     ListNode *JSON=NULL, *ShareList=NULL, *Files=NULL, *Curr;
     const char *ptr;
 
-
-    JSON=SYNO_ListQuery(FS, Path, Method, Additional);
+    JSON=SYNO_ListQuery(FS, Path, Additional);
     ptr=ParserGetValue(JSON, "success");
     if (strcmp(ptr, "true")==0)
     {
         Files=ListCreate();
-        ShareList=ParserOpenItem(JSON, "/data/files");
-        Curr=ListGetNext(ShareList);
-        while (Curr)
+
+        if (strcmp(Path, "/")==0) ShareList=ParserOpenItem(JSON, "/data/shares");
+        else
         {
-            SYNO_ListDirParseItem(Files, Curr);
-            Curr=ListGetNext(Curr);
+            ShareList=ParserOpenItem(JSON, "/data/files");
+            if (! ShareList) ShareList=ParserOpenItem(JSON, "/data/shares");
         }
 
-        ShareList=ParserOpenItem(JSON, "/data/shares");
         Curr=ListGetNext(ShareList);
         while (Curr)
         {
@@ -301,37 +304,40 @@ static ListNode *SYNO_List(TFileStore *FS, const char *Path, const char *Method,
 }
 
 
-
-
-static TFileItem *SYNO_FileInfo(TFileStore *FS, const char *Path)
+static ListNode *SYNO_ListDir(TFileStore *FS, const char *Path)
 {
-    TFileItem *Item=NULL;
-    ListNode *List, *Curr;
-
-    List=SYNO_List(FS, Path, "list", "time,size");
-    Curr=ListGetNext(List);
-    if (Curr)
-    {
-        Item=(TFileItem *) Curr->Item;
-        Curr->Item=NULL;
-    }
-
-    ListDestroy(List, FileItemDestroy);
-    return(Item);
+    return(SYNO_List(FS, Path, "size,time,owner"));
 }
 
 
 
-
-
-static ListNode *SYNO_ListDir(TFileStore *FS, const char *Path)
+static TFileItem *SYNO_FileInfo(TFileStore *FS, const char *Path)
 {
-    ListNode *Files=NULL;
+    TFileItem *Item=NULL, *Found=NULL;
+    ListNode *List, *Curr;
+    char *Dir=NULL;
 
-    if ( (! StrValid(Path)) || (strcmp(Path, "/")==0) ) Files=SYNO_List(FS, "/", "list_share", "time,size");
-    else Files=SYNO_List(FS, Path, "list", "time,size");
+    Dir=CopyStr(Dir, Path);
+    StrRTruncChar(Dir, '/');
 
-    return(Files);
+    List=SYNO_ListDir(FS, Dir);
+    Curr=ListGetNext(List);
+    while (Curr)
+    {
+        Item=(TFileItem *) Curr->Item;
+        if (strcmp(Item->name, GetBasename(Path))==0)
+        {
+            Found=(TFileItem *) Curr->Item;
+            Curr->Item=NULL;
+            break;
+        }
+        Curr=ListGetNext(Curr);
+    }
+
+    ListDestroy(List, FileItemDestroy);
+    Destroy(Dir);
+
+    return(Found);
 }
 
 
@@ -552,7 +558,7 @@ static char *SYNO_GetUsage(char *RetStr, TFileStore *FS)
     char *Token=NULL;
     const char *ptr;
 
-    JSON=SYNO_ListQuery(FS, "/", "list_share", "volume_status");
+    JSON=SYNO_ListQuery(FS, "/", "volume_status");
 
     ShareList=ParserOpenItem(JSON, "/data/shares");
     Curr=ListGetNext(ShareList);
@@ -615,7 +621,6 @@ static char *SYNO_CheckGetMD5(char *MD5, TFileStore *FS, const char *ID)
     Tempstr=MCopyStr(Tempstr, "\"", ID, "\"", NULL);
     Quoted=HTTPQuote(Quoted, Tempstr);
     URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.MD5"), "?api=SYNO.FileStation.MD5&version=2&method=status&taskid=", Quoted, NULL);
-//printf("URL: %s\n", URL);
 
     JSON=SYNO_FileQuery(FS, URL, "file md5:");
     if (JSON)
@@ -694,14 +699,13 @@ static char *SYNO_GetValue(char *RetStr, TFileStore *FS, const char *Path, const
 
 
 
-static STREAM *SYNO_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *SYNO_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     char *Tempstr=NULL, *Args=NULL, *URL=NULL, *Header=NULL, *Boundary=NULL;
     STREAM *S=NULL;
     uint64_t len;
 
-
-    if (*OpenFlags == 'w')
+    if (OpenFlags & XFER_FLAG_WRITE)
     {
         URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.Upload"), NULL);
 
@@ -711,7 +715,7 @@ static STREAM *SYNO_OpenFile(TFileStore *FS, const char *Path, const char *OpenF
         Header=MCatStr(Header, "--", Boundary, "\r\nContent-disposition: form-data; name=\"method\"\r\n\r\nupload\r\n", NULL);
         Header=MCatStr(Header, "--", Boundary, "\r\nContent-disposition: form-data; name=\"create_parents\"\r\n\r\ntrue\r\n", NULL);
         Tempstr=HTTPQuote(Tempstr, FS->CurrDir);
-        Header=MCatStr(Header, "--", Boundary, "\r\nContent-disposition: form-data; name=\"overwrite\"\r\n\r\nfalse\r\n", NULL);
+        Header=MCatStr(Header, "--", Boundary, "\r\nContent-disposition: form-data; name=\"overwrite\"\r\n\r\ntrue\r\n", NULL);
         Header=MCatStr(Header, "--", Boundary, "\r\nContent-disposition: form-data; name=\"path\"\r\n\r\n", FS->CurrDir, "\r\n", NULL);
         Header=MCatStr(Header, "--", Boundary, "\r\nContent-disposition: form-data; name=\"file\"; filename=\"", GetBasename(Path), "\"\r\nContent-type: application/octet-stream\r\n\r\n",  NULL);
         len=Size + StrLen(Header) + StrLen(Boundary) + 8;
@@ -723,6 +727,12 @@ static STREAM *SYNO_OpenFile(TFileStore *FS, const char *Path, const char *OpenF
             STREAMWriteLine(Header, S);
             STREAMSetValue(S, "Boundary", Boundary);
         }
+    }
+    else if (OpenFlags & XFER_FLAG_THUMB)
+    {
+        Tempstr=HTTPQuote(Tempstr, Path);
+        URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.Thumb"), "?api=SYNO.FileStation.Thumb&version=2&method=get&size=small&path=", Tempstr, NULL);
+        S=STREAMOpen(URL, "");
     }
     else
     {
@@ -750,7 +760,7 @@ static int SYNO_CloseFile(TFileStore *FS, STREAM *S)
 
     if (StrValid(STREAMGetValue(S, "Boundary")))
     {
-        Tempstr=MCopyStr(Tempstr, "\r\n--", STREAMGetValue(S, "Boundary"), "--\r\n", NULL);
+        Tempstr=MCopyStr(Tempstr, "\r\n--", STREAMGetValue(S, "Boundary"), "--\r\n\r\n", NULL);
         STREAMWriteLine(Tempstr, S);
         STREAMCommit(S);
         if (! SYNO_ReadReply(FS, S, &JSON))

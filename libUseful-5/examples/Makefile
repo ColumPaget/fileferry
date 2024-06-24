@@ -1,4 +1,4 @@
-LIBS=../libUseful.a -lssl -lcrypto -lz -lcap
+LIBS=../libUseful.a -lssl -lcrypto -lz #-lcap
 
 all:
 	gcc -oJSON.exe JSON.c $(LIBS)
@@ -8,6 +8,7 @@ all:
 	gcc -oHMAC.exe HMAC.c $(LIBS)
 	gcc -oTerminal.exe Terminal.c $(LIBS)
 	gcc -oTermBar.exe TermBar.c $(LIBS)
+	gcc -oTermProgress.exe TermProgress.c $(LIBS)
 	gcc -oVars.exe Vars.c $(LIBS)
 	gcc -oParseRSS.exe ParseRSS.c $(LIBS)
 	gcc -oFileCopy.exe FileCopy.c $(LIBS)
@@ -24,3 +25,4 @@ all:
 	gcc -oWebsocket.exe Websocket.c $(LIBS)
 	gcc -oHttpServer.exe HttpServer.c $(LIBS)
 	gcc -oPasswordFile.exe PasswordFile.c $(LIBS)
+	gcc -obase32.exe base32.c $(LIBS)

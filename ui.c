@@ -90,7 +90,7 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
 {
     ListNode *DirList, *Curr;
     TFileItem *FI;
-    const char *prefix="", *class="", *whenstr="";
+    const char *prefix="", *class="", *whenstr="", *sizestr="";
     char *Tempstr=NULL;
     int LineCount=0;
 
@@ -143,7 +143,9 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
                     else if ((Now - FI->mtime) < (3600 * 24)) whenstr=GetDateStrFromSecs("%H:%M:%S", FI->mtime, NULL);
                     else whenstr=GetDateStrFromSecs("%Y/%m/%d", FI->mtime, NULL);
 
-                    Tempstr=FormatStr(Tempstr, "% 8s % 10s % 10s %s% 30s%s~0", ToMetric((double)FI->size, 1), whenstr, FI->user, prefix, FI->name, class);
+                    if (Cmd->Flags & CMD_FLAG_LONG_LONG) Tempstr=FormatStr(Tempstr, "% 12llu % 10s % 10s %s% 30s%s~0", (unsigned long long) FI->size, whenstr, FI->user, prefix, FI->name, class);
+                    else Tempstr=FormatStr(Tempstr, "% 8s % 10s % 10s %s% 30s%s~0", ToMetric((double)FI->size, 1), whenstr, FI->user, prefix, FI->name, class);
+
                     if (StrValid(FI->hash)) Tempstr=MCatStr(Tempstr, "	", FI->hash, NULL);
                     if (StrValid(FI->destination)) Tempstr=MCatStr(Tempstr, " -> ", FI->destination, NULL);
                     if (StrValid(FI->title)) Tempstr=MCatStr(Tempstr, "  ", FI->title, "", NULL);
@@ -231,6 +233,22 @@ void UI_OutputFStat(TFileStore *FS, TCommand *Cmd)
 }
 
 
+
+void UI_DisplayDiskSpace(double total, double used, double avail)
+{
+char *Tempstr=NULL, *Value=NULL;
+  
+            Tempstr=MCopyStr(Tempstr, "Disk Space: total: ", ToIEC(total, 2), NULL);
+            Value=FormatStr(Value, " used: %0.1f%% (%sb) ", used * 100.0 / total, ToIEC(used, 2));
+            Tempstr=CatStr(Tempstr, Value);
+            Value=FormatStr(Value, " avail: %0.1f%% (%sb) ", avail * 100.0 / total, ToIEC(avail, 2));
+            Tempstr=CatStr(Tempstr, Value);
+            UI_Output(0, "%s", Tempstr);
+
+Destroy(Tempstr);
+Destroy(Value);
+}
+
 void UI_DisplayPrompt(TFileStore *FS)
 {
     char *Tempstr=NULL;
@@ -295,7 +313,7 @@ static void UI_ShowFilePostProcess(TCommand *Cmd, TFileTransfer *Xfer)
 
     Tempstr=FileStoreReformatPath(Tempstr, Xfer->DestFinalName, Xfer->ToFS);
     if (Cmd->Flags & CMD_FLAG_IMG) DisplayImage(Cmd, Xfer->SourceFinalName, Tempstr);
-    unlink(Tempstr);
+    else unlink(Tempstr);
 
     Destroy(Tempstr);
 }

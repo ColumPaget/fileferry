@@ -1,4 +1,5 @@
 #include "ls_decode.h"
+#include "../fileitem.h"
 
 static int LS_CountNumericArgs(const char *Input)
 {
@@ -143,7 +144,7 @@ TFileItem *Decode_MLSD_Output(char *CurrDir, char *LsLine)
     int val;
 
     if (! StrLen(LsLine)) return(NULL);
-    FI=(TFileItem *) calloc(1,sizeof(TFileItem));
+    FI=FileItemCreate("", 0, 0, 0);
     ptr=GetToken(LsLine,"\\S",&FileFacts,0);
     FI->path=CopyStr(FI->path,CurrDir);
     FI->path=CatStr(FI->path,ptr);

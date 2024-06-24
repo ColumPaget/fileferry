@@ -32,7 +32,7 @@ const char *HTTP_Webdav_Parse_Propfind(const char *XML, TFileStore *FS, ListNode
     const char *ptr;
     TFileItem *FI;
 
-    FI=(TFileItem *) calloc(1, sizeof(TFileItem));
+    FI=FileItemCreate("", 0, 0, 0);
     ptr=XMLGetTag(XML, &Namespace, &Tag, &Value);
     while (ptr)
     {
@@ -96,7 +96,7 @@ int Webdav_ListDir(TFileStore *FS, const char *URL, ListNode *FileList)
     STREAM *S;
 
 
-    S=HTTP_OpenURL(FS, "PROPFIND", URL, "", "application/xml", StrLen(PROPFIND_XML), 1);
+    S=HTTP_OpenURL(FS, "PROPFIND", URL, "", "application/xml", StrLen(PROPFIND_XML), 0, 1);
     if (S)
     {
         STREAMWriteLine(PROPFIND_XML, S);
@@ -151,7 +151,7 @@ char *WebDav_GetQuota(char *RetStr, TFileStore *FS)
                 "</D:propfind>");
 
     //ask for props of root directory
-    S=HTTP_OpenURL(FS, "PROPFIND", "", "", "application/xml", StrLen(XML), 0);
+    S=HTTP_OpenURL(FS, "PROPFIND", "", "", "application/xml", StrLen(XML), 0, 0);
     if (S)
     {
         STREAMWriteLine(XML, S);
@@ -206,8 +206,7 @@ char *WebDav_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char
     RetStr=CopyStr(RetStr, "");
 
     if (strcasecmp(ValName, "DiskQuota")==0) RetStr=WebDav_GetQuota(RetStr, FS);
-    if (strcasecmp(ValName, "md5")==0) RetStr=HTTP_GetValue(RetStr, FS, Path, ValName);
-    if (strcasecmp(ValName, "sha")==0) RetStr=HTTP_GetValue(RetStr, FS, Path, ValName);
-    if (strcasecmp(ValName, "sha256")==0) RetStr=HTTP_GetValue(RetStr, FS, Path, ValName);
+    else RetStr=HTTP_GetValue(RetStr, FS, Path, ValName);
+
     return(RetStr);
 }

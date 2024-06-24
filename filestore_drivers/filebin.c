@@ -150,7 +150,7 @@ static int FileBin_Info(TFileStore *FS)
 }
 
 
-static STREAM *FileBin_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *FileBin_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     char *URL=NULL, *Tempstr=NULL;
     const char *ptr;
@@ -158,7 +158,7 @@ static STREAM *FileBin_OpenFile(TFileStore *FS, const char *Path, const char *Op
 
     Tempstr=HTTPQuote(Tempstr, GetBasename(Path));
     URL=MCopyStr(URL, "https://filebin.net/", FS->CurrDir, "/", Tempstr, NULL);
-    if (*OpenFlags=='w') Tempstr=FormatStr(Tempstr, "w Accept=application/json Content-Type=application/octet-stream cid=12345 Content-Length=%lld", Size);
+    if (OpenFlags & XFER_FLAG_WRITE) Tempstr=FormatStr(Tempstr, "w Accept=application/json Content-Type=application/octet-stream cid=12345 Content-Length=%lld", Size);
     else Tempstr=CopyStr(Tempstr, "r Accept=application/json");
 
     UI_Output(UI_OUTPUT_DEBUG, "url: %s", URL);

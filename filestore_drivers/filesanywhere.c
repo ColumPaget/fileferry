@@ -66,7 +66,7 @@ static TFileItem *FilesAnywhere_ReadFileEntry(const char **XML)
     TFileItem *FI=NULL;
     int result;
 
-    FI=(TFileItem *) calloc(1,sizeof(TFileItem));
+    FI=FileItemCreate("", 0, 0, 0);
     *XML=XMLGetTag(*XML,NULL,&TagName,&TagData);
     while (*XML)
     {
@@ -325,7 +325,7 @@ static int FilesAnywhere_ChPassword(TFileStore *FS, const char *Old, const char 
 
 
 
-static STREAM *FilesAnywhere_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *FilesAnywhere_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     char *Tempstr=NULL, *URL=NULL, *XML=NULL;
     char *TagName=NULL, *TagData=NULL;
@@ -334,7 +334,7 @@ static STREAM *FilesAnywhere_OpenFile(TFileStore *FS, const char *Path, const ch
     int result;
 
 
-    if (*OpenFlags == 'w')
+    if (OpenFlags & XFER_FLAG_WRITE)
     {
         S=STREAMCreate();
         STREAMSetValue(S, "transfer_filename", Path);

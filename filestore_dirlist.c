@@ -1,5 +1,6 @@
 #include "filestore_dirlist.h"
 #include "commands.h"
+#include <fnmatch.h>
 
 void FileStoreDirListFree(TFileStore *FS, ListNode *Dir)
 {

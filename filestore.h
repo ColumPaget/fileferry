@@ -25,6 +25,13 @@
 #define DIR_CLEAR 1
 #define DIR_FORCE 2
 
+#define CMP_MATCH         0
+#define CMP_NO_LOCAL      1
+#define CMP_NO_REMOTE     2
+#define CMP_SIZE_MISMATCH 3
+#define CMP_HASH_MISMATCH 4
+#define CMP_LOCAL_NEWER   5
+#define CMP_REMOTE_NEWER  6
 
 typedef enum {FILESTORE_FTP, FILESTORE_SFTP, FILESTORE_HTTP, FILESTORE_WEBDAV} EFileStoreTypes;
 
@@ -37,7 +44,7 @@ typedef int (*MKDIR_FUNC)(TFileStore *FS, const char *Path, int MkDir);
 typedef int (*CHMOD_FUNC)(TFileStore *FS, const char *Path, int Mode);
 typedef char *(*GETVALUE_FUNC)(char *Buffer, TFileStore *FS, const char *Path, const char *Value);
 typedef ListNode *(*LIST_DIR_FUNC)(TFileStore *FS, const char *URL);
-typedef STREAM *(*OPENFILE_FUNC)(TFileStore *FS, const char *URL, const char *OpenType, uint64_t size);
+typedef STREAM *(*OPENFILE_FUNC)(TFileStore *FS, const char *URL, int OpenFlags, uint64_t offset, uint64_t size);
 typedef int (*READFILE_FUNC)(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len);
 typedef int (*WRITEFILE_FUNC)(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len);
 typedef int (*CLOSEFILE_FUNC)(TFileStore *FS, STREAM *S);
@@ -113,7 +120,8 @@ void FileStoreOutputDiskQuota(TFileStore *FS);
 void FileStoreOutputSupportedFeatures(TFileStore *FS);
 void FileStoreRecordCipherDetails(TFileStore *FS, STREAM *S);
 void FileStoreOutputCipherDetails(TFileStore *FS, int Verbosity);
-
-void FileStoreGetTimeFromFile(TFileStore *FS);
+int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileItem *LocalFI, TFileItem *RemoteFI);
+int FileStoreCompareFiles(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath);
+void FileStoreTestFeatures(TFileStore *FS);
 
 #endif

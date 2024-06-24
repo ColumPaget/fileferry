@@ -17,9 +17,13 @@
 #define XFER_FLAG_RECURSE  4
 #define XFER_FLAG_TMPNAME  8
 #define XFER_FLAG_FORCE   16
-#define XFER_FLAG_RESUME  32
+#define XFER_FLAG_THUMB   32
+#define XFER_FLAG_RESUME  64
+#define XFER_FLAGS_OPEN_FILE (XFER_FLAG_FORCE | XFER_FLAG_THUMB | XFER_FLAG_RESUME) //flags that we pass onto the 'FileOpen' function
 
+//for use inside 'OpenFile' functions
 #define XFER_FLAG_WRITE XFER_FLAG_UPLOAD
+#define XFER_FLAG_READ XFER_FLAG_DOWNLOAD
 
 typedef struct t_file_transfer TFileTransfer;
 
@@ -52,12 +56,14 @@ struct t_file_transfer
 };
 
 
-int FileTransferParseOpenFlags(const char *Str, uint64_t *Size, uint64_t *Offset);
+
+int FileTransferParseFlags(const char *String);
 TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileStore *ToFS, TFileItem *FI);
 void FileTransferDestroy(void *p_Xfer);
 int TransferNeeded(TCommand *Cmd, TFileItem *FI, TFileStore *ToFS);
 int TransferFile(TFileTransfer *Xfer);
 int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd);
+int TransferFileParseFlags(const char *Flags);
 
 #endif
 

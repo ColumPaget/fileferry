@@ -149,6 +149,7 @@ void HelpCommand(const char *Command)
         printf("options:\n");
         printf("    -Q                     (scripts only) quit script silently if no matching files\n");
         printf("    -A                     (scripts only) abort script, logging an error, if no matching files\n");
+        printf("    -no                    invert response, return true if item doesn't exist\n");
         break;
 
     case CMD_LEXISTS:
@@ -156,6 +157,7 @@ void HelpCommand(const char *Command)
         printf("options:\n");
         printf("    -Q                     (scripts only) quit script silently if no matching files\n");
         printf("    -A                     (scripts only) abort script, logging an error, if no matching files\n");
+        printf("    -no                    invert response, return true if item doesn't exist\n");
         break;
 
     case CMD_LS:

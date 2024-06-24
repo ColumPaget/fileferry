@@ -30,13 +30,13 @@ static char *CreateItemFormatJSON(char *RetStr, TFileStore *FS, const char *Path
     return(RetStr);
 }
 
-static STREAM *GDrive_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *GDrive_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     STREAM *S;
     char *URL=NULL, *Tempstr=NULL, *PostData=NULL;
     PARSER *P;
 
-    if (StrValid(OpenFlags) && (*OpenFlags=='w'))
+    if (OpenFlags & XFER_FLAG_WRITE)
     {
         PostData=CreateItemFormatJSON(PostData, FS, Path, "application/octet-stream");
         URL=MCopyStr(URL, "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable", NULL);

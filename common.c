@@ -7,6 +7,7 @@ uint64_t ProcessStartTime;
 time_t Now;
 
 
+#ifndef AppendVar
 void AppendVar(ListNode *Vars, const char *VarName, const char *Value)
 {
     char *Tempstr=NULL;
@@ -16,6 +17,7 @@ void AppendVar(ListNode *Vars, const char *VarName, const char *Value)
 
     Destroy(Tempstr);
 }
+#endif
 
 
 void ClipExtension(char *Path)

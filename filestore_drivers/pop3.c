@@ -92,7 +92,7 @@ static int POP3_UnlinkPath(TFileStore *FS, const char *Path)
     return(RetVal);
 }
 
-static STREAM *POP3_OpenFile(TFileStore *FS, const char *Path, const char *OpenMode, uint64_t Size)
+static STREAM *POP3_OpenFile(TFileStore *FS, const char *Path, int OpenMode, uint64_t Offset, uint64_t Size)
 {
     char *Tempstr=NULL, *Verbiage=NULL;
     STREAM *S=NULL;

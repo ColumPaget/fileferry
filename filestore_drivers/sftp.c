@@ -459,7 +459,7 @@ static int SFTP_ReadDirectoryPacket(STREAM *S, ListNode *FileList)
 
         for (i=0; i < count; i++)
         {
-            FI=(TFileItem *) calloc(1, sizeof(TFileItem));
+            FI=FileItemCreate("", 0, 0, 0);
             ptr=SFTP_ExtractString(ptr, &len, &FI->path);
             FI->name=CopyStr(FI->name, FI->path);
             ptr=SFTP_ExtractString(ptr, &len, &Tempstr);
@@ -770,7 +770,7 @@ static int SFTP_MkDir(TFileStore *FS, const char *Path, int Mode)
 
 
 
-static STREAM *SFTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenFlags, uint64_t Size)
+static STREAM *SFTP_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     TPacket *Packet;
     uint64_t offset=0;
@@ -778,21 +778,11 @@ static STREAM *SFTP_OpenFile(TFileStore *FS, const char *Path, const char *OpenF
     const char *ptr;
     STREAM *S=NULL;
 
-    for (ptr=OpenFlags; *ptr != '\0'; ptr++)
-    {
-        switch (*ptr)
-        {
-        case 'r':
-            SFTPFlags |= SSH_FXF_READ;
-            break;
-        case 'w':
-            SFTPFlags |= SSH_FXF_WRITE|SSH_FXF_CREATE|SSH_FXF_TRUNC;
-            break;
-        case 'a':
-            SFTPFlags |= SSH_FXF_APPEND|SSH_FXF_CREATE;
-            break;
-        }
-    }
+    if (OpenFlags & XFER_FLAG_WRITE) SFTPFlags |= SSH_FXF_WRITE|SSH_FXF_CREATE|SSH_FXF_TRUNC;
+    else SFTPFlags |= SSH_FXF_READ;
+
+    //append
+    //     SFTPFlags |= SSH_FXF_APPEND|SSH_FXF_CREATE;
 
 //clone DualFD
 
@@ -1042,7 +1032,7 @@ static int SFTP_Connect(TFileStore *FS)
     if (! S) return(FALSE);
     FS->S=S;
 
-    FileStoreGetTimeFromFile(FS);
+    FileStoreTestFeatures(FS);
 
     return(TRUE);
 }

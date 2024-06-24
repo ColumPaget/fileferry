@@ -17,7 +17,18 @@ TFileItem *FileItemCreate(const char *path, int type, uint64_t size, int perms)
 
     FI=(TFileItem *) calloc(1, sizeof(TFileItem));
     FI->path=CopyStr(FI->path, path);
+
     FI->name=CopyStr(FI->name, GetBasename(path));
+
+    //for URL paths clean any HTTP arguments out of the name
+    if (
+	(strncmp(path, "http:", 5)==0) ||
+	(strncmp(path, "https:", 6)==0)
+	) StrRTruncChar(FI->name, '?');
+
+
+    FI->user=CopyStr(FI->user, "????");
+    FI->group=CopyStr(FI->group, "????");
     FI->size=size;
     FI->type=type;
     if (perms==0)
