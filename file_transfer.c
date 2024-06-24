@@ -57,11 +57,11 @@ TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileS
     )
     {
         DestFI=FileStoreGetFileInfo(ToFS, FI->name);
-        if (DestFI) 
-	{
-		Xfer->Offset=DestFI->size;
-    		Xfer->Flags |= XFER_FLAG_RESUME;
-	}
+        if (DestFI)
+        {
+            Xfer->Offset=DestFI->size;
+            Xfer->Flags |= XFER_FLAG_RESUME;
+        }
     }
 
 
@@ -388,6 +388,7 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     TFileItem *FI;
     ListNode *DirList, *Curr;
     int result, transfers=0;
+		char *HashType=NULL, *Tempstr=NULL;
 
     if (! StrValid(Cmd->Target))
     {
@@ -430,16 +431,17 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
 
                 if (Cmd->Flags & CMD_FLAG_INTEGRITY)
                 {
-                    switch(FileStoreCompareFiles(FromFS, ToFS, GetBasename(Xfer->Path), GetBasename(Xfer->Path)))
+                    switch(FileStoreCompareFiles(FromFS, ToFS, GetBasename(Xfer->Path), GetBasename(Xfer->Path), &HashType))
                     {
                     case CMP_MATCH:
                     case CMP_LOCAL_NEWER:
                     case CMP_REMOTE_NEWER:
-                        HandleEvent(ToFS, 0, "$(filestore): Transfer integrity confirmed", "", "");
+												Tempstr=MCopyStr(Tempstr,	"$(filestore): Transfer integrity confirmed by ", HashType, NULL);
+                        HandleEvent(ToFS, 0, Tempstr, "", "");
                         break;
 
                     default:
-                        HandleEvent(ToFS, 0, "$(filestore): Transfer integrity check failed", "", "");
+                        HandleEvent(ToFS, 0, "$(filestore): Transfer integrity check FAILED", "", "");
                         break;
                     }
                 }
@@ -458,6 +460,9 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     }
 
     FileStoreDirListFree(FromFS, DirList);
+
+		Destroy(HashType);
+		Destroy(Tempstr);
 
     return(TRUE);
 }

@@ -673,7 +673,7 @@ void FileStoreTestFeatures(TFileStore *FS)
 }
 
 
-int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileItem *LocalFI, TFileItem *RemoteFI)
+int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileItem *LocalFI, TFileItem *RemoteFI, char **MatchType)
 {
     int RetVal=CMP_MATCH;
     char *LocalHash=NULL, *RemoteHash=NULL, *HashType=NULL;
@@ -683,6 +683,9 @@ int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileIt
     if (! RemoteFI) return(CMP_NO_REMOTE);
     if (LocalFI->size != RemoteFI->size) return(CMP_SIZE_MISMATCH);
 
+		RetVal=CMP_MATCH;
+		if (MatchType) *MatchType=CopyStr(*MatchType, "size");
+
     ptr=GetVar(RemoteFS->Vars, "HashTypes");
     if (StrValid(ptr))
     {
@@ -690,7 +693,10 @@ int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileIt
         LocalHash=LocalFS->GetValue(LocalHash, LocalFS,  LocalFI->path, HashType);
         RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemoteFI->path, HashType);
 
-        if (strcasecmp(LocalHash, RemoteHash)==0) RetVal=CMP_MATCH;
+        if (strcasecmp(LocalHash, RemoteHash)==0)
+				{
+					if (MatchType) *MatchType=CopyStr(*MatchType, HashType);
+				}
         else RetVal=CMP_HASH_MISMATCH;
     }
 
@@ -705,7 +711,7 @@ int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileIt
 }
 
 
-int FileStoreCompareFiles(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath)
+int FileStoreCompareFiles(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath, char **MatchType)
 {
     TFileItem *LocalFI, *RemoteFI;
 
@@ -715,7 +721,7 @@ int FileStoreCompareFiles(TFileStore *LocalFS, TFileStore *RemoteFS, const char 
     LocalFI=FileStoreGetFileInfo(LocalFS, LocalPath);
     RemoteFI=FileStoreGetFileInfo(RemoteFS, RemotePath);
 
-    return(FileStoreCompareFileItems(LocalFS, RemoteFS, LocalFI, RemoteFI));
+    return(FileStoreCompareFileItems(LocalFS, RemoteFS, LocalFI, RemoteFI, MatchType));
 }
 
 
@@ -835,7 +841,7 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
             }
 
             //only display disk space if we have some values
-	    if ((total > 0) || (used > 0) || (avail > 0) ) UI_DisplayDiskSpace(total, used, avail);
+            if ((total > 0) || (used > 0) || (avail > 0) ) UI_DisplayDiskSpace(total, used, avail);
         }
     }
 

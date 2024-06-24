@@ -343,6 +343,44 @@ static TFileItem *SYNO_FileInfo(TFileStore *FS, const char *Path)
 
 
 
+static int SYNO_Delete(TFileStore *FS, const char *Path, int Recurse)
+{
+    char *Tempstr=NULL, *URL=NULL, *Quoted=NULL;
+    ListNode *JSON;
+    int result=FALSE;
+
+    Quoted=HTTPQuote(Quoted, Path);
+    URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.Delete"), "?api=SYNO.FileStation.Delete&version=2&method=delete&path=", Quoted, NULL);
+    if (Recurse) URL=CatStr(URL, "&recursive=true");
+    else URL=CatStr(URL, "&recursive=false");
+
+    JSON=SYNO_FileQuery(FS, URL, "unlink:");
+    if (JSON)
+    {
+        result=TRUE;
+        ParserItemsDestroy(JSON);
+    }
+
+    Destroy(Tempstr);
+    Destroy(Quoted);
+    Destroy(URL);
+
+    return(result);
+}
+
+
+static int SYNO_Unlink(TFileStore *FS, const char *Path)
+{
+    return(SYNO_Delete(FS, Path, FALSE));
+}
+
+
+static int SYNO_RmDir(TFileStore *FS, const char *Path)
+{
+    return(SYNO_Delete(FS, Path, TRUE));
+}
+
+
 static int SYNO_MkDir(TFileStore *FS, const char *Dir, int Mkdir)
 {
     char *URL=NULL, *Quoted=NULL;
@@ -368,42 +406,6 @@ static int SYNO_MkDir(TFileStore *FS, const char *Dir, int Mkdir)
 
 
 
-static int SYNO_RmDir(TFileStore *FS, const char *Path)
-{
-    char *Tempstr=NULL;
-    int result=FALSE;
-
-
-    Destroy(Tempstr);
-
-    return(result);
-}
-
-
-static int SYNO_Unlink(TFileStore *FS, const char *Path)
-{
-    char *Tempstr=NULL, *URL=NULL, *Quoted=NULL;
-    ListNode *JSON;
-    int result=FALSE;
-
-    Quoted=HTTPQuote(Quoted, Path);
-    URL=MCopyStr(URL, FS->URL, "/", GetVar(FS->Vars, "SYNO.FileStation.Delete"), "?api=SYNO.FileStation.Delete&version=2&method=delete&path=", Quoted, NULL);
-
-    JSON=SYNO_FileQuery(FS, URL, "unlink:");
-    if (JSON)
-    {
-        result=TRUE;
-        ParserItemsDestroy(JSON);
-    }
-
-    Destroy(Tempstr);
-    Destroy(Quoted);
-    Destroy(URL);
-
-    return(result);
-}
-
-
 static char *SYNO_CopyMoveStart(char *RetStr, TFileStore *FS, const char *FromPath, const char *ToPath, int DeleteSrc)
 {
     char *URL=NULL, *QuotedFrom=NULL, *QuotedTo=NULL, *Tempstr=NULL;
@@ -426,8 +428,6 @@ static char *SYNO_CopyMoveStart(char *RetStr, TFileStore *FS, const char *FromPa
     Destroy(QuotedTo);
     Destroy(Tempstr);
     Destroy(URL);
-
-
 
     return(RetStr);
 }
@@ -526,6 +526,7 @@ static int SYNO_CopyMove(TFileStore *FS, const char *FromPath, const char *ToPat
 
     return(result);
 }
+
 
 static int SYNO_Rename(TFileStore *FS, const char *FromPath, const char *ToPath)
 {
@@ -687,6 +688,7 @@ static char *SYNO_GetShareLink(char *RetStr, TFileStore *FS, const char *Path)
 }
 
 
+
 static char *SYNO_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
     if (strcasecmp(ValName, "DiskQuota")==0) return(SYNO_GetUsage(RetStr, FS));
@@ -762,6 +764,7 @@ static int SYNO_CloseFile(TFileStore *FS, STREAM *S)
     {
         Tempstr=MCopyStr(Tempstr, "\r\n--", STREAMGetValue(S, "Boundary"), "--\r\n\r\n", NULL);
         STREAMWriteLine(Tempstr, S);
+        STREAMFlush(S);
         STREAMCommit(S);
         if (! SYNO_ReadReply(FS, S, &JSON))
         {

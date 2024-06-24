@@ -22,9 +22,9 @@ TFileItem *FileItemCreate(const char *path, int type, uint64_t size, int perms)
 
     //for URL paths clean any HTTP arguments out of the name
     if (
-	(strncmp(path, "http:", 5)==0) ||
-	(strncmp(path, "https:", 6)==0)
-	) StrRTruncChar(FI->name, '?');
+        (strncmp(path, "http:", 5)==0) ||
+        (strncmp(path, "https:", 6)==0)
+    ) StrRTruncChar(FI->name, '?');
 
 
     FI->user=CopyStr(FI->user, "????");

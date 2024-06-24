@@ -120,8 +120,8 @@ void FileStoreOutputDiskQuota(TFileStore *FS);
 void FileStoreOutputSupportedFeatures(TFileStore *FS);
 void FileStoreRecordCipherDetails(TFileStore *FS, STREAM *S);
 void FileStoreOutputCipherDetails(TFileStore *FS, int Verbosity);
-int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileItem *LocalFI, TFileItem *RemoteFI);
-int FileStoreCompareFiles(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath);
+int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileItem *LocalFI, TFileItem *RemoteFI, char **MatchType);
+int FileStoreCompareFiles(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath, char **MatchType);
 void FileStoreTestFeatures(TFileStore *FS);
 
 #endif

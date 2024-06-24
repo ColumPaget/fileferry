@@ -156,22 +156,31 @@ static char *LocalDisk_GetValue(char *RetStr, TFileStore *FS, const char *Path, 
 
 STREAM *LocalDisk_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
-    STREAM *S;
+    STREAM *S=NULL;
     char *Tempstr=NULL;
+    static TFileItem *FI;
 
     if (*Path != '/') Tempstr=MCopyStr(Tempstr, FS->CurrDir, "/", Path, NULL);
     else Tempstr=CopyStr(Tempstr, Path);
 
-    if (OpenFlags & XFER_FLAG_WRITE)
+    FI=LocalDisk_FileInfo(FS, Path);
+    if (FI && (FI->type == FTYPE_FILE))
     {
-        //using rw gives us a writeable file that isn't truncated, which we need to do resume tranfers
-        if (Offset > 0) S=STREAMOpen(Tempstr, "rw");
-        else S=STREAMOpen(Tempstr, "w");
+
+        if (OpenFlags & XFER_FLAG_WRITE)
+        {
+            //using rw gives us a writeable file that isn't truncated, which we need to do resume tranfers
+            if (Offset > 0) S=STREAMOpen(Tempstr, "rw");
+            else S=STREAMOpen(Tempstr, "w");
+        }
+        else S=STREAMOpen(Tempstr, "r");
+
+
+        if (Offset > 0) STREAMSeek(S, (size_t) Offset, SEEK_SET);
     }
-    else S=STREAMOpen(Tempstr, "r");
 
+    if (FI) FileItemDestroy(FI);
 
-    if (Offset > 0) STREAMSeek(S, (size_t) Offset, SEEK_SET);
     Destroy(Tempstr);
 
     return(S);

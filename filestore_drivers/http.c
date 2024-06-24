@@ -62,9 +62,9 @@ int HTTP_CheckResponseCode(STREAM *S)
         case 201: //created, means item was created
             RetVal=TRUE;
             break;
-	case 203: //'cached' or otherwise non-authoritive data
-	    RetVal=TRUE;
-	    break;
+        case 203: //'cached' or otherwise non-authoritive data
+            RetVal=TRUE;
+            break;
         case 204: //no content, means item was deleted
             RetVal=TRUE;
             break;
@@ -133,7 +133,7 @@ STREAM *HTTP_OpenURL(TFileStore *FS, const char *Method, const char *URL, const 
     S=STREAMOpen(FullURL, Args);
     if (S)
     {
-	//we can learn/detect various things from the connection
+        //we can learn/detect various things from the connection
         if (StrValid(STREAMGetValue(S, "HTTP:DAV")))
         {
             FS->Type=FILESTORE_WEBDAV;
@@ -142,9 +142,9 @@ STREAM *HTTP_OpenURL(TFileStore *FS, const char *Method, const char *URL, const 
 
         ptr=STREAMGetValue(S, "HTTP:Accept-Ranges");
         if (StrValid(ptr))
-	{
-		if (strcasecmp(ptr, "none") !=0) FS->Flags |= FILESTORE_RESUME_TRANSFERS;
-	}
+        {
+            if (strcasecmp(ptr, "none") !=0) FS->Flags |= FILESTORE_RESUME_TRANSFERS;
+        }
 
         FileStoreRecordCipherDetails(FS, S);
 
@@ -238,7 +238,7 @@ static int HTTP_Internal_ListDir(TFileStore *FS, const char *Dir, ListNode *File
             ptr=STREAMGetValue(S, "HTTP:Content-Type");
             if (StrValid(ptr)) FileListForContentType(FileList, Tempstr, ptr);
             STREAMClose(S);
-	    RetVal=TRUE;
+            RetVal=TRUE;
         }
     }
 

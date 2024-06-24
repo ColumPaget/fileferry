@@ -117,6 +117,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     switch (Cmd->Type)
     {
     case CMD_LS:
+    case CMD_LLS:
         if (strcmp(Switch, "-t")==0) Cmd->Flags |= CMD_FLAG_SORT_TIME;
         else if (strcmp(Switch, "-lt")==0) Cmd->Flags |= CMD_FLAG_SORT_TIME | CMD_FLAG_LONG;
         else if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
@@ -131,6 +132,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         break;
 
     case CMD_EXISTS:
+    case CMD_LEXISTS:
         if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
         else if (strcmp(Switch, "-d")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
         else if (strcmp(Switch, "-file")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
@@ -535,7 +537,7 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 {
     ListNode *LocalDir, *RemoteDir, *Curr, *Node;
     TFileItem *LocalItem, *RemoteItem;
-    char *RemoteTime=NULL, *LocalTime=NULL;
+    char *RemoteTime=NULL, *LocalTime=NULL, *MatchType=NULL;
     int diff=0, match=0;
     int result;
 
@@ -551,7 +553,7 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         {
             RemoteItem=(TFileItem *) Node->Item;
 
-            result=FileStoreCompareFileItems(LocalFS, RemoteFS, LocalItem, RemoteItem);
+            result=FileStoreCompareFileItems(LocalFS, RemoteFS, LocalItem, RemoteItem, &MatchType);
 
             if (result == CMP_LOCAL_NEWER)
             {
@@ -591,7 +593,7 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
                 break;
 
             case CMP_MATCH:
-                if (Cmd->Flags & CMD_FLAG_ALL) printf("%-30s   match\n", Curr->Tag);
+                if (Cmd->Flags & CMD_FLAG_ALL) printf("%-30s   %s match\n", Curr->Tag, MatchType);
                 match++;
                 break;
             }
@@ -622,6 +624,7 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 
     Destroy(RemoteTime);
     Destroy(LocalTime);
+    Destroy(MatchType);
 }
 
 

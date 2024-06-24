@@ -236,17 +236,17 @@ void UI_OutputFStat(TFileStore *FS, TCommand *Cmd)
 
 void UI_DisplayDiskSpace(double total, double used, double avail)
 {
-char *Tempstr=NULL, *Value=NULL;
-  
-            Tempstr=MCopyStr(Tempstr, "Disk Space: total: ", ToIEC(total, 2), NULL);
-            Value=FormatStr(Value, " used: %0.1f%% (%sb) ", used * 100.0 / total, ToIEC(used, 2));
-            Tempstr=CatStr(Tempstr, Value);
-            Value=FormatStr(Value, " avail: %0.1f%% (%sb) ", avail * 100.0 / total, ToIEC(avail, 2));
-            Tempstr=CatStr(Tempstr, Value);
-            UI_Output(0, "%s", Tempstr);
+    char *Tempstr=NULL, *Value=NULL;
 
-Destroy(Tempstr);
-Destroy(Value);
+    Tempstr=MCopyStr(Tempstr, "Disk Space: total: ", ToIEC(total, 2), NULL);
+    Value=FormatStr(Value, " used: %0.1f%% (%sb) ", used * 100.0 / total, ToIEC(used, 2));
+    Tempstr=CatStr(Tempstr, Value);
+    Value=FormatStr(Value, " avail: %0.1f%% (%sb) ", avail * 100.0 / total, ToIEC(avail, 2));
+    Tempstr=CatStr(Tempstr, Value);
+    UI_Output(0, "%s", Tempstr);
+
+    Destroy(Tempstr);
+    Destroy(Value);
 }
 
 void UI_DisplayPrompt(TFileStore *FS)
