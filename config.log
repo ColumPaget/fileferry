@@ -166,8 +166,8 @@ configure:3685: $? = 0
 configure:3695: result: yes
 configure:3705: checking for EVP_CIPHER_CTX_init in -lcrypto
 configure:3728: gcc -o conftest -g -O2   conftest.c -lcrypto  -lz  >&5
-/usr/bin/ld: /tmp/ccLiicYt.o: in function `main':
-/home/colum/work/fileferry/conftest.c:28: undefined reference to `EVP_CIPHER_CTX_init'
+/usr/bin/ld: /tmp/ccfF95KP.o: in function `main':
+/tmp/fileferry/conftest.c:28: undefined reference to `EVP_CIPHER_CTX_init'
 collect2: error: ld returned 1 exit status
 configure:3728: $? = 1
 configure: failed program was:
@@ -205,8 +205,8 @@ configure: failed program was:
 configure:3738: result: no
 configure:3748: checking for SSL_library_init in -lssl
 configure:3771: gcc -o conftest -g -O2   conftest.c -lssl  -lz  >&5
-/usr/bin/ld: /tmp/ccZAYjPf.o: in function `main':
-/home/colum/work/fileferry/conftest.c:28: undefined reference to `SSL_library_init'
+/usr/bin/ld: /tmp/cc6k7anx.o: in function `main':
+/tmp/fileferry/conftest.c:28: undefined reference to `SSL_library_init'
 collect2: error: ld returned 1 exit status
 configure:3771: $? = 1
 configure: failed program was:
