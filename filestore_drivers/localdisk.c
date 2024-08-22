@@ -164,12 +164,11 @@ STREAM *LocalDisk_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint
     else Tempstr=CopyStr(Tempstr, Path);
 
     FI=LocalDisk_FileInfo(FS, Path);
-    if (FI && (FI->type == FTYPE_FILE))
+    if ( (! FI) || (FI->type == FTYPE_FILE) )
     {
-
         if (OpenFlags & XFER_FLAG_WRITE)
         {
-            //using rw gives us a writeable file that isn't truncated, which we need to do resume tranfers
+            //using rw gives us a writeable file that isn't truncated, which we need to do resume transfers
             if (Offset > 0) S=STREAMOpen(Tempstr, "rw");
             else S=STREAMOpen(Tempstr, "w");
         }
