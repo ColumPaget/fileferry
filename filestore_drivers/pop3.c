@@ -233,7 +233,11 @@ static int POP3_Connect(TFileStore *FS)
         else PortStr=CopyStr(PortStr, "110");
     }
 
-    if (strcasecmp(Proto, "pop3s")==0) Tempstr=MCopyStr(Tempstr, "tls:", Host, ":", PortStr, NULL);
+    if (strcasecmp(Proto, "pop3s")==0)
+    {
+        Tempstr=MCopyStr(Tempstr, "tls:", Host, ":", PortStr, NULL);
+        FS->Flags |= FILESTORE_TLS;
+    }
     else Tempstr=MCopyStr(Tempstr, "tcp:", Host, ":", PortStr, NULL);
 
     FS->S=STREAMOpen(Tempstr, "");
@@ -241,7 +245,7 @@ static int POP3_Connect(TFileStore *FS)
     {
         RetVal=TRUE;
 
-        STREAMSetTimeout(FS->S,3000);
+        STREAMSetTimeout(FS->S, 3000);
         InetReadResponse(FS->S, FS, &Tempstr, &Verbiage, INET_OKAY);
         if (StrLen(Verbiage) > 4) SetVar(FS->Vars,"ServerBanner",Verbiage);
 
@@ -261,6 +265,7 @@ static int POP3_Connect(TFileStore *FS)
 
     if (RetVal)
     {
+        if (FS->Flags & FILESTORE_TLS) FileStoreRecordCipherDetails(FS, FS->S);
         //POP3_ReadFeatures(FS);
     }
     else

@@ -40,18 +40,108 @@ void FileStoreDirListRemoveItem(TFileStore *FS, const char *Path)
 }
 
 
-ListNode *FileStoreGetDirList(TFileStore *FS, const char *Path)
+ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char *Match)
 {
-    char *Tempstr=NULL;
-    ListNode *DirList=NULL;
+    ListNode *GlobList, *Curr;
+    TFileItem *Item;
+    const char *rname;
 
-    Tempstr=FileStoreReformatPath(Tempstr, Path, FS);
-    DirList=FS->ListDir(FS, Tempstr);
+    GlobList=ListCreate();
+    if (InputList==NULL) InputList=FS->DirList;
+    Curr=ListGetNext(InputList);
+    while (Curr)
+    {
+        rname=GetBasename(Curr->Tag);
+        if ((! StrValid(Match)) || (fnmatch(Match, rname, 0)==0))
+        {
+            Item=FileItemClone((TFileItem *) Curr->Item);
+            if (Item->type != FTYPE_DELETED) ListAddNamedItem(GlobList, Item->name, Item);
+        }
+
+        Curr=ListGetNext(Curr);
+    }
+    return(GlobList);
+}
+
+
+
+unsigned long FileStoreGetDirListRecurse(TFileStore *FS, ListNode *ReturnList, const char *Above, const char *Level)
+{
+    char *Tempstr=NULL, *Path=NULL, *Token=NULL;
+    ListNode *DirList=NULL, *Curr=NULL;
+    TFileItem *FI, *NewFI;
+    const char *ptr;
+
+    Tempstr=CopyStr(Tempstr, Above);
+    Tempstr=SlashTerminateDirectoryPath(Tempstr);
+    Tempstr=CatStr(Tempstr, Level);
+
+
+    DirList=FS->ListDir(FS, Above);
+
+    ptr=GetToken(Level, "/", &Token, 0);
+    Tempstr=MCatStr(Tempstr, "/", Token, NULL);
+
+    Curr=ListGetNext(DirList);
+    while (Curr)
+    {
+        FI=(TFileItem *) Curr->Item;
+
+        if (fnmatch(Token, FI->name, 0)==0)
+        {
+            if (FI->type==FTYPE_DIR)
+            {
+                Tempstr=MCopyStr(Tempstr, Above, "/", FI->name, 0);
+                FileStoreGetDirListRecurse(FS, ReturnList, Tempstr, ptr);
+            }
+            else
+            {
+                NewFI=FileItemClone(FI);
+                NewFI->path=MCopyStr(NewFI->path, Above, "/", FI->name, NULL);
+                ListAddNamedItem(ReturnList, FI->name, NewFI);
+            }
+        }
+
+        Curr=ListGetNext(Curr);
+    }
+
+    ListDestroy(DirList, FileItemDestroy);
 
     Destroy(Tempstr);
+    Destroy(Token);
+    Destroy(Path);
+
+
+    return(ListSize(ReturnList));
+}
+
+
+ListNode *FileStoreGetDirList(TFileStore *FS, const char *Path)
+{
+    char *Tempstr=NULL, *Above=NULL;
+    ListNode *DirList=NULL, *ReturnList=NULL;
+    char *ptr;
+    int len;
+
+    Tempstr=FileStoreReformatPath(Tempstr, Path, FS);
+    len=StrLen(FS->CurrDir);
+    if ((strchr(Path, '/')) && (strncasecmp(Tempstr, FS->CurrDir, len)==0))
+    {
+        ptr=Tempstr+len;
+        while (*ptr=='/') ptr++;
+        Above=CopyStrLen(Above, Tempstr, len);
+        DirList=ListCreate();
+        FileStoreGetDirListRecurse(FS, DirList, Above, ptr);
+    }
+    else DirList=FS->ListDir(FS, Tempstr);
+
+    Destroy(Tempstr);
+    Destroy(Above);
 
     return(DirList);
 }
+
+
 
 
 void FileStoreDirListClear(TFileStore *FS)
@@ -87,29 +177,6 @@ ListNode *FileStoreDirListRefresh(TFileStore *FS, int Flags)
 }
 
 
-ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char *Match)
-{
-    ListNode *GlobList, *Curr;
-    TFileItem *Item;
-    const char *rname;
-
-    GlobList=ListCreate();
-    if (InputList==NULL) InputList=FS->DirList;
-    Curr=ListGetNext(InputList);
-    while (Curr)
-    {
-        rname=GetBasename(Curr->Tag);
-        if ((! StrValid(Match)) || (fnmatch(Match, rname, 0)==0))
-        {
-            Item=FileItemClone((TFileItem *) Curr->Item);
-            if (Item->type != FTYPE_DELETED) ListAddNamedItem(GlobList, Item->name, Item);
-        }
-
-        Curr=ListGetNext(Curr);
-    }
-    return(GlobList);
-}
-
 
 ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 {
@@ -117,15 +184,16 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
     char *Tempstr=NULL;
     const char *Match;
 
-    //absolute path, not something in curr dir
 
     if (StrValid(Path))
     {
+        //absolute path, not something in curr dir
         if (*Path=='/') SrcDir=FileStoreGetDirList(FS, Path);
         else
         {
-            if ( (ListSize(FS->DirList)==0) || strchr(Path, '/') || (strcmp(Path, ".")==0) ) SrcDir=FileStoreDirListRefresh(FS, DIR_FORCE);
-            SrcDir=FS->DirList;
+            if (strchr(Path, '/')) SrcDir=FileStoreGetDirList(FS, Path);
+            else if ( (ListSize(FS->DirList)==0) || (strcmp(Path, ".")==0) ) SrcDir=FileStoreDirListRefresh(FS, DIR_FORCE);
+            else SrcDir=FS->DirList;
         }
 
         //use basename not 'GetBasename' as these behave differently for a path ending in '/'

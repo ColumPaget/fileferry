@@ -133,6 +133,12 @@ STREAM *HTTP_OpenURL(TFileStore *FS, const char *Method, const char *URL, const 
     S=STREAMOpen(FullURL, Args);
     if (S)
     {
+        if (strncmp(FullURL, "https:", 6)==0)
+	{
+		FS->Flags |= FILESTORE_TLS;
+		FileStoreRecordCipherDetails(FS, S);
+	}
+
         //we can learn/detect various things from the connection
         if (StrValid(STREAMGetValue(S, "HTTP:DAV")))
         {
@@ -146,7 +152,6 @@ STREAM *HTTP_OpenURL(TFileStore *FS, const char *Method, const char *URL, const 
             if (strcasecmp(ptr, "none") !=0) FS->Flags |= FILESTORE_RESUME_TRANSFERS;
         }
 
-        FileStoreRecordCipherDetails(FS, S);
 
         ptr=STREAMGetValue(S, "HTTP:Date");
         if (StrValid(ptr)) FS->TimeOffset=DateStrToSecs("%a, %d %b %Y %H:%M:%S", ptr, NULL) - time(NULL);

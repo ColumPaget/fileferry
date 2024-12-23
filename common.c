@@ -7,7 +7,7 @@ uint64_t ProcessStartTime;
 time_t Now;
 
 
-#ifndef AppendVar
+#ifndef HAVE_APPEND_VAR
 void AppendVar(ListNode *Vars, const char *VarName, const char *Value)
 {
     char *Tempstr=NULL;

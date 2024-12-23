@@ -1,9 +1,9 @@
 OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o html.o rss.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o filestore_drivers/fileferry_builtin_drivers.a
-BUILTIN=-DFILESTORE_BUILTIN_SFTP -DFILESTORE_BUILTIN_HTTP -DFILESTORE_BUILTIN_FTP -DFILESTORE_BUILTIN_POP3 -DFILESTORE_BUILTIN_GDRIVE -DFILESTORE_BUILTIN_DROPBOX -DFILESTORE_BUILTIN_GOFILE -DFILESTORE_BUILTIN_FILEBIN -DFILESTORE_BUILTIN_FILESANYWHERE -DFILESTORE_BUILTIN_SYNOLOGY
-FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_VERSION=3.0 $(BUILTIN) 
+FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_NAME=\"fileferry\" -DPACKAGE_TARNAME=\"fileferry\" -DPACKAGE_VERSION=\"3.0\" -DPACKAGE_STRING=\"fileferry\ 3.0\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -D_FILE_OFFSET_BITS=64 -DHAVE_LIBZ=1 -DHAVE_LIBCRYPTO=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCAP=1 -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_LIBUSEFUL_5_LIBUSEFUL_H=1 -DHAVE_LIBUSEFUL_5=1 -DHAVE_LIBUSEFUL_5=1 -DHAVE_APPEND_VAR=1
 PREFIX=/usr/local
-LIBS=-lUseful-5 
+LIBS=-lUseful-5 -lUseful-5 -lcap -lssl -lcrypto -lz 
 STATIC_LIBUSEFUL=
+
 
 all: $(OBJ) main.c $(STATIC_LIBUSEFUL)
 	gcc $(FLAGS) -ofileferry $(OBJ) main.c $(STATIC_LIBUSEFUL) $(LIBS)
@@ -127,4 +127,4 @@ install:
 	cp fileferry $(PREFIX)/bin
 
 clean:
-	rm *.orig *.o */*.o */*.a */*.so */*.orig fileferry
+	rm *.orig */*.orig *.o */*.o */*.a */*.so */*.orig fileferry

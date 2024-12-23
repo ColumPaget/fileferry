@@ -59,15 +59,24 @@ static void UI_ShowFlag(const char *Name, int Flag)
     else printf("%-20s no\n", Name);
 }
 
+
 void UI_ShowSettings()
 {
+    const char *ptr;
+
     UI_ShowFlag("verbose", SETTING_VERBOSE);
     UI_ShowFlag("debug",   SETTING_DEBUG);
     UI_ShowFlag("syslog",  SETTING_SYSLOG);
     UI_ShowFlag("sixel",   SETTING_SIXEL);
     UI_ShowFlag("nols",    SETTING_NO_DIR_LIST);
     UI_ShowFlag("progress",SETTING_PROGRESS);
+    UI_ShowFlag("integrity",SETTING_XTERM_TITLE);
+    UI_ShowFlag("xterm-title",SETTING_XTERM_TITLE);
 
+    if (Settings->Flags & SETTING_LIST_LONG) ptr="long";
+    else if (Settings->Flags & SETTING_LIST_LONG_LONG) ptr="full";
+    else ptr="basic";
+    printf("%-20s %s\n", "list-type", ptr);
 
     printf("%-20s %s\n", "config-file", Settings->ConfigFile);
     printf("%-20s %s\n", "proxy", Settings->ProxyChain);
@@ -86,6 +95,16 @@ void UI_ShowSettings()
 }
 
 
+
+static int UI_ListFlags(TCommand *Cmd)
+{
+    if (Settings->Flags & SETTING_LIST_LONG_LONG) return(CMD_FLAG_LONG_LONG);
+    if (Settings->Flags & SETTING_LIST_LONG) return(CMD_FLAG_LONG);
+
+    return(Cmd->Flags);
+}
+
+
 void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
 {
     ListNode *DirList, *Curr;
@@ -93,6 +112,7 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
     const char *prefix="", *class="", *whenstr="", *sizestr="";
     char *Tempstr=NULL;
     int LineCount=0;
+    int ListFlags=0;
 
     time(&Now);
 
@@ -137,20 +157,22 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
                     break;
                 }
 
-                if (Cmd->Flags & CMD_FLAG_LONG)
+                ListFlags=UI_ListFlags(Cmd);
+
+                if (ListFlags & (CMD_FLAG_LONG | CMD_FLAG_LONG_LONG))
                 {
-                    if (Cmd->Flags & CMD_FLAG_LONG_LONG) whenstr=GetDateStrFromSecs("%Y/%m/%d %H:%M:%S", FI->mtime, NULL);
+                    if (ListFlags & CMD_FLAG_LONG_LONG) whenstr=GetDateStrFromSecs("%Y/%m/%d %H:%M:%S", FI->mtime, NULL);
                     else if ((Now - FI->mtime) < (3600 * 24)) whenstr=GetDateStrFromSecs("%H:%M:%S", FI->mtime, NULL);
                     else whenstr=GetDateStrFromSecs("%Y/%m/%d", FI->mtime, NULL);
 
-                    if (Cmd->Flags & CMD_FLAG_LONG_LONG) Tempstr=FormatStr(Tempstr, "% 12llu % 10s % 10s %s% 30s%s~0", (unsigned long long) FI->size, whenstr, FI->user, prefix, FI->name, class);
+                    if (ListFlags & CMD_FLAG_LONG_LONG) Tempstr=FormatStr(Tempstr, "% 12llu % 10s % 10s %s% 30s%s~0", (unsigned long long) FI->size, whenstr, FI->user, prefix, FI->name, class);
                     else Tempstr=FormatStr(Tempstr, "% 8s % 10s % 10s %s% 30s%s~0", ToMetric((double)FI->size, 1), whenstr, FI->user, prefix, FI->name, class);
 
                     if (StrValid(FI->hash)) Tempstr=MCatStr(Tempstr, "	", FI->hash, NULL);
                     if (StrValid(FI->destination)) Tempstr=MCatStr(Tempstr, " -> ", FI->destination, NULL);
                     if (StrValid(FI->title)) Tempstr=MCatStr(Tempstr, "  ", FI->title, "", NULL);
 
-                    if (Cmd->Flags & CMD_FLAG_LONG_LONG)
+                    if (ListFlags & CMD_FLAG_LONG_LONG)
                     {
                         if (StrValid(FI->description)) Tempstr=MCatStr(Tempstr, "\n  ", FI->description, "\n", NULL);
                     }
@@ -269,6 +291,13 @@ TCommand *UI_ReadCommand(TFileStore *FS)
 
     STREAMSetTimeout(StdIO, 0);
     UI_DisplayPrompt(FS);
+
+    if (Settings->Flags & SETTING_XTERM_TITLE)
+    {
+        Tempstr=MCopyStr(Tempstr, "fileferry: ", FS->Name, NULL);
+        XtermSetTitle(StdIO, Tempstr);
+    }
+
     Tempstr=STREAMReadLine(Tempstr, StdIO);
     StripTrailingWhitespace(Tempstr);
     if (StrValid(Tempstr)) Cmd=CommandParse(Tempstr);
@@ -281,25 +310,44 @@ TCommand *UI_ReadCommand(TFileStore *FS)
 int UI_TransferProgress(TFileTransfer *Xfer)
 {
     double percent;
-    char *BPS=NULL, *Size=NULL;
+    char *BPS=NULL, *Size=NULL, *Transferred=NULL, *Tempstr=NULL;
     long secs;
+    static double LastCentisecs=0;
+    double Centisecs=0;
 
     if (isatty(0))
     {
-        time(&Now);
-        secs=Now-Xfer->StartTime;
-        if (secs > 0) BPS=CopyStr(BPS, ToMetric(Xfer->Downloaded / secs, 1));
-        else BPS=CopyStr(BPS, "0.0");
+        Centisecs=GetTime(TIME_CENTISECS);
+        secs=(Centisecs / 100) - Xfer->StartTime;
 
-        if (Xfer->Size > 0)
+        if ( ((Centisecs - LastCentisecs) > 150) || (Xfer->Offset == Xfer->Size) )
         {
-            percent=(double) Xfer->Offset * 100.0 / (double) Xfer->Size;
-            Size=CopyStr(Size, ToMetric((double) Xfer->Size, 1));
-            printf("% 5.1f%% %s  (%s of %s) %sbps         \r", percent, Xfer->DestFinalName, ToMetric((double) Xfer->Offset, 1), Size, BPS);
+            if (secs > 0) BPS=CopyStr(BPS, ToMetric(Xfer->Downloaded / secs, 1));
+            else BPS=CopyStr(BPS, "0.0");
+
+            if (Xfer->Size > 0)
+            {
+                percent=(double) Xfer->Offset * 100.0 / (double) Xfer->Size;
+                Size=CopyStr(Size, ToMetric((double) Xfer->Size, 1));
+                Transferred=CopyStr(Transferred, ToMetric((double) Xfer->Offset, 1));
+                printf("% 5.1f%% %s  (%s of %s) %sbps         \r", percent, Xfer->DestFinalName, Transferred, Size, BPS);
+            }
+            else printf("%s %s %sbps            \r", Transferred, Xfer->DestFinalName, BPS);
+
+            if (Settings->Flags & SETTING_XTERM_TITLE)
+            {
+                if (Xfer->Size > 0) Tempstr=FormatStr(Tempstr, "%0.1f%%  %s", percent, Xfer->DestFinalName);
+                else Tempstr=FormatStr(Tempstr, "%s  %s", Transferred, Xfer->DestFinalName);
+                XtermSetTitle(StdIO, Tempstr);
+            }
+
+            fflush(NULL);
+            LastCentisecs=Centisecs;
         }
-        else printf("%s %s %sbps            \r", ToMetric((double) Xfer->Offset, 1), Xfer->DestFinalName, BPS);
     }
 
+    Destroy(Tempstr);
+    Destroy(Transferred);
     Destroy(BPS);
     Destroy(Size);
 
@@ -392,9 +440,9 @@ void UI_Output(int Flags, const char *Fmt, ...)
         //if (Settings->Flags & SETTING_TIMESTAMPS) printf("%s ", GetDateStr("%Y/%m/%d %H:%M:%S", NULL));
         va_start(list, Fmt);
         Tempstr=VFormatStr(Tempstr, Fmt, list);
-        if (Flags & UI_OUTPUT_ERROR) printf("ERROR: %s\n", Tempstr);
-        else if (Flags & UI_OUTPUT_SUCCESS) printf("%s\n", Tempstr);
-        else printf("%s\n", Tempstr);
+        if (Flags & UI_OUTPUT_ERROR) TerminalPrint(StdIO, "ERROR: %s\n", Tempstr);
+        else if (Flags & UI_OUTPUT_SUCCESS) TerminalPrint(StdIO, "%s\n", Tempstr);
+        else TerminalPrint(StdIO, "%s\n", Tempstr);
         va_end(list);
     }
 
@@ -413,6 +461,7 @@ void UI_MainLoop(TFileStore *LocalFS, TFileStore *RemoteFS)
     {
         CommandProcess(Cmd, LocalFS, RemoteFS);
         CommandDestroy(Cmd);
+
         Cmd=UI_ReadCommand(RemoteFS);
     }
 

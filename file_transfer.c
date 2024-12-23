@@ -388,7 +388,7 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     TFileItem *FI;
     ListNode *DirList, *Curr;
     int result, transfers=0;
-		char *HashType=NULL, *Tempstr=NULL;
+    char *HashType=NULL, *Tempstr=NULL;
 
     if (! StrValid(Cmd->Target))
     {
@@ -436,7 +436,7 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
                     case CMP_MATCH:
                     case CMP_LOCAL_NEWER:
                     case CMP_REMOTE_NEWER:
-												Tempstr=MCopyStr(Tempstr,	"$(filestore): Transfer integrity confirmed by ", HashType, NULL);
+                        Tempstr=MCopyStr(Tempstr,	"$(filestore): Transfer integrity confirmed by ", HashType, NULL);
                         HandleEvent(ToFS, 0, Tempstr, "", "");
                         break;
 
@@ -461,8 +461,8 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
 
     FileStoreDirListFree(FromFS, DirList);
 
-		Destroy(HashType);
-		Destroy(Tempstr);
+    Destroy(HashType);
+    Destroy(Tempstr);
 
     return(TRUE);
 }

@@ -10,6 +10,8 @@ int InetReadResponse(STREAM *S, TFileStore *FS, char **ResponseCode, char **Verb
     int result=FALSE;
 
     Tempstr=ReadLoggedLine(Tempstr, FS, S);
+printf("%s\n", Tempstr);
+
     if (! StrValid(Tempstr)) return(FALSE);
 
     StripCRLF(Tempstr);

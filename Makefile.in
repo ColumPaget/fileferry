@@ -1,9 +1,9 @@
 OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o html.o rss.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o filestore_drivers/fileferry_builtin_drivers.a
-BUILTIN=-DFILESTORE_BUILTIN_SFTP -DFILESTORE_BUILTIN_HTTP -DFILESTORE_BUILTIN_FTP -DFILESTORE_BUILTIN_POP3 -DFILESTORE_BUILTIN_GDRIVE -DFILESTORE_BUILTIN_DROPBOX -DFILESTORE_BUILTIN_GOFILE -DFILESTORE_BUILTIN_FILEBIN -DFILESTORE_BUILTIN_FILESANYWHERE -DFILESTORE_BUILTIN_SYNOLOGY
-FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_VERSION=@PACKAGE_VERSION@ $(BUILTIN) 
+FLAGS=-g -D_FILE_OFFSET_BITS=64 @DEFS@
 PREFIX=@prefix@
 LIBS=@LIBS@
 STATIC_LIBUSEFUL=@LIBUSEFUL_BUNDLED@
+
 
 all: $(OBJ) main.c $(STATIC_LIBUSEFUL)
 	gcc $(FLAGS) -ofileferry $(OBJ) main.c $(STATIC_LIBUSEFUL) $(LIBS)
@@ -127,4 +127,4 @@ install:
 	cp fileferry $(PREFIX)/bin
 
 clean:
-	rm *.orig *.o */*.o */*.a */*.so */*.orig fileferry
+	rm *.orig */*.orig *.o */*.o */*.a */*.so */*.orig fileferry

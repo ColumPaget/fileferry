@@ -36,11 +36,11 @@ static ListNode *Drivers=NULL;
 #include "filebin.h"
 #endif
 
-#ifdef FILESTORE_BUILTIN_FILESANYWHERE
+#ifdef FILESTORE_BUILTIN_FAW
 #include "filesanywhere.h"
 #endif
 
-#ifdef FILESTORE_BUILTIN_SYNOLOGY
+#ifdef FILESTORE_BUILTIN_SYNO
 #include "synology.h"
 #endif
 
@@ -73,7 +73,7 @@ void FileStoreDriversInit()
     FileStoreDriverAdd("gdrive", "Google Drive", "Google drive api v3", GDrive_Attach);
 #endif
 
-#ifdef FILESTORE_BUILTIN_GDRIVE
+#ifdef FILESTORE_BUILTIN_DROPBOX
     FileStoreDriverAdd("dropbox", "Dropbox", "DropBox", DropBox_Attach);
 #endif
 
@@ -85,12 +85,13 @@ void FileStoreDriversInit()
     FileStoreDriverAdd("filebin", "FileBin", "FileBin API. https://filebin.net/", FileBin_Attach);
 #endif
 
-#ifdef FILESTORE_BUILTIN_FILESANYWHERE
+#ifdef FILESTORE_BUILTIN_FAW
     FileStoreDriverAdd("faw", "FilesAnywhere", "FilesAnywhere v2 API. https://filesanywhere.com ", FilesAnywhere_Attach);
 #endif
 
-#ifdef FILESTORE_BUILTIN_SYNOLOGY
+#ifdef FILESTORE_BUILTIN_SYNO
     FileStoreDriverAdd("syno", "SynologyNAS", "Synology NAS API.", SYNO_Attach);
+    FileStoreDriverAdd("synos", "SynologyNAS", "Synology NAS API with https/TLS/SSL encryption.", SYNO_Attach);
 #endif
 
 

@@ -17,7 +17,6 @@ void SigHandler(int Sig)
 int ApplicationInit(int argc, const char *argv[])
 {
     int Act;
-    char *Tempstr=NULL;
 
     signal(SIGALRM, SigHandler);
     ProcessStartTime=GetTime(0);
@@ -27,10 +26,8 @@ int ApplicationInit(int argc, const char *argv[])
     LibUsefulSetValue("HTTP:UserAgent", "fileferry-2.0");
     LogInit();
 
-    Tempstr=ProcLookupParent(Tempstr);
-    if (Settings->LogFile) HandleEvent(NULL, 0, "Starting up. parent=$(path)", Tempstr, "");
+    if (! (Settings->Flags & SETTING_VERBOSE)) LibUsefulSetValue("Error:Silent", "y");
 
-    Destroy(Tempstr);
     return(Act);
 }
 
@@ -60,6 +57,13 @@ int main(int argc, const char *argv[])
 
     if (ApplicationInit(argc, argv))
     {
+        if (Settings->LogFile)
+        {
+            Tempstr=ProcLookupParent(Tempstr);
+            HandleEvent(NULL, 0, "Starting up. parent=$(path)", Tempstr, "");
+        }
+
+
         Tempstr=MCopyStr(Tempstr, "remote ", Settings->URL, NULL);
         if (StrValid(Settings->User)) Tempstr=MCatStr(Tempstr, " user='", Settings->User, "'", NULL);
         if (StrValid(Settings->Pass)) Tempstr=MCatStr(Tempstr, " pass='", Settings->Pass, "'", NULL);

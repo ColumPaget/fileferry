@@ -49,7 +49,7 @@ const char *CommandLineGetExtn(const char *CommandLine, char **Extn)
 //CommandLine here is command line after the switch
 const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const char *Switch)
 {
-    char *Token=NULL;
+    char *Token=NULL, *Tempstr=NULL;
     const char *ptr;
     long val;
 
@@ -129,6 +129,12 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
             CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
             Cmd->NoOfItems = atoi(Token);
         }
+        else if ( (strcmp(Switch, "-k")==0) || (strcmp(Switch, "-keyword")==0) )
+        {
+            CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+            Tempstr=MCopyStr(Tempstr, "'", Token, "' ", NULL);
+            AppendVar(Cmd->Vars, "Keywords", Tempstr);
+        }
         break;
 
     case CMD_EXISTS:
@@ -182,6 +188,12 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         else if (strcmp(Switch,"-7zenc")==0) Cmd->EncryptType = ENCRYPT_7ZIP;
         else if (strcmp(Switch, "-resume")==0) Cmd->Flags |= CMD_FLAG_RESUME;
         else if (strcmp(Switch, "-t")==0) SetVar(Cmd->Vars, "DestTransferExtn", ".tmp");
+        else if ( (strcmp(Switch, "-k")==0) || (strcmp(Switch, "-keyword")==0) )
+        {
+            CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
+            Tempstr=MCopyStr(Tempstr, "'", Token, "' ", NULL);
+            AppendVar(Cmd->Vars, "Keywords", Tempstr);
+        }
         else if (strcmp(Switch, "-h")==0)
         {
             CommandLine=GetToken(CommandLine, " ", &Token, GETTOKEN_QUOTES);
@@ -235,6 +247,7 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
         break;
     }
 
+    Destroy(Tempstr);
     Destroy(Token);
 
     return(CommandLine);

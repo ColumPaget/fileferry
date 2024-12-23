@@ -819,7 +819,11 @@ static int SYNO_Auth(TFileStore *FS, const char *Path)
     FS->S=STREAMOpen(Tempstr, "");
     if (FS->S)
     {
-        if (SYNO_ReadReply(FS, FS->S, &JSON)) RetVal=TRUE;
+        if (SYNO_ReadReply(FS, FS->S, &JSON))
+        {
+            if (FS->Flags & FILESTORE_TLS) FileStoreRecordCipherDetails(FS, FS->S);
+            RetVal=TRUE;
+        }
         else
         {
             Tempstr=SYNO_FormatLoginError(Tempstr, "$(filestore): Login Failed", JSON);
@@ -882,6 +886,7 @@ static int SYNO_Connect(TFileStore *FS)
     {
         Tempstr=CopyStr(Tempstr, FS->URL);
         FS->URL=MCopyStr(FS->URL, "https:", Tempstr+6, "/webapi/", NULL);
+        FS->Flags |= FILESTORE_TLS;
     }
     else //if (strncmp(FS->URL, "syno:", 5)==0)
     {

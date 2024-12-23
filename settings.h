@@ -12,6 +12,10 @@
 #define SETTING_SIXEL  64
 #define SETTING_SYSLOG 128
 #define SETTING_INTEGRITY_CHECK 256
+#define SETTING_XTERM_TITLE 512
+
+#define SETTING_LIST_LONG 1024
+#define SETTING_LIST_LONG_LONG 2048
 
 //to prevent clashing with anyting else, give this 2^31
 #define SETTING_NO_DIR_LIST 2147483648

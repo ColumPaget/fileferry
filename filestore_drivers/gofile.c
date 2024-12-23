@@ -13,6 +13,8 @@ static int GoFile_Info(TFileStore *FS)
     S=STREAMOpen(Tempstr, "r");
     if (S)
     {
+        FS->Flags |= FILESTORE_TLS;
+        FileStoreRecordCipherDetails(FS, FS->S);
         Tempstr=STREAMReadDocument(Tempstr, S);
         if (StrValid(Tempstr))
         {

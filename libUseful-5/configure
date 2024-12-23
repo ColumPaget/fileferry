@@ -650,6 +650,7 @@ LIBOBJS
 SIMD_CFLAGS
 CPP
 SONAME_FLAGS
+AR
 EGREP
 GREP
 SET_MAKE
@@ -712,11 +713,13 @@ enable_soname
 enable_sendfile
 enable_ip6
 enable_xattr
+enable_fsflags
 enable_namespaces
 enable_ssl
 enable_zlib
 enable_simd
 enable_capabilities
+enable_seccomp
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1353,11 +1356,13 @@ Optional Features:
   --enable-sendfile           enable 'fastcopy' sendfile support
   --enable-ip6                enable IPv6 support
   --enable-xattr              enable filesystem xattr support
+  --enable-fsflags              enable support for immutable and append-only files (and use of these in logs)
   --enable-namespaces         enable linux namespace support
   --enable-ssl                use Secure Sockets Layer
   --enable-zlib               use ZLib Compression
   --enable-simd=<level>       use SIMD cpu extensions, 'level' can be one of mmx, sse, sse2
   --enable-capabilities       enable linux capabilities support (default=no)
+  --enable-seccomp           enable seccomp to limit process syscalls
 
 Some influential environment variables:
   CC          C compiler command
@@ -3783,6 +3788,17 @@ rm -rf conftest*
 fi
 
 
+
+
+if test "$AR" = ""
+then
+AR=ar
+fi
+
+
+echo "CC=$CC AR=$AR"
+
+
 cf_have_libssl=no
 cf_have_libcrypto=no
 cf_have_libz=no
@@ -3792,6 +3808,9 @@ cf_use_sendfile=no
 cf_use_xattr=no
 
 cf_use_hashopenssl=auto
+
+
+
 
 # Check whether --enable-wall was given.
 if test ${enable_wall+y}
@@ -3888,7 +3907,6 @@ if test "$cf_use_stackprotect" = "yes"
 then
 CFLAGS="$CFLAGS -fstack-protector-strong"
 fi
-
 
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for get_current_dir_name in -lc" >&5
@@ -4038,6 +4056,12 @@ then :
   printf "%s\n" "#define HAVE_GETENTROPY 1" >>confdefs.h
 
 fi
+ac_fn_c_check_func "$LINENO" "prctl" "ac_cv_func_prctl"
+if test "x$ac_cv_func_prctl" = xyes
+then :
+  printf "%s\n" "#define HAVE_PRCTL 1" >>confdefs.h
+
+fi
 
 
 
@@ -4178,6 +4202,32 @@ printf "%s\n" "#define HAVE_XATTR 1" >>confdefs.h
 
 fi
 fi
+
+# Check whether --enable-fsflags was given.
+if test ${enable_fsflags+y}
+then :
+  enableval=$enable_fsflags; cf_use_fsflags=$enableval
+else $as_nop
+  cf_use_fsflags=no
+fi
+
+
+if test "$cf_use_fsflags" = "yes"
+then
+ac_fn_c_check_header_compile "$LINENO" "linux/fs.h" "ac_cv_header_linux_fs_h" "$ac_includes_default"
+if test "x$ac_cv_header_linux_fs_h" = xyes
+then :
+  cf_have_fsflags=yes
+fi
+
+fi
+
+if test "$cf_have_fsflags" = "yes"
+then
+printf "%s\n" "#define USE_FSFLAGS 1" >>confdefs.h
+
+fi
+
 
 
 # Check whether --enable-namespaces was given.
@@ -4549,66 +4599,6 @@ then :
   printf "%s\n" "#define HAVE_EVP_MD_CTX_FREE 1" >>confdefs.h
 
 fi
-ac_fn_c_check_func "$LINENO" "EVP_bf_cbc" "ac_cv_func_EVP_bf_cbc"
-if test "x$ac_cv_func_EVP_bf_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_BF_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_rc2_cbc" "ac_cv_func_EVP_rc2_cbc"
-if test "x$ac_cv_func_EVP_rc2_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_RC2_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_rc4" "ac_cv_func_EVP_rc4"
-if test "x$ac_cv_func_EVP_rc4" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_RC4 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_rc5_32_12_16_cbc" "ac_cv_func_EVP_rc5_32_12_16_cbc"
-if test "x$ac_cv_func_EVP_rc5_32_12_16_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_RC5_32_12_16_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_des_cbc" "ac_cv_func_EVP_des_cbc"
-if test "x$ac_cv_func_EVP_des_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_DES_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_desx_cbc" "ac_cv_func_EVP_desx_cbc"
-if test "x$ac_cv_func_EVP_desx_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_DESX_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_cast5_cbc" "ac_cv_func_EVP_cast5_cbc"
-if test "x$ac_cv_func_EVP_cast5_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_CAST5_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_idea_cbc" "ac_cv_func_EVP_idea_cbc"
-if test "x$ac_cv_func_EVP_idea_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_IDEA_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_aes_128_cbc" "ac_cv_func_EVP_aes_128_cbc"
-if test "x$ac_cv_func_EVP_aes_128_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_AES_128_CBC 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "EVP_aes_256_cbc" "ac_cv_func_EVP_aes_256_cbc"
-if test "x$ac_cv_func_EVP_aes_256_cbc" = xyes
-then :
-  printf "%s\n" "#define HAVE_EVP_AES_256_CBC 1" >>confdefs.h
-
-fi
 ac_fn_c_check_func "$LINENO" "X509_check_host" "ac_cv_func_X509_check_host"
 if test "x$ac_cv_func_X509_check_host" = xyes
 then :
@@ -4625,6 +4615,12 @@ ac_fn_c_check_func "$LINENO" "SSL_set_min_proto_version" "ac_cv_func_SSL_set_min
 if test "x$ac_cv_func_SSL_set_min_proto_version" = xyes
 then :
   printf "%s\n" "#define HAVE_SSL_SET_MIN_PROTO_VERSION 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "EVP_CIPHER_fetch" "ac_cv_func_EVP_CIPHER_fetch"
+if test "x$ac_cv_func_EVP_CIPHER_fetch" = xyes
+then :
+  printf "%s\n" "#define HAVE_EVP_CIPHER_FETCH 1" >>confdefs.h
 
 fi
 
@@ -5060,6 +5056,98 @@ fi
 printf "%s\n" "#define USE_CAPABILITIES 1" >>confdefs.h
 
 fi
+
+
+
+# Check whether --enable-seccomp was given.
+if test ${enable_seccomp+y}
+then :
+  enableval=$enable_seccomp; cf_use_seccomp=$enableval
+else $as_nop
+  cf_use_seccomp=no
+fi
+
+
+if test "$cf_use_seccomp" = "yes"
+then
+ac_fn_c_check_header_compile "$LINENO" "linux/seccomp.h" "ac_cv_header_linux_seccomp_h" "$ac_includes_default"
+if test "x$ac_cv_header_linux_seccomp_h" = xyes
+then :
+
+else $as_nop
+  cf_use_seccomp=no
+fi
+
+ac_fn_c_check_header_compile "$LINENO" "linux/filter.h" "ac_cv_header_linux_filter_h" "$ac_includes_default"
+if test "x$ac_cv_header_linux_filter_h" = xyes
+then :
+
+else $as_nop
+  cf_use_seccomp=no
+fi
+
+ac_fn_c_check_header_compile "$LINENO" "linux/bpf.h" "ac_cv_header_linux_bpf_h" "$ac_includes_default"
+if test "x$ac_cv_header_linux_bpf_h" = xyes
+then :
+
+else $as_nop
+  cf_use_seccomp=no
+fi
+
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for prctl in -lc" >&5
+printf %s "checking for prctl in -lc... " >&6; }
+if test ${ac_cv_lib_c_prctl+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lc  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+char prctl ();
+int
+main (void)
+{
+return prctl ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_c_prctl=yes
+else $as_nop
+  ac_cv_lib_c_prctl=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_c_prctl" >&5
+printf "%s\n" "$ac_cv_lib_c_prctl" >&6; }
+if test "x$ac_cv_lib_c_prctl" = xyes
+then :
+  printf "%s\n" "#define HAVE_LIBC 1" >>confdefs.h
+
+  LIBS="-lc $LIBS"
+
+else $as_nop
+  cf_use_seccomp=no
+fi
+
+if test "$cf_use_seccomp" = "yes"
+then
+printf "%s\n" "#define USE_SECCOMP 1" >>confdefs.h
+
+fi
+
+fi
+
+
 
 
 ac_config_files="$ac_config_files Makefile"
@@ -6268,6 +6356,13 @@ else
 echo "zlib NOT enabled"
 fi
 
+if test "$cf_have_fsflags" = "yes"
+then
+echo "support for FS_APPEND_FL and FS_IMMUTABLE_FL flags and hardened logs enabled"
+else
+echo "support for FS_APPEND_FL and FS_IMMUTABLE_FL flags and hardened logs NOT enabled"
+fi
+
 if test "$cf_have_unshare" = "yes" -o "$cf_have_setns" = "yes"
 then
 echo "linux namespace support enabled"
@@ -6280,6 +6375,13 @@ then
 echo "linux capabilities support enabled"
 else
 echo "linux capabilities support NOT enabled"
+fi
+
+if test "$cf_use_seccomp" = "yes"
+then
+echo "linux seccomp support enabled"
+else
+echo "linux seccomp support NOT enabled"
 fi
 
 

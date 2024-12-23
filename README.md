@@ -91,9 +91,11 @@ dropbox:         drop box
 gofile:          gofile.io
 filebin:         filebin.net
 faw:             filesanywhere.com
+syno:            Synology NAS API
+synos:           Synology NAS API over SSL/TLS
 ```
 
-Of these the sftp, ftp, ftps http and https URL/filestore types are the most tested, the others are all somewhat experimental.
+Of these the sftp, ftp, ftps, syno, synos, http and https URL/filestore types are the most tested, the others are all somewhat experimental.
 
 
 FILESTORES

@@ -683,8 +683,8 @@ int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileIt
     if (! RemoteFI) return(CMP_NO_REMOTE);
     if (LocalFI->size != RemoteFI->size) return(CMP_SIZE_MISMATCH);
 
-		RetVal=CMP_MATCH;
-		if (MatchType) *MatchType=CopyStr(*MatchType, "size");
+    RetVal=CMP_MATCH;
+    if (MatchType) *MatchType=CopyStr(*MatchType, "size");
 
     ptr=GetVar(RemoteFS->Vars, "HashTypes");
     if (StrValid(ptr))
@@ -694,9 +694,9 @@ int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileIt
         RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemoteFI->path, HashType);
 
         if (strcasecmp(LocalHash, RemoteHash)==0)
-				{
-					if (MatchType) *MatchType=CopyStr(*MatchType, HashType);
-				}
+        {
+            if (MatchType) *MatchType=CopyStr(*MatchType, HashType);
+        }
         else RetVal=CMP_HASH_MISMATCH;
     }
 
@@ -794,10 +794,13 @@ void FileStoreRecordCipherDetails(TFileStore *FS, STREAM *S)
     const char *ptr;
     int i;
 
-    for (i=0; ValuesToCopy[i] !=NULL; i++)
+    if (S)
     {
-        ptr=STREAMGetValue(S, ValuesToCopy[i]);
-        if (StrValid(ptr)) SetVar(FS->Vars, ValuesToCopy[i], ptr);
+        for (i=0; ValuesToCopy[i] !=NULL; i++)
+        {
+            ptr=STREAMGetValue(S, ValuesToCopy[i]);
+            if (StrValid(ptr)) SetVar(FS->Vars, ValuesToCopy[i], ptr);
+        }
     }
 }
 
@@ -805,13 +808,18 @@ void FileStoreRecordCipherDetails(TFileStore *FS, STREAM *S)
 void FileStoreOutputCipherDetails(TFileStore *FS, int Verbosity)
 {
     char *Tempstr=NULL;
+    const char *ptr;
 
     Tempstr=CopyStr(Tempstr, GetVar(FS->Vars, "SSL:CipherDetails"));
     StripTrailingWhitespace(Tempstr);
     if (StrValid(Tempstr))
     {
-        UI_Output(Verbosity, "Encryption: %s", Tempstr);
-        UI_Output(0, "Certificate: %s  Validity: %s  Issuer: %s", GetVar(FS->Vars, "SSL:CertificateCommonName"), GetVar(FS->Vars, "SSL:CertificateVerify"), GetVar(FS->Vars, "SSL:CertificateIssuer"));
+        UI_Output(0, "Encryption: %s", Tempstr);
+        ptr=GetVar(FS->Vars, "SSL:CertificateVerify");
+        if (ptr && (strcmp(ptr, "OK") ==0)) Tempstr=MCopyStr(Tempstr, "~g", ptr, "~0", NULL);
+        else Tempstr=MCopyStr(Tempstr, "~r", ptr, "~0", NULL);
+
+        UI_Output(0, "Certificate: %s  Validity: %s  Issuer: %s", GetVar(FS->Vars, "SSL:CertificateCommonName"), Tempstr,  GetVar(FS->Vars, "SSL:CertificateIssuer"));
         UI_Output(Verbosity, "Certificate Life: %s to %s", GetVar(FS->Vars, "SSL:CertificateNotBefore"), GetVar(FS->Vars, "SSL:CertificateNotAfter"));
         UI_Output(Verbosity, "Certificate Fingerprint: %s", GetVar(FS->Vars, "SSL:CertificateFingerprint"));
     }
@@ -856,20 +864,20 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS)
 {
     const char *ptr;
 
-    if (StrValid(GetVar(FS->Vars, "SSL:CipherDetails"))) FileStoreOutputCipherDetails(FS, UI_OUTPUT_VERBOSE);
-    if (! FS->Flags & FILESTORE_FOLDERS) UI_Output(0, "This filestore does not support directories/folders");
-    if (FS->Flags & FILESTORE_SHARELINK) UI_Output(0, "This filestore supports link sharing via the 'share' command");
-    if (FS->Flags & FILESTORE_USAGE) UI_Output(0, "This filestore supports disk-usage/quota reporting via the 'info usage' command");
-    if (! FS->ReadBytes) UI_Output(0, "This filestore does NOT support downloads (write only)");
-    if (! FS->WriteBytes) UI_Output(0, "This filestore does NOT support uploads (read only)");
-    if (FS->Flags & FILESTORE_RESUME_TRANSFERS) UI_Output(0, "This filestore supports resuming transfers via 'get -resume'");
-    if (! FS->UnlinkPath) UI_Output(0, "This filestore does NOT support deleting files");
-    if (! FS->MkDir) UI_Output(0, "This filestore does NOT support creating folders/directories");
-    if (! FS->RenamePath) UI_Output(0, "This filestore does NOT support moving/renaming files");
-    if (FS->LinkPath) UI_Output(0, "This filestore supports links/symlinks");
-    else UI_Output(0, "This filestore does NOT support links/symlinks");
+    if (FS->Flags & FILESTORE_TLS) FileStoreOutputCipherDetails(FS, UI_OUTPUT_VERBOSE);
     ptr=GetVar(FS->Vars, "HashTypes");
     if (StrValid(ptr)) UI_Output(0, "This filestore supports checksum/hashing using %s", ptr);
+    if (FS->Flags & FILESTORE_SHARELINK) UI_Output(0, "This filestore supports link sharing via the 'share' command");
+    if (FS->Flags & FILESTORE_USAGE) UI_Output(0, "This filestore supports disk-usage/quota reporting via the 'info usage' command");
+    if (FS->Flags & FILESTORE_RESUME_TRANSFERS) UI_Output(0, "This filestore supports resuming transfers via 'get -resume'");
+    if (! FS->ReadBytes) UI_Output(0, "~rThis filestore does NOT support downloads (write only)~0");
+    if (! FS->WriteBytes) UI_Output(0, "~rThis filestore does NOT support uploads (read only)~0");
+    if (! FS->Flags & FILESTORE_FOLDERS) UI_Output(0, "~rThis filestore does not support directories/folders~0");
+    if (! FS->UnlinkPath) UI_Output(0, "~rThis filestore does NOT support deleting files~0");
+    if (! FS->MkDir) UI_Output(0, "~rThis filestore does NOT support creating folders/directories~0");
+    if (! FS->RenamePath) UI_Output(0, "~rThis filestore does NOT support moving/renaming files~0");
+    if (FS->LinkPath) UI_Output(0, "~rThis filestore supports links/symlinks~0");
+    else UI_Output(0, "~rThis filestore does NOT support links/symlinks~0");
     if (StrValid(FS->Features)) UI_Output(0, "Protocol Supported Features: %s", FS->Features);
     if (StrValid(GetVar(FS->Vars, "ProtocolVersion"))) UI_Output(0, "Protocol Version: %s", GetVar(FS->Vars, "ProtocolVersion"));
 }

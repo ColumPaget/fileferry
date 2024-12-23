@@ -1,7 +1,7 @@
 #include "file_include_exclude.h"
 
 
-time_t DatePartialToSecs(const char *Date)
+static time_t DatePartialToSecs(const char *Date)
 {
     char *Tempstr=NULL;
     time_t When;
@@ -12,6 +12,27 @@ time_t DatePartialToSecs(const char *Date)
     Destroy(Tempstr);
 
     return(When);
+}
+
+
+static int FileIncludeKeywords(const char *Keywords, TFileItem *FI)
+{
+    char *Token=NULL;
+    const char *ptr;
+    int Found=FALSE;
+
+    if (! StrValid(Keywords)) return(TRUE);
+    if (! StrValid(FI->description)) return(TRUE);
+
+    ptr=GetToken(Keywords, "\\S", &Token, GETTOKEN_QUOTES);
+    while (ptr)
+    {
+        if (strcasestr(FI->description, Token) > 0) Found=TRUE;
+        ptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);
+    }
+
+    Destroy(Token);
+    return(Found);
 }
 
 
@@ -65,6 +86,9 @@ int FileIncluded(TCommand *Cmd, TFileItem *FI, TFileStore *FS, TFileStore *ToFS)
         val=FromIEC(ptr, 10);
         if (FI->size < val) RetVal=FALSE;
     }
+
+    ptr=GetVar(Cmd->Vars, "Keywords");
+    if (! FileIncludeKeywords(ptr, FI)) RetVal=FALSE;
 
     if ( (Cmd->Flags & CMD_FLAG_FILES_ONLY) && (FI->type != FTYPE_FILE) ) RetVal=FALSE;
     if ( (Cmd->Flags & CMD_FLAG_DIRS_ONLY) && (FI->type != FTYPE_DIR) ) RetVal=FALSE;

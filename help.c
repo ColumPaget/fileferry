@@ -175,6 +175,8 @@ void HelpCommand(const char *Command)
         printf("    -files                 list files only\n");
         printf("    -d                     list directories only\n");
         printf("    -dirs                  list directories only\n");
+        printf("    -k <string>            list files whose description contains keyword/string\n");
+        printf("    -keyword <string>      list files whose description contains keyword/string\n");
         printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -smaller <size>        list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
@@ -196,6 +198,8 @@ void HelpCommand(const char *Command)
         printf("    -files                 list files only\n");
         printf("    -d                     list directories only\n");
         printf("    -dirs                  list directories only\n");
+        printf("    -k <string>            list files whose description contains keyword/string\n");
+        printf("    -keyword <string>      list files whose description contains keyword/string\n");
         printf("    -newer <when>          list items newer than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -older <when>          list items older than <when>. <when> can be a duration, e.g. '7d' '2w' '1y' or a date in format YYYY/mm/dd or a time in format HH:MM:SS or a combined date/time in format YYYY/mm/ddTHH:MM:SS\n");
         printf("    -smaller <size>        list items smaller than <size>, where <size> is a number with a suffix: e.g. 200k, 4M, 1G\n");
@@ -384,14 +388,15 @@ void HelpCommand(const char *Command)
 
 void HelpCommandLine()
 {
-    printf("usage:\n");
+    printf("\nusage:\n");
     printf("  fileferry [options] [url]                  - connect to a filestore by url\n");
     printf("  fileferry [options] [name]                 - connect to a saved, filestore by name\n");
     printf("  fileferry -add [name] [filestore url]      - add a filestore to saved filestores list\n");
     printf("  fileferry -filestores                      - print list of saved filestores\n");
     printf("  fileferry -drivers                         - print list of available filestore drivers\n");
     printf("  fileferry -commands                        - print list of interactive commands\n");
-    printf("options:\n");
+    printf("  fileferry -config <name>=<value>           - show config, and/or change a config setting (multiple settings can be supplied on the command line)\n");
+    printf("\noptions:\n");
     printf("  -v                                         - be verbose\n");
     printf("  -N                                         - batch mode, do not try to read any user input, even passwords\n");
     printf("  -D                                         - print debugging\n");

@@ -34,6 +34,8 @@ static char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, co
     S=STREAMOpen(URL, ConnectConfig);
     if (S)
     {
+        FS->Flags |= FILESTORE_TLS;
+        FileStoreRecordCipherDetails(FS, S);
         if (StrValid(Args)) STREAMWriteLine(Args, S);
         STREAMCommit(S);
         ptr=STREAMGetValue(S, "HTTP:ResponseCode");
@@ -486,7 +488,7 @@ static OAUTH *DropBox_OAuth(TFileStore *FS, OAUTH *Ctx, int Force)
         }
     }
 
-    printf("AccessToken: %s RefreshToken: %s\n",Ctx->AccessToken, Ctx->RefreshToken);
+    if (Settings->Flags & (SETTING_DEBUG | SETTING_VERBOSE)) printf("AccessToken: %s RefreshToken: %s\n",Ctx->AccessToken, Ctx->RefreshToken);
     FS->Pass=CopyStr(FS->Pass, Ctx->AccessToken);
 
 //FS->Settings |= FS_OAUTH;

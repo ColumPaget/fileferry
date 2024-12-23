@@ -1,3 +1,13 @@
+v3.1 (2024-09-27)
+   * fix download breakage caused by adding 'transfer resume'
+   * added -config option to change config file
+   * added '--enable' options to ./config for different filestore types
+   * added 'list-type' setting
+   * added '-keyword' option to 'ls' command to list files by keywords in their description
+   * synology api now supports synos: url, for ssl/tls encryption
+   * capture and display certificate details for all SSL filestores
+	 * fix crash when parsing some html pages
+
 v3.0 (2024-06-24)
    * added resumable transfers for ftp and http/https
    * added synology NAS driver

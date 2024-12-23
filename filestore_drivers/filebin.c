@@ -102,6 +102,8 @@ static ListNode *FileBin_ListDir(TFileStore *FS, const char *Path)
         S=STREAMOpen(URL, "r Accept=application/json");
         if (S)
         {
+            FS->Flags |= FILESTORE_TLS;
+            FileStoreRecordCipherDetails(FS, FS->S);
             Tempstr=STREAMReadDocument(Tempstr, S);
             UI_Output(UI_OUTPUT_DEBUG, "%s", Tempstr);
             FileBin_ParseItem(Items, Tempstr);

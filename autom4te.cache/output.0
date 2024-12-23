@@ -658,6 +658,16 @@ ac_subst_vars='LTLIBOBJS
 LIB@&t@OBJS
 subdirs
 LIBUSEFUL_BUNDLED
+FILESTORE_BUILTIN_FILEBIN
+FILESTORE_BUILTIN_GOFILE
+FILESTORE_BUILTIN_POP3
+FILESTORE_BUILTIN_GDRIVE
+FILESTORE_BUILTIN_DROPBOX
+FILESTORE_BUILTIN_FAW
+FILESTORE_BUILTIN_SYNO
+FILESTORE_BUILTIN_HTTP
+FILESTORE_BUILTIN_SFTP
+FILESTORE_BUILTIN_FTP
 EGREP
 GREP
 SET_MAKE
@@ -711,6 +721,18 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_largefile
+enable_ftp
+enable_sftp
+enable_http
+enable_pop3
+enable_syno
+enable_synology
+enable_faw
+enable_dropbox
+enable_gdrive
+enable_gofile
+enable_filebin
+enable_allfs
 with_libuseful
 '
       ac_precious_vars='build_alias
@@ -1340,6 +1362,18 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-largefile     omit support for large files
+  --enable-ftp		enable FTP/FTPS file transfer (default=yes) 
+  --enable-sftp		enable SFTP file transfer (default=yes) 
+  --enable-http		enable HTTP/HTTPS/WEBDAV file transfer (default=yes) 
+  --enable-pop3		enable POP3/POP3S file transfer (default=yes) 
+  --enable-syno		enable SYNOLOGY NAS API file transfer (default=no) 
+  --enable-synology		enable SYNOLOGY NAS API file transfer (default=no) 
+  --enable-faw 		enable FilesAnywhere API file transfer (default=no) 
+  --enable-dropbox 		enable DROPBOX API file transfer (default=no) 
+  --enable-gdrive 		enable GOOGLEDRIVE API file transfer (default=no) 
+  --enable-gofile 		enable GOFILE API file transfer (default=no) 
+  --enable-filebin		enable FILEBIN API file transfer (default=no) 
+  --enable-allfs		enable all filestore types (default=no) 
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -3368,9 +3402,6 @@ printf "%s\n" "$ac_cv_path_GREP" >&6; }
  GREP="$ac_cv_path_GREP"
  
 
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for egrep" >&5
 printf %s "checking for egrep... " >&6; }
 if test ${ac_cv_path_EGREP+y}
@@ -3651,6 +3682,79 @@ fi
 
 
 
+@%:@ Check whether --enable-ftp was given.
+if test ${enable_ftp+y}
+then :
+  enableval=$enable_ftp; cf_enable_ftp=$enableval 
+fi
+
+@%:@ Check whether --enable-sftp was given.
+if test ${enable_sftp+y}
+then :
+  enableval=$enable_sftp; cf_enable_sftp=$enableval 
+fi
+
+@%:@ Check whether --enable-http was given.
+if test ${enable_http+y}
+then :
+  enableval=$enable_http; cf_enable_http=$enableval 
+fi
+
+@%:@ Check whether --enable-pop3 was given.
+if test ${enable_pop3+y}
+then :
+  enableval=$enable_pop3; cf_enable_pop3=$enableval 
+fi
+
+@%:@ Check whether --enable-syno was given.
+if test ${enable_syno+y}
+then :
+  enableval=$enable_syno; cf_enable_syno=$enableval 
+fi
+
+@%:@ Check whether --enable-synology was given.
+if test ${enable_synology+y}
+then :
+  enableval=$enable_synology; cf_enable_syno=$enableval 
+fi
+
+@%:@ Check whether --enable-faw was given.
+if test ${enable_faw+y}
+then :
+  enableval=$enable_faw; cf_enable_faw=$enableval 
+fi
+
+@%:@ Check whether --enable-dropbox was given.
+if test ${enable_dropbox+y}
+then :
+  enableval=$enable_dropbox; cf_enable_dropbox=$enableval 
+fi
+
+@%:@ Check whether --enable-gdrive was given.
+if test ${enable_gdrive+y}
+then :
+  enableval=$enable_gdrive; cf_enable_gdrive=$enableval 
+fi
+
+@%:@ Check whether --enable-gofile was given.
+if test ${enable_gofile+y}
+then :
+  enableval=$enable_gofile; cf_enable_gofile=$enableval 
+fi
+
+@%:@ Check whether --enable-filebin was given.
+if test ${enable_filebin+y}
+then :
+  enableval=$enable_filebin; cf_enable_filebin=$enableval 
+fi
+
+@%:@ Check whether --enable-allfs was given.
+if test ${enable_allfs+y}
+then :
+  enableval=$enable_allfs; cf_enable_allfs=$enableval 
+fi
+
+
 
 @%:@ Check whether --with-libuseful was given.
 if test ${with_libuseful+y}
@@ -3832,6 +3936,78 @@ then :
 fi
 
 
+if test "$cf_enable_allfs" == "yes"
+then
+cf_enable_ftp="yes"
+cf_enable_sftp="yes"
+cf_enable_http="yes"
+cf_enable_syno="yes"
+cf_enable_pop3="yes"
+cf_enable_faw="yes"
+cf_enable_dropbox="yes"
+cf_enable_gdrive="yes"
+cf_enable_filebin="yes"
+fi
+
+if test "$cf_enable_ftp" != "no"
+then
+FILESTORE_BUILTIN_FTP="Y"
+
+fi
+
+if test "$cf_enable_sftp" != "no"
+then
+FILESTORE_BUILTIN_SFTP="Y"
+
+fi
+
+if test "$cf_enable_http" != "no"
+then
+FILESTORE_BUILTIN_HTTP="Y"
+
+fi
+
+if test "$cf_enable_syno" == "yes"
+then
+FILESTORE_BUILTIN_SYNO="Y"
+
+fi
+
+if test "$cf_enable_faw" == "yes"
+then
+FILESTORE_BUILTIN_FAW="Y"
+
+fi
+
+if test "$cf_enable_dropbox" == "yes"
+then
+FILESTORE_BUILTIN_DROPBOX="Y"
+
+fi
+
+if test "$cf_enable_gdrive" == "yes"
+then
+FILESTORE_BUILTIN_GDRIVE="Y"
+
+fi
+
+if test "$cf_enable_pop3" == "yes"
+then
+FILESTORE_BUILTIN_POP3="Y"
+
+fi
+
+if test "$cf_enable_gofile" == "yes"
+then
+FILESTORE_BUILTIN_GOFILE="Y"
+
+fi
+
+if test "$cf_enable_filebin" == "yes"
+then
+FILESTORE_BUILTIN_FILEBIN="Y"
+
+fi
 
 
 if test "$cf_system_libuseful" != "no"

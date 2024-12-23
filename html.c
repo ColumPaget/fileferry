@@ -24,8 +24,8 @@ static void HTML_ListDir_HTMLTag(ListNode *FileList, const char *Args)
         {
             if (IsDownloadableURL(Value))
             {
-                FI=FileItemCreate(FI->path, 0, 0, 0);
-                ListAddNamedItem(FileList, FI->name, FI);
+                FI=FileItemCreate(Value, 0, 0, 0);
+                if (FI) ListAddNamedItem(FileList, FI->name, FI);
             }
         }
 
