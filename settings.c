@@ -22,7 +22,7 @@ void PrintVersion()
 }
 
 
-int SettingChangeBoolean(const char *Value, int Flag)
+int SettingChangeBoolean(const char *Value, unsigned int Flag)
 {
     if (! StrValid(Value)) Settings->Flags ^= Flag;
     else if (strtobool(Value)) Settings->Flags |= Flag;
@@ -60,14 +60,17 @@ int SettingChange(const char *Name, const char *Value)
 
 
 
-int SettingsLoadConfigFile(TSettings *Settings)
+int SettingsLoadConfigFile(const char *PathList)
 {
     STREAM *S;
-    char *Tempstr=NULL, *Token=NULL;
-    const char *ptr;
+    char *Tempstr=NULL, *Token=NULL, *Path=NULL;
+    const char *ptr, *p_Paths;
     int RetVal=FALSE;
 
-    S=STREAMOpen(Settings->ConfigFile, "r");
+		p_Paths=GetToken(PathList, ":", &Path, 0);
+		while (p_Paths)
+		{
+    S=STREAMOpen(Path, "r");
     if (S)
     {
         Tempstr=STREAMReadLine(Tempstr, S);
@@ -80,9 +83,12 @@ int SettingsLoadConfigFile(TSettings *Settings)
         }
         STREAMClose(S);
     }
+		p_Paths=GetToken(p_Paths, ":", &Path, 0);
+		}
 
     Destroy(Tempstr);
     Destroy(Token);
+    Destroy(Path);
 
     return(RetVal);
 }
@@ -136,6 +142,7 @@ int SettingsSaveConfigFile(const char *Path, TSettings *Settings)
     const char *ptr;
     int RetVal=FALSE;
 
+		MakeDirPath(Path, 0770);
     S=STREAMOpen(Path, "w");
     if (S)
     {
@@ -188,12 +195,15 @@ int SettingsSaveConfig(TSettings *Settings)
 
 
 
-void ParseCommandLineChangeConfig(CMDLINE *Cmd)
+void ParseCommandLineChangeConfig(int argc, const char *argv[])
 {
+		CMDLINE *Cmd;
     const char *arg;
     char *Token=NULL;
     const char *ptr;
+		int Changed=FALSE;
 
+    Cmd=CommandLineParserCreate(argc, (char **) argv);
     arg=CommandLineNext(Cmd);
     while (arg)
     {
@@ -201,14 +211,17 @@ void ParseCommandLineChangeConfig(CMDLINE *Cmd)
         {
             ptr=GetToken(arg, "=", &Token, GETTOKEN_QUOTES);
             SettingChange(Token, ptr);
+						Changed=TRUE;
         }
         arg=CommandLineNext(Cmd);
     }
 
-    SettingsSaveConfig(Settings);
+    if (Changed) SettingsSaveConfig(Settings);
     UI_ShowSettings();
 
     Destroy(Token);
+
+		free(Cmd);
 }
 
 
@@ -325,7 +338,7 @@ void ParseCommandLineDefault(CMDLINE *Cmd)
 
 int ParseCommandLine(int argc, const char *argv[])
 {
-    int i, RetVal=FALSE, Act=ACT_FILEFERRY;
+    int Act=ACT_FILEFERRY;
     CMDLINE *Cmd;
     const char *arg;
 
@@ -335,7 +348,7 @@ int ParseCommandLine(int argc, const char *argv[])
         exit(1);
     }
 
-    Cmd=CommandLineParserCreate(argc, argv);
+    Cmd=CommandLineParserCreate(argc, (char **) argv);
     arg=CommandLineNext(Cmd);
 
     //must do this to prevent loading commands twice
@@ -346,11 +359,47 @@ int ParseCommandLine(int argc, const char *argv[])
     else if (strcmp(arg, "-commands")==0) Act=ACT_LIST_COMMANDS;
     else if (strcmp(arg, "-add")==0) Act=ACT_ADD_FILESTORE;
     else if (strcmp(arg, "-config")==0) Act=ACT_SAVE_CONFIG;
+    else  ParseCommandLineDefault(Cmd);
+
+    free(Cmd);
+
+    return(Act);
+}
+
+
+
+
+
+int SettingsInit(int argc, const char *argv[])
+{
+int RetVal=FALSE, Act;
+
+    Settings=(TSettings *) calloc(1, sizeof(TSettings));
+		Settings->SystemConfig=CopyStr(Settings->SystemConfig, "/etc/fileferry.conf");
+    Settings->ConfigFile=MCopyStr(Settings->ConfigFile, GetCurrUserHomeDir(), "/.config/fileferry/fileferry.conf", NULL);
+
+    if (isatty(1)) Settings->Flags |= SETTING_PROGRESS;
+    Settings->Flags |= SETTING_TIMESTAMPS;
+    Settings->ProxyChain=CopyStr(Settings->ProxyChain, "");
+    Settings->LogFile=CopyStr(Settings->LogFile, "");
+    Settings->EmailForErrors=CopyStr(Settings->EmailForErrors, "");
+    Settings->EmailSender=CopyStr(Settings->EmailSender, "");
+    Settings->SmtpServer=CopyStr(Settings->SmtpServer, "127.0.0.1:25");
+    Settings->FileStoresPath=MCopyStr(Settings->FileStoresPath, GetCurrUserHomeDir(), "/.config/fileferry/filestores.conf", ":/etc/fileferry/filestores.conf", NULL);
+    Settings->ImagePreviewSize=CopyStr(Settings->ImagePreviewSize, "200x200");
+
+    Settings->ImageViewers=CopyStr(Settings->ImageViewers, "miv2 $(path),display $(path),fim $(path),feh $(path),miv $(path),mage $(path),xv $(path),imlib2_view $(path),gqview $(path),qimageviewer $(path),links -g $(path)");
+    Settings->Sixelers=CopyStr(Settings->Sixelers, "img2sixel -w $(width) $(path),convert -resize $(width)x$(height) $(path) sixel:-");
+
+    ParseCommandLine(argc, argv);
+    SettingsLoadConfigFile(Settings->SystemConfig);
+    SettingsLoadConfigFile(Settings->ConfigFile);
+    Act=ParseCommandLine(argc, argv);
 
     switch (Act)
     {
     case ACT_SAVE_CONFIG:
-        ParseCommandLineChangeConfig(Cmd);
+        ParseCommandLineChangeConfig(argc, argv);
         break;
 
     case ACT_LIST_FILESTORES:
@@ -370,38 +419,10 @@ int ParseCommandLine(int argc, const char *argv[])
         break;
 
     case ACT_FILEFERRY:
-        ParseCommandLineDefault(Cmd);
         RetVal=TRUE;
         break;
     }
 
-    free(Cmd);
 
-    return(RetVal);
-}
-
-
-
-
-
-int SettingsInit(int argc, const char *argv[])
-{
-    Settings=(TSettings *) calloc(1, sizeof(TSettings));
-    if (isatty(1)) Settings->Flags |= SETTING_PROGRESS;
-    Settings->Flags |= SETTING_TIMESTAMPS;
-    Settings->ProxyChain=CopyStr(Settings->ProxyChain, "");
-    Settings->LogFile=CopyStr(Settings->LogFile, "");
-    Settings->EmailForErrors=CopyStr(Settings->EmailForErrors, "");
-    Settings->EmailSender=CopyStr(Settings->EmailSender, "");
-    Settings->ConfigFile=MCopyStr(Settings->ConfigFile, GetCurrUserHomeDir(), "/.config/fileferry/fileferry.conf", ":/etc/fileferry/fileferry.conf", NULL);
-    Settings->SmtpServer=CopyStr(Settings->SmtpServer, "127.0.0.1:25");
-    Settings->FileStoresPath=MCopyStr(Settings->FileStoresPath, GetCurrUserHomeDir(), "/.config/fileferry/filestores.conf", ":/etc/fileferry/filestores.conf", NULL);
-    Settings->ImagePreviewSize=CopyStr(Settings->ImagePreviewSize, "200x200");
-
-    Settings->ImageViewers=CopyStr(Settings->ImageViewers, "miv2 $(path),display $(path),fim $(path),feh $(path),miv $(path),mage $(path),xv $(path),imlib2_view $(path),gqview $(path),qimageviewer $(path),links -g $(path)");
-    Settings->Sixelers=CopyStr(Settings->Sixelers, "img2sixel -w $(width) $(path),convert -resize $(width)x$(height) $(path) sixel:-");
-
-    if (! ParseCommandLine(argc, argv)) return(FALSE);
-    SettingsLoadConfigFile(Settings);
-    return(ParseCommandLine(argc, argv));
+return(RetVal);
 }

@@ -22,7 +22,7 @@
 
 typedef struct
 {
-    int Flags;
+    unsigned int Flags;
     char *URL;
     char *User;
     char *Pass;
@@ -30,6 +30,7 @@ typedef struct
     char *Encryption;
     char *IdentityFile;
     char *Commands;
+    char *SystemConfig;
     char *ConfigFile;
     char *FileStoresPath;
     char *ProxyChain;

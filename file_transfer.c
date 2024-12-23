@@ -48,8 +48,6 @@ TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileS
     if (Cmd->Flags & CMD_FLAG_FORCE) Xfer->Flags |= XFER_FLAG_FORCE;
     if (Cmd->Flags & CMD_FLAG_THUMB) Xfer->Flags |= XFER_FLAG_THUMB;
 
-
-
     if (
         (Cmd->Flags & CMD_FLAG_RESUME) &&
         (FromFS->Flags & FILESTORE_RESUME_TRANSFERS) &&
@@ -260,17 +258,18 @@ int TransferPostProcess(TFileTransfer *Xfer)
 
 
 
-ListNode *TransferFileGlob(TFileStore *FS, TCommand *Cmd)
+ListNode *TransferFileGlob(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
 {
-    ListNode *DirList=NULL, *tmpList, *Curr;
+    ListNode *DirList=NULL, *tmpList, *Curr, *Next;
     char *Item=NULL;
     const char *ptr;
+		TFileItem *FI;
 
     switch (Cmd->Type)
     {
     case CMD_GET:
     case CMD_PUT:
-        DirList=FileStoreGlob(FS, Cmd->Target);
+        DirList=FileStoreGlob(FromFS, Cmd->Target);
         break;
 
     case CMD_MGET:
@@ -279,11 +278,11 @@ ListNode *TransferFileGlob(TFileStore *FS, TCommand *Cmd)
         ptr=GetToken(Cmd->Target, "\\S", &Item, GETTOKEN_QUOTES);
         while (ptr)
         {
-            tmpList=FileStoreGlob(FS, Item);
+            tmpList=FileStoreGlob(FromFS, Item);
             Curr=ListGetNext(tmpList);
             while (Curr)
             {
-                ListAddNamedItem(DirList, Curr->Tag, Curr->Item);
+               ListAddNamedItem(DirList, Curr->Tag, Curr->Item);
                 Curr=ListGetNext(Curr);
             }
             ListDestroy(tmpList, NULL);
@@ -292,6 +291,24 @@ ListNode *TransferFileGlob(TFileStore *FS, TCommand *Cmd)
         break;
     }
 
+
+		//remove any 'not included' files, so we know how many files we are really
+		//transferring
+		Curr=ListGetNext(DirList);
+		while (Curr)
+		{
+				Next=ListGetNext(Curr);
+        FI=(TFileItem *) Curr->Item;
+        if (! FileIncluded(Cmd, FI, FromFS, ToFS))
+				{
+          UI_Output(UI_OUTPUT_VERBOSE, "TRANSFER NOT NEEDED: %s", FI->path);
+					ListDeleteNode(Curr);
+					FileItemDestroy(FI);
+				}
+				Curr=Next;
+		}
+ 
+ 
     Destroy(Item);
     return(DirList);
 }
@@ -333,12 +350,13 @@ int TransferFile(TFileTransfer *Xfer)
     TFileStore *FromFS, *ToFS;
     STREAM *FromS, *ToS;
 
+    Xfer->StartTime=GetTime(TIME_CENTISECS);
     result=TransferPreProcess(Xfer);
+
     if (result != XFER_OKAY) return(result);
 
     FromFS=Xfer->FromFS;
     ToFS=Xfer->ToFS;
-    Xfer->StartTime=GetTime(0);
 
     //if we have pre-processed the file in some way (encryption, compression, etc) and produced an output
     //file for upload, then use the path to that rather than the path to the origin file
@@ -389,6 +407,7 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     ListNode *DirList, *Curr;
     int result, transfers=0;
     char *HashType=NULL, *Tempstr=NULL;
+		float duration;
 
     if (! StrValid(Cmd->Target))
     {
@@ -396,16 +415,17 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
         return(FALSE);
     }
 
-    DirList=TransferFileGlob(FromFS, Cmd);
+    DirList=TransferFileGlob(FromFS, ToFS, Cmd);
     Curr=ListGetNext(DirList);
     if (! Curr) UI_Output(UI_OUTPUT_ERROR, "No files matching '%s'", Cmd->Target);
     while (Curr)
     {
-        FI=(TFileItem *) Curr->Item;
-        if (FileIncluded(Cmd, FI, FromFS, ToFS))
-        {
+						FI=(TFileItem *) Curr->Item;
             Xfer=FileTransferFromCommand(Cmd, FromFS, ToFS, FI);
             Xfer->ProgressFunc=UI_TransferProgress;
+						Xfer->TotalFiles=ListSize(DirList);
+						Xfer->CurrFileNum=transfers;
+	
             CommandActivateTimeout();
             result=TransferFile(Xfer);
             CommandDeactivateTimeout();
@@ -425,7 +445,9 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
                 break;
 
             default:
-                UI_Output(UI_OUTPUT_SUCCESS, "TRANSFERRED: %s (%sb) in %ds                           ", FI->name, ToMetric(Xfer->Downloaded, 1), time(NULL) - Xfer->StartTime);
+
+								duration=((float) (GetTime(TIME_CENTISECS) - Xfer->StartTime)) / 100.0;
+                UI_Output(UI_OUTPUT_SUCCESS, "TRANSFERRED: %llu/%llu %s (%sb) in %0.2fsecs                           ", Xfer->CurrFileNum+1, Xfer->TotalFiles, FI->name, ToMetric(Xfer->Downloaded, 1), duration);
                 if (Xfer->Flags & XFER_FLAG_DOWNLOAD) HandleEvent(FromFS, 0, "$(filestore): Downloaded: $(path)", Xfer->Path, "");
                 else HandleEvent(ToFS, 0, "$(filestore): Uploaded: $(path)", Xfer->Path, "");
 
@@ -453,8 +475,6 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
             FileTransferDestroy(Xfer);
             transfers++;
             if ((Cmd->NoOfItems > 0) && (transfers >= Cmd->NoOfItems)) break;
-        }
-        else UI_Output(UI_OUTPUT_VERBOSE, "TRANSFER NOT NEEDED: %s", FI->path);
 
         Curr=ListGetNext(Curr);
     }

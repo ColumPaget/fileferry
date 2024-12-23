@@ -35,7 +35,9 @@ struct t_file_transfer
     uint64_t Offset;
     uint64_t Downloaded;
     uint64_t MaxTransfers;
-    time_t StartTime;
+    uint64_t CurrFileNum;
+    uint64_t TotalFiles;
+    uint64_t StartTime;
     int DestBackups;
     int EncryptType;
     char *EncryptKey;
@@ -60,7 +62,6 @@ struct t_file_transfer
 int FileTransferParseFlags(const char *String);
 TFileTransfer *FileTransferFromCommand(TCommand *Cmd, TFileStore *FromFS, TFileStore *ToFS, TFileItem *FI);
 void FileTransferDestroy(void *p_Xfer);
-int TransferNeeded(TCommand *Cmd, TFileItem *FI, TFileStore *ToFS);
 int TransferFile(TFileTransfer *Xfer);
 int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd);
 int TransferFileParseFlags(const char *Flags);

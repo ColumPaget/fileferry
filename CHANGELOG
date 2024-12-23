@@ -1,4 +1,9 @@
-v3.1 (2024-09-27)
+v3.2 (2024-12-23)
+	 * add a 'system-wide' config that can be overriden by user config
+	 * include 'file x of x' in transfer progress
+   * improve accuracy of BPS using centisecs rather than seconds
+
+v3.1 (2024-12-22)
    * fix download breakage caused by adding 'transfer resume'
    * added -config option to change config file
    * added '--enable' options to ./config for different filestore types

@@ -70,7 +70,7 @@ void UI_ShowSettings()
     UI_ShowFlag("sixel",   SETTING_SIXEL);
     UI_ShowFlag("nols",    SETTING_NO_DIR_LIST);
     UI_ShowFlag("progress",SETTING_PROGRESS);
-    UI_ShowFlag("integrity",SETTING_XTERM_TITLE);
+    UI_ShowFlag("integrity",SETTING_INTEGRITY_CHECK);
     UI_ShowFlag("xterm-title",SETTING_XTERM_TITLE);
 
     if (Settings->Flags & SETTING_LIST_LONG) ptr="long";
@@ -310,34 +310,37 @@ TCommand *UI_ReadCommand(TFileStore *FS)
 int UI_TransferProgress(TFileTransfer *Xfer)
 {
     double percent;
-    char *BPS=NULL, *Size=NULL, *Transferred=NULL, *Tempstr=NULL;
-    long secs;
-    static double LastCentisecs=0;
-    double Centisecs=0;
+    char *BPS=NULL, *Size=NULL, *Transferred=NULL, *Tempstr=NULL, *XofX=NULL;
+    static uint64_t LastCentisecs=0;
+    uint64_t Centisecs=0, diff;
 
     if (isatty(0))
     {
         Centisecs=GetTime(TIME_CENTISECS);
-        secs=(Centisecs / 100) - Xfer->StartTime;
-
-        if ( ((Centisecs - LastCentisecs) > 150) || (Xfer->Offset == Xfer->Size) )
+        diff=((long) (Centisecs)) - Xfer->StartTime;
+        if ( ((Centisecs - LastCentisecs) > 20) || (Xfer->Offset == Xfer->Size) )
         {
-            if (secs > 0) BPS=CopyStr(BPS, ToMetric(Xfer->Downloaded / secs, 1));
+            if (diff > 0) BPS=CopyStr(BPS, ToMetric((float) Xfer->Downloaded / ((float)diff / 100.0), 1));
             else BPS=CopyStr(BPS, "0.0");
+
+						if (Xfer->TotalFiles > 1) XofX=FormatStr(XofX, "%llu/%llu ", Xfer->CurrFileNum+1, Xfer->TotalFiles);
+						else XofX=CopyStr(XofX, "");
 
             if (Xfer->Size > 0)
             {
                 percent=(double) Xfer->Offset * 100.0 / (double) Xfer->Size;
                 Size=CopyStr(Size, ToMetric((double) Xfer->Size, 1));
                 Transferred=CopyStr(Transferred, ToMetric((double) Xfer->Offset, 1));
-                printf("% 5.1f%% %s  (%s of %s) %sbps         \r", percent, Xfer->DestFinalName, Transferred, Size, BPS);
+                printf("%s% 5.1f%% %s  (%s of %s) %sbps         \r", XofX, percent, Xfer->DestFinalName, Transferred, Size, BPS);
             }
-            else printf("%s %s %sbps            \r", Transferred, Xfer->DestFinalName, BPS);
+            else printf("%s%s %s %sbps            \r", XofX, Transferred, Xfer->DestFinalName, BPS);
 
             if (Settings->Flags & SETTING_XTERM_TITLE)
             {
-                if (Xfer->Size > 0) Tempstr=FormatStr(Tempstr, "%0.1f%%  %s", percent, Xfer->DestFinalName);
-                else Tempstr=FormatStr(Tempstr, "%s  %s", Transferred, Xfer->DestFinalName);
+									
+                if (Xfer->Size > 0) Tempstr=FormatStr(Tempstr, "%s%0.1f%%  %s", XofX, percent, Xfer->DestFinalName);
+                else Tempstr=FormatStr(Tempstr, "%s%s  %s", XofX, Transferred, Xfer->DestFinalName);
+
                 XtermSetTitle(StdIO, Tempstr);
             }
 
