@@ -1,6 +1,7 @@
 #include "filestore_dirlist.h"
 #include "commands.h"
 #include <fnmatch.h>
+#include <libgen.h> // basename on macOS and musl
 
 void FileStoreDirListFree(TFileStore *FS, ListNode *Dir)
 {

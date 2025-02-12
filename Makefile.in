@@ -6,7 +6,7 @@ STATIC_LIBUSEFUL=@LIBUSEFUL_BUNDLED@
 
 
 all: $(OBJ) main.c $(STATIC_LIBUSEFUL)
-	gcc $(FLAGS) -ofileferry $(OBJ) main.c $(STATIC_LIBUSEFUL) $(LIBS)
+	gcc $(FLAGS) -o fileferry $(OBJ) main.c $(STATIC_LIBUSEFUL) $(LIBS)
 
 libUseful-5/libUseful.a:
 	make -C libUseful-5
