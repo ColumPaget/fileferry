@@ -4160,6 +4160,8 @@ subdirs="$subdirs libUseful-5"
 
 	$as_echo "#define HAVE_APPEND_VAR 1" >>confdefs.h
 
+	$as_echo "#define HAVE_PROMPT_HISTORY \"Y\"" >>confdefs.h
+
 fi
 
 
