@@ -263,7 +263,7 @@ ListNode *TransferFileGlob(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     ListNode *DirList=NULL, *tmpList, *Curr, *Next;
     char *Item=NULL;
     const char *ptr;
-		TFileItem *FI;
+    TFileItem *FI;
 
     switch (Cmd->Type)
     {
@@ -282,7 +282,7 @@ ListNode *TransferFileGlob(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
             Curr=ListGetNext(tmpList);
             while (Curr)
             {
-               ListAddNamedItem(DirList, Curr->Tag, Curr->Item);
+                ListAddNamedItem(DirList, Curr->Tag, Curr->Item);
                 Curr=ListGetNext(Curr);
             }
             ListDestroy(tmpList, NULL);
@@ -292,23 +292,23 @@ ListNode *TransferFileGlob(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     }
 
 
-		//remove any 'not included' files, so we know how many files we are really
-		//transferring
-		Curr=ListGetNext(DirList);
-		while (Curr)
-		{
-				Next=ListGetNext(Curr);
+    //remove any 'not included' files, so we know how many files we are really
+    //transferring
+    Curr=ListGetNext(DirList);
+    while (Curr)
+    {
+        Next=ListGetNext(Curr);
         FI=(TFileItem *) Curr->Item;
         if (! FileIncluded(Cmd, FI, FromFS, ToFS))
-				{
-          UI_Output(UI_OUTPUT_VERBOSE, "TRANSFER NOT NEEDED: %s", FI->path);
-					ListDeleteNode(Curr);
-					FileItemDestroy(FI);
-				}
-				Curr=Next;
-		}
- 
- 
+        {
+            UI_Output(UI_OUTPUT_VERBOSE, "TRANSFER NOT NEEDED: %s", FI->path);
+            ListDeleteNode(Curr);
+            FileItemDestroy(FI);
+        }
+        Curr=Next;
+    }
+
+
     Destroy(Item);
     return(DirList);
 }
@@ -407,7 +407,7 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     ListNode *DirList, *Curr;
     int result, transfers=0;
     char *HashType=NULL, *Tempstr=NULL;
-		float duration;
+    float duration;
 
     if (! StrValid(Cmd->Target))
     {
@@ -420,61 +420,61 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
     if (! Curr) UI_Output(UI_OUTPUT_ERROR, "No files matching '%s'", Cmd->Target);
     while (Curr)
     {
-						FI=(TFileItem *) Curr->Item;
-            Xfer=FileTransferFromCommand(Cmd, FromFS, ToFS, FI);
-            Xfer->ProgressFunc=UI_TransferProgress;
-						Xfer->TotalFiles=ListSize(DirList);
-						Xfer->CurrFileNum=transfers;
-	
-            CommandActivateTimeout();
-            result=TransferFile(Xfer);
-            CommandDeactivateTimeout();
+        FI=(TFileItem *) Curr->Item;
+        Xfer=FileTransferFromCommand(Cmd, FromFS, ToFS, FI);
+        Xfer->ProgressFunc=UI_TransferProgress;
+        Xfer->TotalFiles=ListSize(DirList);
+        Xfer->CurrFileNum=transfers;
 
-            switch (result)
+        CommandActivateTimeout();
+        result=TransferFile(Xfer);
+        CommandDeactivateTimeout();
+
+        switch (result)
+        {
+        case XFER_SOURCE_FAIL:
+            HandleEvent(FromFS, UI_OUTPUT_ERROR, "Failed to open source file '$(path)'.", Xfer->Path, "");
+            break;
+
+        case XFER_DEST_FAIL:
+            HandleEvent(ToFS, UI_OUTPUT_ERROR, "Failed to open destination file '$(path)'.", GetBasename(Xfer->Path), "");
+            break;
+
+        case XFER_DEST_EXISTS:
+            HandleEvent(ToFS, UI_OUTPUT_ERROR, "Destination '$(path)' already exists. Transfer aborted.", GetBasename(Xfer->Path), "");
+            break;
+
+        default:
+
+            duration=((float) (GetTime(TIME_CENTISECS) - Xfer->StartTime)) / 100.0;
+            UI_Output(UI_OUTPUT_SUCCESS, "TRANSFERRED: %llu/%llu %s (%sb) in %0.2fsecs                           ", Xfer->CurrFileNum+1, Xfer->TotalFiles, FI->name, ToMetric(Xfer->Downloaded, 1), duration);
+            if (Xfer->Flags & XFER_FLAG_DOWNLOAD) HandleEvent(FromFS, 0, "$(filestore): Downloaded: $(path)", Xfer->Path, "");
+            else HandleEvent(ToFS, 0, "$(filestore): Uploaded: $(path)", Xfer->Path, "");
+
+            if (Cmd->Flags & CMD_FLAG_INTEGRITY)
             {
-            case XFER_SOURCE_FAIL:
-                HandleEvent(FromFS, UI_OUTPUT_ERROR, "Failed to open source file '$(path)'.", Xfer->Path, "");
-                break;
-
-            case XFER_DEST_FAIL:
-                HandleEvent(ToFS, UI_OUTPUT_ERROR, "Failed to open destination file '$(path)'.", GetBasename(Xfer->Path), "");
-                break;
-
-            case XFER_DEST_EXISTS:
-                HandleEvent(ToFS, UI_OUTPUT_ERROR, "Destination '$(path)' already exists. Transfer aborted.", GetBasename(Xfer->Path), "");
-                break;
-
-            default:
-
-								duration=((float) (GetTime(TIME_CENTISECS) - Xfer->StartTime)) / 100.0;
-                UI_Output(UI_OUTPUT_SUCCESS, "TRANSFERRED: %llu/%llu %s (%sb) in %0.2fsecs                           ", Xfer->CurrFileNum+1, Xfer->TotalFiles, FI->name, ToMetric(Xfer->Downloaded, 1), duration);
-                if (Xfer->Flags & XFER_FLAG_DOWNLOAD) HandleEvent(FromFS, 0, "$(filestore): Downloaded: $(path)", Xfer->Path, "");
-                else HandleEvent(ToFS, 0, "$(filestore): Uploaded: $(path)", Xfer->Path, "");
-
-                if (Cmd->Flags & CMD_FLAG_INTEGRITY)
+                switch(FileStoreCompareFiles(FromFS, ToFS, GetBasename(Xfer->Path), GetBasename(Xfer->Path), &HashType))
                 {
-                    switch(FileStoreCompareFiles(FromFS, ToFS, GetBasename(Xfer->Path), GetBasename(Xfer->Path), &HashType))
-                    {
-                    case CMP_MATCH:
-                    case CMP_LOCAL_NEWER:
-                    case CMP_REMOTE_NEWER:
-                        Tempstr=MCopyStr(Tempstr,	"$(filestore): Transfer integrity confirmed by ", HashType, NULL);
-                        HandleEvent(ToFS, 0, Tempstr, "", "");
-                        break;
+                case CMP_MATCH:
+                case CMP_LOCAL_NEWER:
+                case CMP_REMOTE_NEWER:
+                    Tempstr=MCopyStr(Tempstr,	"$(filestore): Transfer integrity confirmed by ", HashType, NULL);
+                    HandleEvent(ToFS, 0, Tempstr, "", "");
+                    break;
 
-                    default:
-                        HandleEvent(ToFS, 0, "$(filestore): Transfer integrity check FAILED", "", "");
-                        break;
-                    }
+                default:
+                    HandleEvent(ToFS, 0, "$(filestore): Transfer integrity check FAILED", "", "");
+                    break;
                 }
-                break;
             }
+            break;
+        }
 
 
-            UI_Output(0, "");
-            FileTransferDestroy(Xfer);
-            transfers++;
-            if ((Cmd->NoOfItems > 0) && (transfers >= Cmd->NoOfItems)) break;
+        UI_Output(0, "");
+        FileTransferDestroy(Xfer);
+        transfers++;
+        if ((Cmd->NoOfItems > 0) && (transfers >= Cmd->NoOfItems)) break;
 
         Curr=ListGetNext(Curr);
     }

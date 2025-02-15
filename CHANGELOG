@@ -1,35 +1,38 @@
+v3.3 (2025-02-15)
+  * add command history if supported by libuseful
+
 v3.2 (2024-12-23)
-	 * add a 'system-wide' config that can be overriden by user config
-	 * include 'file x of x' in transfer progress
-   * improve accuracy of BPS using centisecs rather than seconds
+	* add a 'system-wide' config that can be overriden by user config
+	* include 'file x of x' in transfer progress
+  * improve accuracy of BPS using centisecs rather than seconds
 
 v3.1 (2024-12-22)
-   * fix download breakage caused by adding 'transfer resume'
-   * added -config option to change config file
-   * added '--enable' options to ./config for different filestore types
-   * added 'list-type' setting
-   * added '-keyword' option to 'ls' command to list files by keywords in their description
-   * synology api now supports synos: url, for ssl/tls encryption
-   * capture and display certificate details for all SSL filestores
-	 * fix crash when parsing some html pages
+  * fix download breakage caused by adding 'transfer resume'
+  * added -config option to change config file
+  * added '--enable' options to ./config for different filestore types
+  * added 'list-type' setting
+  * added '-keyword' option to 'ls' command to list files by keywords in their description
+  * synology api now supports synos: url, for ssl/tls encryption
+  * capture and display certificate details for all SSL filestores
+	* fix crash when parsing some html pages
 
 v3.0 (2024-06-24)
-   * added resumable transfers for ftp and http/https
-   * added synology NAS driver
-   * added 'diff', 'cmp' and 'exists' commands
-   * data integrity checks for upload/download, using the '-I' option
-   * ftp hashing via XMD5 XSHA1 etc should now work
-   * detect webdav/http hosts that offer md5 hashing via 'ETag:' header
-   * ftp now uses binary (image) transfers explicity, rather than going with server default
-   * MSDos directory format working for FTP
-   * ftp 'anonymous' login support
-   * add directory caching, stats/lstats command
-   * dropbox upload working
-   * thumbnail support (currently snology driver only) 
+  * added resumable transfers for ftp and http/https
+  * added synology NAS driver
+  * added 'diff', 'cmp' and 'exists' commands
+  * data integrity checks for upload/download, using the '-I' option
+  * ftp hashing via XMD5 XSHA1 etc should now work
+  * detect webdav/http hosts that offer md5 hashing via 'ETag:' header
+  * ftp now uses binary (image) transfers explicity, rather than going with server default
+  * MSDos directory format working for FTP
+  * ftp 'anonymous' login support
+  * add directory caching, stats/lstats command
+  * dropbox upload working
+  * thumbnail support (currently snology driver only) 
 
 v2.0 (2023-07-13)
-   * added 'nols' mode 
-   * added '-n' option for transfers
+  * added 'nols' mode 
+  * added '-n' option for transfers
 
 v1.0 (2023-04-30)
-   * initial commit
+  * initial commit

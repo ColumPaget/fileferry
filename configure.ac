@@ -1,9 +1,8 @@
-AC_INIT([fileferry],[3.0])
+AC_INIT([fileferry],[3.3])
 
 AC_PROG_CC
 AC_LANG([C])
 AC_PROG_MAKE_SET
-AC_CHECK_INCLUDES_DEFAULT
 AC_PROG_EGREP
 
 AC_SYS_LARGEFILE
@@ -98,6 +97,8 @@ fi
 if test "$cf_system_libuseful" != "no"
 then
 	AC_CHECK_LIB([Useful-5],GetToken,[cf_have_libUseful5=yes],[cf_have_libUseful5=no])
+	AC_CHECK_LIB([Useful-5],TerminalReadPromptWithHistory,AC_DEFINE([HAVE_PROMPT_HISTORY],"Y"))
+
 	if test "$cf_have_libUseful5" = "yes"
 	then
 	AC_CHECK_HEADERS([libUseful-5/libUseful.h])

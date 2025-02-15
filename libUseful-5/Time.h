@@ -49,6 +49,7 @@ time_t ParseDuration(const char *Dur);
 const char *FormatDuration(const char *Fmt, time_t Duration);
 
 //convert Time from timezone 'SrcZone' to 'DstZone'
+//time must be inf ormat "%Y/%m/%d %H:%M:%S"
 char *TimeZoneConvert(char *RetStr, const char *Time, const char *SrcZone, const char *DstZone);
 
 //this sets a SIGALRM timer, causing a signal to be sent to our process after 'timeout' seconds.
@@ -61,6 +62,23 @@ long TimezoneOffset(const char *TimeZone);
 
 //convert a milliseconds value to a timeval
 void MillisecsToTV(int millisecs, struct timeval *tv);
+
+
+//given day, month and year, is it the current day? return TRUE if so, FALSE otherwise
+int IsToday(int Day, int Month, int Year);
+
+
+//return TRUE (1) if year is a leap year, FALSE (0) otherwise
+int IsLeapYear(unsigned int year);
+
+//return number of days in month (month range 1-12, months < 1 are in previous years and >12 are in subsequent years)
+int GetDaysInMonth(int Month, int Year);
+
+//produce a csv of days in month. each line is a week. Any dates starting
+//with '-' are in the previous month to the one requested, and any 
+//started with '+' are in the next month
+char *CalendarFormatCSV(char *RetStr, unsigned int Month, unsigned int Year);
+
 
 #ifdef __cplusplus
 }

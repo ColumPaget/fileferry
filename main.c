@@ -78,19 +78,19 @@ int main(int argc, const char *argv[])
         if (! RemoteFS)
         {
             fprintf(stderr, "ERROR: unknown filestore: '%s'\n", Tempstr);
-            exit(1);
+    				UI_Exit(1);
         }
 
         if (! (RemoteFS->Flags & FILESTORE_ATTACHED))
         {
             fprintf(stderr, "ERROR: failed to find driver for %s\n", Settings->URL);
-            exit(1);
+    				UI_Exit(1);
         }
 
         if (! (RemoteFS->Flags & FILESTORE_CONNECTED))
         {
             fprintf(stderr, "ERROR: failed to connect to %s\n", Settings->URL);
-            exit(1);
+    				UI_Exit(1);
         }
 
 
@@ -104,5 +104,8 @@ int main(int argc, const char *argv[])
 
     if (StrValid(Settings->LogFile)) LogFileClose(Settings->LogFile);
 
+    UI_Close();
     Destroy(Tempstr);
+
+UI_Exit(0);
 }

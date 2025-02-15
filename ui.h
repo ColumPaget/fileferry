@@ -22,5 +22,6 @@ void UI_OutputFStat(TFileStore *FS, TCommand *Cmd);
 void UI_DisplayDiskSpace(double total, double used, double avail);
 void UI_ShowSettings();
 int UI_ShowFile(TFileStore *FromFS, TFileStore *LocalFS, TCommand *Cmd);
+void UI_Exit(int RetVal);
 
 #endif

@@ -1,3 +1,55 @@
+v5.39 (2025-02-15)
+  * Fix issue with STREAMReadBytes returning 'STREAM_CLOSED' too early
+  * Changes to use TerminalCalendar in libUseful-lua
+
+v5.38 (2025-02-14)
+  * Fixes for LineEdit in TerminalReadPrompt
+  * TerminalReadPromptWithPrefix now accepts a history list
+  * Ensure that data between XML tags that ends in '/' isn't mistaken for a close tag
+
+v5.37 (2025-02-09)
+  * TCP Quickack support added and used as default in HTTP Get
+  * 'Full flush' option added to file and TCP, using fsync with files and pipes and disabling Nagle's algorithm for TCP
+  * 'Ordered List' functionality in List.c simplified/repaired
+  * When writing to pipes in STREAMs honor the PIPE_BUF constant if declared
+  * Added RAWDATAMove and RAWDATATrunc functions to enable using RAWDATA as a fifo
+  * Websocket client connection ceases to be experimental
+  * Added 'STREAMReadMessage' to handle websocket messages
+  * STREAMReadDocument now uses STREAMReadMessage and is the user interface to websocket messages
+  * Removed 'insert line feeds between websocket messages' testing bodge
+  * ditch __builtin_prefetch in List.c, once upon a time it seemed to give a benefit, but not now
+
+v5.36 (2025-02-04)
+  * Restructure XMLGetTag and ensure whitespace is preserved in data between tags
+  * Properly implement 'websocket frame too big', closing connection when this happens
+  * Websocket code no longer outputs http debugging.
+  * Handle prompt/prefix in new 'LineEdit' based TerminalReadLine 
+  * Ensure CopyStr/CatStr return allocated memory even if both dst and src start as null
+  * Handle 'Stolen characters' after unicode in TerminalPutStr
+  * More work on LineEdit.c
+
+v5.35 (2025-02-1)
+  * Added LineEdit.c for full line editing with history
+  * Handle 'bigframes' in Websocket.c
+  * Add bech32 encoding
+
+v5.34 (2025-01-23)
+  * Fixes for parsing unicode in 'UnQuoteStr'
+  * Handle NULL URL passed to 'STREAMOpen'
+  * Added function 'VarsFromNameValueList' to Vars.c
+
+v5.33 (2025-01-10)
+  * Keep '/' in XML tag data, in order to detect <tag /> as end tags
+  * Added 'XMLIsEndTag' function
+
+v5.32 (2025-01-07)
+  * Added 'SetNumericVar' and 'AddToNumericVar' functions in Vars.c
+  * Added 'IsLeapYear' function in Time.c
+  * Added 'GetDaysInMonth' function in Time.c
+  * Added 'CalendarFormatCSV' function in Time.c
+  * Added TerminalCalendar widget
+  * Fix issue in PasswordFile.c where 'Extra' data can get appended to password when doing password check
+
 v5.31 (2024-12-20)
   * Added 'FormatDuration' function
   * Added STREAMGetDestination function
@@ -5,7 +57,7 @@ v5.31 (2024-12-20)
 
 v5.30 (2024-10-29)
   * Fix crash if TerminalTextAlign has NULL for the Terminal
-	* Added HttpGet and HttpPost functions
+  * Added HttpGet and HttpPost functions
   * Improvements to httpserver authentication. 
   * Add 'extra' field to passwords file to allow storing data against a user.
 
@@ -143,6 +195,6 @@ v5.5 (2024-01-13)
   * fixes/improvements for 'PipeSpawn'
   * copy file permissions when FileCopy
   * handle SUPER key in terminal functions
-  * lots of work on Ouath and experimental websocket and http servers
+  * lots of work on OAuth and experimental websocket and http servers
 
 

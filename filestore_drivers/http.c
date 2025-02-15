@@ -373,7 +373,10 @@ static int HTTP_CloseFile(TFileStore *FS, STREAM *S)
 
 static int HTTP_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
-    return(STREAMReadBytes(S, Buffer, len));
+int result;
+
+result=STREAMReadBytes(S, Buffer, len);
+return(result);
 }
 
 

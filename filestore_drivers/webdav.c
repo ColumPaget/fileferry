@@ -18,8 +18,10 @@ static void HTTP_Webdav_Normalize_Path(TFileStore *FS, TFileItem *FI, const char
     else ptr=URL;
 
     Path=HTTPUnQuote(Path, ptr);
+    StripDirectorySlash(Path);
     FI->path=CopyStr(FI->path, FileStorePathRelativeToCurr(FS, Path));
     FI->name=CopyStr(FI->name, GetBasename(FI->path));
+
 
     Destroy(Tempstr);
     Destroy(Path);
@@ -36,6 +38,7 @@ const char *HTTP_Webdav_Parse_Propfind(const char *XML, TFileStore *FS, ListNode
     ptr=XMLGetTag(XML, &Namespace, &Tag, &Value);
     while (ptr)
     {
+
         if (strcasecmp(Tag, "/response")==0) break;
         else if (strcasecmp(Tag,"iscollection")==0)
         {

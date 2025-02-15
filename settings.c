@@ -17,8 +17,8 @@ TSettings *Settings=NULL;
 
 void PrintVersion()
 {
-    printf("fileferry %s\n", VERSION);
-    exit(0);
+    printf("fileferry %s\n", PACKAGE_VERSION);
+    UI_Exit(0);
 }
 
 
@@ -67,24 +67,24 @@ int SettingsLoadConfigFile(const char *PathList)
     const char *ptr, *p_Paths;
     int RetVal=FALSE;
 
-		p_Paths=GetToken(PathList, ":", &Path, 0);
-		while (p_Paths)
-		{
-    S=STREAMOpen(Path, "r");
-    if (S)
+    p_Paths=GetToken(PathList, ":", &Path, 0);
+    while (p_Paths)
     {
-        Tempstr=STREAMReadLine(Tempstr, S);
-        while (Tempstr)
+        S=STREAMOpen(Path, "r");
+        if (S)
         {
-            StripTrailingWhitespace(Tempstr);
-            ptr=GetToken(Tempstr, "\\S", &Token, 0);
-            SettingChange(Token, ptr);
             Tempstr=STREAMReadLine(Tempstr, S);
+            while (Tempstr)
+            {
+                StripTrailingWhitespace(Tempstr);
+                ptr=GetToken(Tempstr, "\\S", &Token, 0);
+                SettingChange(Token, ptr);
+                Tempstr=STREAMReadLine(Tempstr, S);
+            }
+            STREAMClose(S);
         }
-        STREAMClose(S);
+        p_Paths=GetToken(p_Paths, ":", &Path, 0);
     }
-		p_Paths=GetToken(p_Paths, ":", &Path, 0);
-		}
 
     Destroy(Tempstr);
     Destroy(Token);
@@ -142,7 +142,7 @@ int SettingsSaveConfigFile(const char *Path, TSettings *Settings)
     const char *ptr;
     int RetVal=FALSE;
 
-		MakeDirPath(Path, 0770);
+    MakeDirPath(Path, 0770);
     S=STREAMOpen(Path, "w");
     if (S)
     {
@@ -197,11 +197,11 @@ int SettingsSaveConfig(TSettings *Settings)
 
 void ParseCommandLineChangeConfig(int argc, const char *argv[])
 {
-		CMDLINE *Cmd;
+    CMDLINE *Cmd;
     const char *arg;
     char *Token=NULL;
     const char *ptr;
-		int Changed=FALSE;
+    int Changed=FALSE;
 
     Cmd=CommandLineParserCreate(argc, (char **) argv);
     arg=CommandLineNext(Cmd);
@@ -211,7 +211,7 @@ void ParseCommandLineChangeConfig(int argc, const char *argv[])
         {
             ptr=GetToken(arg, "=", &Token, GETTOKEN_QUOTES);
             SettingChange(Token, ptr);
-						Changed=TRUE;
+            Changed=TRUE;
         }
         arg=CommandLineNext(Cmd);
     }
@@ -221,7 +221,7 @@ void ParseCommandLineChangeConfig(int argc, const char *argv[])
 
     Destroy(Token);
 
-		free(Cmd);
+    free(Cmd);
 }
 
 
@@ -275,7 +275,7 @@ void ParseCommandLineListDrivers(int argc, const char *argv[])
     }
 
     Destroy(Tempstr);
-    exit(1);
+    UI_Exit(1);
 }
 
 
@@ -284,9 +284,9 @@ void ParseCommandLineDefault(CMDLINE *Cmd)
 {
     const char *arg;
 
-		//we must start with CommandLineCurr, because ParseCommandLineDefault is called only
-		//when we didn't recognize the first argument on the command-line as '-config', '-filestores' etc
-    
+    //we must start with CommandLineCurr, because ParseCommandLineDefault is called only
+    //when we didn't recognize the first argument on the command-line as '-config', '-filestores' etc
+
     arg=CommandLineCurr(Cmd);
     while (arg)
     {
@@ -345,7 +345,7 @@ int ParseCommandLine(int argc, const char *argv[])
     if (argc < 2)
     {
         fprintf(stderr, "ERROR: No command-line arguments\n");
-        exit(1);
+				UI_Exit(0);
     }
 
     Cmd=CommandLineParserCreate(argc, (char **) argv);
@@ -372,10 +372,10 @@ int ParseCommandLine(int argc, const char *argv[])
 
 int SettingsInit(int argc, const char *argv[])
 {
-int RetVal=FALSE, Act;
+    int RetVal=FALSE, Act;
 
     Settings=(TSettings *) calloc(1, sizeof(TSettings));
-		Settings->SystemConfig=CopyStr(Settings->SystemConfig, "/etc/fileferry.conf");
+    Settings->SystemConfig=CopyStr(Settings->SystemConfig, "/etc/fileferry.conf");
     Settings->ConfigFile=MCopyStr(Settings->ConfigFile, GetCurrUserHomeDir(), "/.config/fileferry/fileferry.conf", NULL);
 
     if (isatty(1)) Settings->Flags |= SETTING_PROGRESS;
@@ -424,5 +424,5 @@ int RetVal=FALSE, Act;
     }
 
 
-return(RetVal);
+    return(RetVal);
 }

@@ -14,8 +14,6 @@
 #define EXTN_CHANGE 0
 #define EXTN_APPEND 1
 
-#define VERSION "3.2"
-
 extern STREAM *StdIO;
 extern uint64_t ProcessStartTime;
 extern time_t Now;

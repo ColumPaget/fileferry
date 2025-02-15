@@ -429,8 +429,8 @@ void HelpCommandLine()
     printf("  -help                                      - print this help\n");
     printf("  --help                                     - print this help\n");
 
-    UI_Close();
-    exit(0);
+
+    UI_Exit(0);
 }
 
 

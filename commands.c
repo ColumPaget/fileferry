@@ -352,6 +352,7 @@ TCommand *CommandParse(const char *Str)
     case CMD_CD:
     case CMD_LCD:
         Cmd->Target=CopyStr(Cmd->Target, ptr);
+        StripDirectorySlash(Cmd->Target);
         break;
 
     case CMD_SET:

@@ -111,11 +111,11 @@ static void WebSocketSendControl(int Control, STREAM *S)
 
 
 
-static int WebSocketReadFrameHeader(STREAM *S, uint32_t *mask)
+static unsigned int WebSocketReadFrameHeader(STREAM *S, uint32_t *mask)
 {
     char bytes[2];
     uint16_t nlen;
-    unsigned int len;
+    uint64_t len;
     int op, result;
 
     result=STREAMPullBytes(S, bytes, 2);
@@ -126,7 +126,16 @@ static int WebSocketReadFrameHeader(STREAM *S, uint32_t *mask)
 
     len=bytes[1] & 0xFF;
 
-    if (len == 127) printf("ERROR: BigLen\n");
+    if (len == 127)
+    {
+        STREAMPullBytes(S, (char *) &len, 8);
+        len=ntohll(len);
+        if (len > LibUsefulGetInteger("WEBSOCKET:MaxFrameSize"))
+        {
+            RaiseError(0, "WebsocketReadFrameHeader", "Frame of %llu bytes on %s greater than maximum allowed, closing stream", len, S->Path);
+            return(STREAM_CLOSED);
+        }
+    }
     else if (len == 126)
     {
         STREAMPullBytes(S, (char *) &nlen, 2);
@@ -141,13 +150,17 @@ static int WebSocketReadFrameHeader(STREAM *S, uint32_t *mask)
 
     case WS_TEXT:
     case WS_BINARY:
-        if (bytes[1] & WS_MASKED) STREAMPullBytes(S, (char *) mask, 4);
+        if ((len > 0) && (bytes[1] & WS_MASKED)) STREAMPullBytes(S, (char *) mask, 4);
         return(len);
         break;
 
     case WS_PING:
         WebSocketSendControl(WS_PONG, S);
-        return(0);
+        return(STREAM_MESSAGE_END);
+        break;
+
+    case WS_PONG:
+        return(STREAM_MESSAGE_END);
         break;
     }
 
@@ -189,39 +202,33 @@ int WebSocketSendBytes(STREAM *S, const char *Data, int Len)
 
 int WebSocketReadBytes(STREAM *S, char *Data, int Len)
 {
-    static int msg_len=0;
     int read_len, result=0;
     uint32_t mask=0;
 
-    if (msg_len==0)
+    if (S->Size == 0)
     {
         if (S->State & LU_SS_MSG_READ)
         {
-            if (Len > 0)
-            {
-                S->State &= ~ LU_SS_MSG_READ;;
-                Data[0]='\n';
-                return(1);
-            }
-            return(0);
+            if (Len > 0) S->State &= ~ LU_SS_MSG_READ;
+            return(STREAM_MESSAGE_END);
         }
         else
         {
             result=WebSocketReadFrameHeader(S, &mask);
-            if (result > 0) msg_len=result;
+            if (result > 0) S->Size=result;
         }
     }
 
-    if (msg_len > 0)
+    if (S->Size > 0)
     {
-        if (msg_len > Len) read_len=Len;
-        else read_len=msg_len;
+        if (S->Size > Len) read_len=Len;
+        else read_len=S->Size;
 
         result=STREAMPullBytes(S, Data, read_len);
         if (mask > 0) WebSocketMaskData(Data, (const char *) &mask, result);
         if (result > 0)
         {
-            msg_len -= result;
+            S->Size -= result;
         }
     }
 
@@ -252,7 +259,6 @@ STREAM *WebSocketOpen(const char *WebsocketURL, const char *Config)
         Type=STREAM_TYPE_WS;
     }
 
-    LibUsefulSetValue("HTTP:Debug", "Y");
     Tempstr=GetRandomAlphabetStr(Tempstr, 16);
     Key=EncodeBytes(Key, Tempstr, 16, ENCODE_BASE64);
     Args=MCopyStr(Args, Config, " Upgrade=websocket Connection=Upgrade Sec-Websocket-Key=", Key, " Sec-Websocket-Version=13", NULL);

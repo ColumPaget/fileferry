@@ -64,6 +64,7 @@ Copyright (c) 2015 Colum Paget <colums.projects@googlemail.com>
 #include "TerminalMenu.h"
 #include "TerminalChoice.h"
 #include "TerminalProgress.h"
+#include "TerminalCalendar.h"
 #include "TerminalBar.h"
 #include "Process.h"
 #include "SecureMem.h"
@@ -75,5 +76,6 @@ Copyright (c) 2015 Colum Paget <colums.projects@googlemail.com>
 #include "PasswordFile.h"
 #include "StreamAuth.h"
 #include "CGI.h"
+#include "LineEdit.h"
 
 #endif

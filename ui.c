@@ -17,13 +17,20 @@ STREAM *StdIO=NULL;
 void UI_Init()
 {
     StdIO=STREAMFromDualFD(0,1);
-    TerminalInit(StdIO, 0);
+    TerminalInit(StdIO, TERM_RAWKEYS | TERM_SAVEATTRIBS);
 }
 
 void UI_Close()
 {
     TerminalReset(StdIO);
 }
+
+void UI_Exit(int RetVal)
+{
+    TerminalReset(StdIO);
+		exit(RetVal);
+}
+
 
 int SortSizeCompare(void *data, void *i1, void *i2)
 {
@@ -271,26 +278,14 @@ void UI_DisplayDiskSpace(double total, double used, double avail)
     Destroy(Value);
 }
 
-void UI_DisplayPrompt(TFileStore *FS)
-{
-    char *Tempstr=NULL;
-
-    Tempstr=MCopyStr(Tempstr, "\r", FS->URL, ": ", NULL);
-    STREAMWriteLine(Tempstr, StdIO);
-    STREAMFlush(StdIO);
-
-    Destroy(Tempstr);
-}
 
 
 
 TCommand *UI_ReadCommand(TFileStore *FS)
 {
-    char *Tempstr=NULL;
+    char *Tempstr=NULL, *Input=NULL;
     TCommand *Cmd;
 
-    STREAMSetTimeout(StdIO, 0);
-    UI_DisplayPrompt(FS);
 
     if (Settings->Flags & SETTING_XTERM_TITLE)
     {
@@ -298,11 +293,27 @@ TCommand *UI_ReadCommand(TFileStore *FS)
         XtermSetTitle(StdIO, Tempstr);
     }
 
-    Tempstr=STREAMReadLine(Tempstr, StdIO);
-    StripTrailingWhitespace(Tempstr);
-    if (StrValid(Tempstr)) Cmd=CommandParse(Tempstr);
+    STREAMSetTimeout(StdIO, 0);
+    Tempstr=MCopyStr(Tempstr, FS->URL, ": ", NULL);
+
+#ifdef HAVE_PROMPT_HISTORY
+    static ListNode *History=NULL;
+
+    if (! History) History=ListCreate();
+    Input=TerminalReadPromptWithHistory(Input, Tempstr, 0, History, StdIO);
+#else
+    Input=TerminalReadPrompt(Input, Tempstr, 0, StdIO);
+#endif
+
+    if (StrValid(Input))
+    {
+    STREAMWriteLine("\n", StdIO);
+    StripTrailingWhitespace(Input);
+    if (StrValid(Input)) Cmd=CommandParse(Input);
+    }
 
     Destroy(Tempstr);
+    Destroy(Input);
     return(Cmd);
 }
 
@@ -323,8 +334,8 @@ int UI_TransferProgress(TFileTransfer *Xfer)
             if (diff > 0) BPS=CopyStr(BPS, ToMetric((float) Xfer->Downloaded / ((float)diff / 100.0), 1));
             else BPS=CopyStr(BPS, "0.0");
 
-						if (Xfer->TotalFiles > 1) XofX=FormatStr(XofX, "%llu/%llu ", Xfer->CurrFileNum+1, Xfer->TotalFiles);
-						else XofX=CopyStr(XofX, "");
+            if (Xfer->TotalFiles > 1) XofX=FormatStr(XofX, "%llu/%llu ", Xfer->CurrFileNum+1, Xfer->TotalFiles);
+            else XofX=CopyStr(XofX, "");
 
             if (Xfer->Size > 0)
             {
@@ -337,7 +348,6 @@ int UI_TransferProgress(TFileTransfer *Xfer)
 
             if (Settings->Flags & SETTING_XTERM_TITLE)
             {
-									
                 if (Xfer->Size > 0) Tempstr=FormatStr(Tempstr, "%s%0.1f%%  %s", XofX, percent, Xfer->DestFinalName);
                 else Tempstr=FormatStr(Tempstr, "%s%s  %s", XofX, Transferred, Xfer->DestFinalName);
 
