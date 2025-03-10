@@ -1,4 +1,4 @@
-AC_INIT([fileferry],[3.3])
+AC_INIT([fileferry],[3.4])
 
 AC_PROG_CC
 AC_LANG([C])
@@ -26,9 +26,15 @@ AC_ARG_WITH(libuseful, [  --with-libuseful		use system-wide libUseful (default=a
 dnl These libraries are required by libuseful. We only really need them if static linking, but
 dnl let's be lazy and just include them all anyway
 AC_CHECK_LIB(z,deflate,,)
-AC_CHECK_LIB(crypto,EVP_CIPHER_CTX_init,,)
-AC_CHECK_LIB(ssl,SSL_library_init,,)
 AC_CHECK_LIB(cap,cap_init,,)
+AC_CHECK_LIB(crypto,EVP_CIPHER_CTX_init,,)
+cf_have_libcrypto=$ac_cv_lib_crypto_EVP_CIPHER_CTX_init
+dnl New versions of openssl seem to lack EVP_CIPHER_CTX_init, so let's look for another function. I've no idea what's going on with openssl, this is why I use libressl instead.
+AC_CHECK_LIB(crypto,EVP_CIPHER_CTX_new,,)
+AC_CHECK_LIB(ssl,SSL_library_init,,)
+dnl New versions of openssl seem to lack SSL_library_init, so let's look for another function. I've no idea what's going on with openssl, this is why I use libressl instead.
+AC_CHECK_LIB(ssl,OPENSSL_init_ssl,,)
+
 
 if test "$cf_enable_allfs" == "yes"
 then
@@ -132,10 +138,11 @@ then
   dnl previous AC_CHECK_LIB don't do this, because an action is supplied for them
   AC_CHECK_LIB([Useful-4],GetToken)
 else
-  AC_SUBST(LIBUSEFUL_BUNDLED,"libUseful-5/libUseful.a")
-  AC_CONFIG_SUBDIRS([libUseful-5])
-	AC_DEFINE(HAVE_APPEND_VAR)
-	AC_DEFINE([HAVE_PROMPT_HISTORY],"Y")
+  AC_DEFINE(USE_LIBUSEFUL_BUNDLED)
+  AC_SUBST(LIBUSEFUL_BUNDLED,"libUseful-bundled/libUseful.a")
+  AC_CONFIG_SUBDIRS([libUseful-bundled])
+  AC_DEFINE(HAVE_APPEND_VAR)
+  AC_DEFINE([HAVE_PROMPT_HISTORY],"Y")
 fi
 
 

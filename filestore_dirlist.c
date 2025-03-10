@@ -1,7 +1,6 @@
 #include "filestore_dirlist.h"
 #include "commands.h"
 #include <fnmatch.h>
-#include <libgen.h> // basename on macOS and musl
 
 void FileStoreDirListFree(TFileStore *FS, ListNode *Dir)
 {
@@ -183,7 +182,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 {
     ListNode *GlobList, *SrcDir, *Curr;
     char *Tempstr=NULL;
-    const char *Match;
+    const char *Match="";
 
 
     if (StrValid(Path))
@@ -197,9 +196,21 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
             else SrcDir=FS->DirList;
         }
 
-        //use basename not 'GetBasename' as these behave differently for a path ending in '/'
-        //basename will return blank for a path like '/tmp/', whereas GetBasename will return '/tmp'
-        Match=basename(Path);
+        //use neither basename nor 'GetBasename' as these both exhibit unexpected behavior
+	//what we want is a match string to limit searches in SrcDir. If Path ends in '/'
+        //then we want this match string to be "" (empty) to indicate 'sort everything'
+
+        //GetBasename will return '/tmp' for '/tmp/', which is normally desirable, but not here, as we already have 'SrcDir'
+ 
+        //basename exists in two versions:
+        //1) POSIX basename modifies the contents of Path, and can return '.' if Path is empty or null. It returns '/' if Path is just '/'
+        //2) GNU basename doesn't modify path, and returns the empty string when Path ends in '/' or is just '/'
+
+	//props to barracuda156@github.com for pointing me in the direction of this whole mess
+
+        Match=strrchr(Path, '/');
+        if (Match) Match++;
+        else Match="";
     }
     else
     {
@@ -207,7 +218,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
         Match="*";
     }
 
-    GlobList=FileStoreDirListMatch(FS, SrcDir, Match);
+    if (StrValid(Match)) GlobList=FileStoreDirListMatch(FS, SrcDir, Match);
     FileStoreDirListFree(FS, SrcDir);
 
     Destroy(Tempstr);

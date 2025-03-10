@@ -1,7 +1,11 @@
 #ifndef FILEFERRY_COMMON_H
 #define FILEFERRY_COMMON_H
 
+#ifdef USE_LIBUSEFUL_BUNDLED
+#include "libUseful-bundled/libUseful.h"
+#else
 #include "libUseful-5/libUseful.h"
+#endif
 
 #define ERR_FULL      -1
 #define ERR_FORBID    -2

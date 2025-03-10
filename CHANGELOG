@@ -1,3 +1,9 @@
+v3.4 (2025-03-10)
+  * stop using 'basename' after barracuda156@github.com pointed us in the direction of all the issues with this function
+  * fix for compile on macOS after guidance from barracuda156@github.com
+  * libUseful now stored in 'libUseful-bundled' to prevent confusion with system-wide libuseful
+  * compile with recent versions of openssl 
+
 v3.3 (2025-02-15)
   * add command history if supported by libuseful
 

@@ -1,15 +1,15 @@
 OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o html.o rss.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o filestore_drivers/fileferry_builtin_drivers.a
-FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_NAME=\"fileferry\" -DPACKAGE_TARNAME=\"fileferry\" -DPACKAGE_VERSION=\"3.3\" -DPACKAGE_STRING=\"fileferry\ 3.3\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -D_FILE_OFFSET_BITS=64 -DHAVE_LIBZ=1 -DHAVE_LIBCRYPTO=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCAP=1 -DHAVE_APPEND_VAR=1 -DHAVE_PROMPT_HISTORY=\"Y\"
+FLAGS=-g -D_FILE_OFFSET_BITS=64 -DPACKAGE_NAME=\"fileferry\" -DPACKAGE_TARNAME=\"fileferry\" -DPACKAGE_VERSION=\"3.4\" -DPACKAGE_STRING=\"fileferry\ 3.4\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DHAVE_LIBZ=1 -DHAVE_LIBCRYPTO=1 -DHAVE_LIBSSL=1 -DUSE_LIBUSEFUL_BUNDLED=1 -DHAVE_APPEND_VAR=1 -DHAVE_PROMPT_HISTORY=\"Y\"
 PREFIX=/usr/local
-LIBS=-lcap -lssl -lcrypto -lz 
-STATIC_LIBUSEFUL=libUseful-5/libUseful.a
+LIBS=-lssl -lcrypto -lz 
+STATIC_LIBUSEFUL=libUseful-bundled/libUseful.a
 
 
 all: $(OBJ) main.c $(STATIC_LIBUSEFUL)
-	gcc $(FLAGS) -ofileferry $(OBJ) main.c $(STATIC_LIBUSEFUL) $(LIBS)
+	gcc $(FLAGS) -o fileferry $(OBJ) main.c $(STATIC_LIBUSEFUL) $(LIBS)
 
-libUseful-5/libUseful.a:
-	make -C libUseful-5
+libUseful-bundled/libUseful.a:
+	make -C libUseful-bundled
 
 filestore_drivers/fileferry_builtin_drivers.a: $(wildcard filestore_drivers/*.c)
 	make -C filestore_drivers
