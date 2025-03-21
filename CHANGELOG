@@ -1,3 +1,10 @@
+v3.5 (2025-03-21)
+  * major bugfix: fix 'no files match' situation caused in v3.4
+  * added 'df' command
+  * more color in 'disk usage' output to make it more readable
+  * dropbox folders now recognized as folders
+  * added 'LICENSE' file
+
 v3.4 (2025-03-10)
   * stop using 'basename' after barracuda156@github.com pointed us in the direction of all the issues with this function
   * fix for compile on macOS after guidance from barracuda156@github.com

@@ -184,7 +184,7 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
                         if (StrValid(FI->description)) Tempstr=MCatStr(Tempstr, "\n  ", FI->description, "\n", NULL);
                     }
                 }
-                else Tempstr=MCopyStr(Tempstr, FI->name, class, NULL);
+                else Tempstr=MCopyStr(Tempstr, prefix, FI->name, class, "~0", NULL);
                 Tempstr=CatStr(Tempstr, "\n");
 
                 TerminalPutStr(Tempstr, StdIO);
@@ -267,10 +267,10 @@ void UI_DisplayDiskSpace(double total, double used, double avail)
 {
     char *Tempstr=NULL, *Value=NULL;
 
-    Tempstr=MCopyStr(Tempstr, "Disk Space: total: ", ToIEC(total, 2), NULL);
-    Value=FormatStr(Value, " used: %0.1f%% (%sb) ", used * 100.0 / total, ToIEC(used, 2));
+    Tempstr=MCopyStr(Tempstr, "~eDisk Space: ~c~etotal: ", ToIEC(total, 2), "~0", NULL);
+    Value=FormatStr(Value, " ~mused: %0.1f%% (%sb)~0 ", used * 100.0 / total, ToIEC(used, 2));
     Tempstr=CatStr(Tempstr, Value);
-    Value=FormatStr(Value, " avail: %0.1f%% (%sb) ", avail * 100.0 / total, ToIEC(avail, 2));
+    Value=FormatStr(Value, " ~e~bavail: %0.1f%% (%sb)~0 ", avail * 100.0 / total, ToIEC(avail, 2));
     Tempstr=CatStr(Tempstr, Value);
     UI_Output(0, "%s", Tempstr);
 
@@ -284,7 +284,7 @@ void UI_DisplayDiskSpace(double total, double used, double avail)
 TCommand *UI_ReadCommand(TFileStore *FS)
 {
     char *Tempstr=NULL, *Input=NULL;
-    TCommand *Cmd;
+    TCommand *Cmd=NULL;
 
 
     if (Settings->Flags & SETTING_XTERM_TITLE)
@@ -309,11 +309,14 @@ TCommand *UI_ReadCommand(TFileStore *FS)
     {
     STREAMWriteLine("\n", StdIO);
     StripTrailingWhitespace(Input);
-    if (StrValid(Input)) Cmd=CommandParse(Input);
     }
+
+		//we want to have a Cmd returned even if Input is blank
+    Cmd=CommandParse(Input);
 
     Destroy(Tempstr);
     Destroy(Input);
+
     return(Cmd);
 }
 

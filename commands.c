@@ -259,6 +259,8 @@ int CommandMatch(const char *Str)
 {
     int Cmd=CMD_NONE;
 
+		if (StrValid(Str))
+		{
     if (strcmp(Str, "cd")==0) Cmd=CMD_CD;
     else if (strcmp(Str, "chdir")==0) Cmd=CMD_CD;
     else if (strcmp(Str, "lcd")==0) Cmd=CMD_LCD;
@@ -313,6 +315,7 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "lsha1")==0) Cmd=CMD_LSHA1;
     else if (strcmp(Str, "lsha1sum")==0) Cmd=CMD_LSHA1;
     else if (strcmp(Str, "info")==0) Cmd=CMD_INFO;
+    else if (strcmp(Str, "df")==0) Cmd=CMD_DISK_FREE;
     else if (strcmp(Str, "exists")==0) Cmd=CMD_EXISTS;
     else if (strcmp(Str, "lock")==0) Cmd=CMD_LOCK;
     else if (strcmp(Str, "llock")==0) Cmd=CMD_LLOCK;
@@ -329,6 +332,8 @@ int CommandMatch(const char *Str)
     else if (strcmp(Str, "help")==0) Cmd=CMD_HELP;
     else if (strcmp(Str, "quit")==0) Cmd=CMD_QUIT;
     else if (strcmp(Str, "exit")==0) Cmd=CMD_QUIT;
+    else Cmd=CMD_UNKNOWN;
+    }
 
     return(Cmd);
 }
@@ -361,7 +366,7 @@ TCommand *CommandParse(const char *Str)
         else SettingChange(Token, ptr);
         break;
 
-    case CMD_NONE:
+    case CMD_UNKNOWN:
         HandleEvent(NULL, UI_OUTPUT_ERROR, "unrecognized command: $(path)", Token, "");
         break;
 
@@ -555,6 +560,12 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
     int diff=0, match=0;
     int result;
 
+    if (! StrValid(Cmd->Target))
+    {
+        UI_Output(UI_OUTPUT_ERROR, "No target given for diff command.");
+        return;
+    }
+
     LocalDir=FileStoreGlob(LocalFS, Cmd->Target);
     RemoteDir=FileStoreGlob(RemoteFS, Cmd->Target);
 
@@ -655,11 +666,20 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         HelpCommand(Cmd->Target);
         break;
 
+    case CMD_DISK_FREE:
+        FileStoreOutputDiskQuota(RemoteFS);
+        break;
+
     case CMD_INFO:
+        if (StrValid(Cmd->Target))
+        {
         if (strncmp(Cmd->Target, "encrypt", 7)==0) FileStoreOutputCipherDetails(RemoteFS, 0);
-        if (strcmp(Cmd->Target, "usage")==0) FileStoreOutputDiskQuota(RemoteFS);
-        if (strcmp(Cmd->Target, "features")==0) FileStoreOutputSupportedFeatures(RemoteFS);
-        //if (strcmp(Cmd->Target, "service")==0) FileStoreOutputServiceInfo(RemoteFS);
+        else if (strcmp(Cmd->Target, "usage")==0) FileStoreOutputDiskQuota(RemoteFS);
+        else if (strcmp(Cmd->Target, "features")==0) FileStoreOutputSupportedFeatures(RemoteFS);
+        // else if (strcmp(Cmd->Target, "service")==0) FileStoreOutputServiceInfo(RemoteFS);
+        else UI_Output(UI_OUTPUT_ERROR, "unrecognized argument to 'info'. Expected one of 'encrypt', 'usage' or 'features'.");
+        }
+        else UI_Output(UI_OUTPUT_ERROR, "'info' requires and argument, one of:\n  'encrypt' for connection encryption details\n  'usage' for remote disk usage\n  'features' for supported features of connection/service");
         break;
 
     case CMD_EXISTS:
@@ -705,7 +725,6 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
     case CMD_LRMDIR:
         result=FileStoreRmDir(LocalFS, Cmd->Target);
         break;
-
 
     case CMD_RENAME:
         result=CommandGlobAndProcess(RemoteFS, CMD_TYPE_DEST, Cmd, FileStoreRename);

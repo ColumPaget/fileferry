@@ -48,7 +48,6 @@ static char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, co
         {
             Tempstr=STREAMReadDocument(Tempstr, S);
             HandleEvent(FS, UI_OUTPUT_ERROR, Tempstr, URL, "");
-            //printf("%s\n", Tempstr);
             Destroy(RetStr);
             RetStr=NULL;
         }
@@ -97,7 +96,6 @@ static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, int OpenFlags,
             {
                 STREAMSetValue(S, "dropbox_transfer", "upload");
                 Tempstr=STREAMReadDocument(Tempstr, S);
-printf("%s\n", Tempstr);
                 P=ParserParseDocument("json", Tempstr);
 								InfoS=STREAMCreate();
                 STREAMSetValue(InfoS, "dropbox_sessionid", ParserGetValue(P, "session_id"));
@@ -128,7 +126,6 @@ static int DropBox_CloseFile(TFileStore *FS, STREAM *InfoS)
     STREAM *S=NULL;
 
     Tempstr=CopyStr(Tempstr, STREAMGetValue(InfoS, "dropbox_transfer"));
-    printf("CF: [%s]\n", Tempstr);
     fflush(NULL);
 
     if (strcmp(Tempstr, "upload")==0)
@@ -139,7 +136,6 @@ static int DropBox_CloseFile(TFileStore *FS, STREAM *InfoS)
         {
             STREAMCommit(S);
             Tempstr=STREAMReadDocument(Tempstr, S);
-            printf("%s\n", Tempstr);
             STREAMClose(S);
         }
     }
@@ -164,7 +160,6 @@ static int DropBox_WriteBytes(TFileStore *FS, STREAM *InfoS, char *Buffer, uint6
 
     Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"close\": false, \"cursor\": {\"offset\": %llu, \"session_id\": \"%s\"}}' Content-Type=application/octet-stream Content-Length=%lu", FS->Pass, offset, STREAMGetValue(InfoS, "dropbox_sessionid"), len);
 
-printf("WB: %d %s\n", len, Tempstr);
     S=STREAMOpen("https://content.dropboxapi.com/2/files/upload_session/append_v2", Tempstr);
     if (S)
     {
@@ -172,9 +167,7 @@ printf("WB: %d %s\n", len, Tempstr);
         STREAMWriteBytes(S, "\r\n", 2);
         STREAMCommit(S);
 
-				printf("RESP %s\n", STREAMGetValue(S, "HTTP:ResponseCode"));
         Tempstr=STREAMReadDocument(Tempstr, S);
-        printf("GOT: %s\n", Tempstr);
         STREAMClose(S);
     }
 
@@ -242,11 +235,10 @@ static int DropBox_CloseFile(TFileStore *FS, STREAM *S)
     Tempstr=CopyStr(Tempstr, STREAMGetValue(S, "dropbox_transfer"));
     if (strcmp(Tempstr, "upload")==0)
     {
-        printf("CF: %s\n",  Tempstr);
         STREAMWriteLine("\r\n", S);
         STREAMCommit(S);
         Tempstr=STREAMReadDocument(Tempstr, S);
-        printf("%s\n", Tempstr);
+        fprintf(stderr, "%s\n", Tempstr);
         STREAMClose(S);
     }
 
@@ -263,7 +255,6 @@ static int DropBox_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t o
 
 static int DropBox_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
-    printf("WB: %d\n", len);
     return(STREAMWriteBytes(S, Buffer, len));
 }
 
@@ -280,7 +271,6 @@ static int DropBox_Unlink(TFileStore *FS, const char *Path)
     JSON=DropBox_Transact(JSON, FS, "/files/delete_v2", Tempstr);
     if (StrValid(JSON)) RetVal=TRUE;
 
-    printf("%s\n", JSON);
     Destroy(Tempstr);
     Destroy(JSON);
 
@@ -322,7 +312,6 @@ static int DropBox_MkDir(TFileStore *FS, const char *Path, int Mkdir)
     JSON=DropBox_Transact(JSON, FS, "/files/create_folder_v2", Tempstr);
     if (StrValid(JSON)) RetVal=TRUE;
 
-    printf("%s\n", JSON);
     Destroy(Tempstr);
     Destroy(JSON);
 
@@ -335,6 +324,7 @@ static ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
     char *Tempstr=NULL, *JSON=NULL;
     ListNode *Items, *FilesP, *Curr;
     TFileItem *FI;
+    const char *ptr;
     PARSER *P;
     uint64_t size;
 
@@ -349,6 +339,7 @@ static ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
     else Tempstr=MCopyStr(Tempstr, "{\"path\": \"", Path,"\",\"recursive\": false}", NULL);
 
     JSON=DropBox_Transact(JSON, FS, "/files/list_folder", Tempstr);
+if (Settings->Flags & SETTING_DEBUG) fprintf(stderr, "%s\n", JSON);
     P=ParserParseDocument("json", JSON);
     if (P)
     {
@@ -357,8 +348,10 @@ static ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
         {
             if (StrValid(ParserGetValue(Curr, "name")))
             {
+		ptr=ParserGetValue(Curr, ".tag");
                 size=(uint64_t) strtoll(ParserGetValue(Curr, "size"), NULL, 10);
-                FI=FileItemCreate(ParserGetValue(Curr, "name"), FTYPE_FILE, size, 0666);
+		if (CompareStr(ptr, "folder")==0) FI=FileItemCreate(ParserGetValue(Curr, "name"), FTYPE_DIR, size, 0666);
+		else FI=FileItemCreate(ParserGetValue(Curr, "name"), FTYPE_FILE, size, 0666);
                 FI->path=CopyStr(FI->path, ParserGetValue(Curr, "path_lower"));
                 FI->mtime=DateStrToSecs("%Y-%m-%dT%H:%M:%S.", ParserGetValue(Curr,"client_modified"), NULL);
 

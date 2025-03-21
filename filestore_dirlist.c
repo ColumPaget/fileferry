@@ -180,7 +180,7 @@ ListNode *FileStoreDirListRefresh(TFileStore *FS, int Flags)
 
 ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 {
-    ListNode *GlobList, *SrcDir, *Curr;
+    ListNode *GlobList=NULL, *SrcDir, *Curr;
     char *Tempstr=NULL;
     const char *Match="";
 
@@ -210,7 +210,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
 
         Match=strrchr(Path, '/');
         if (Match) Match++;
-        else Match="";
+        else Match=Path;
     }
     else
     {

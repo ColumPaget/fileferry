@@ -39,7 +39,7 @@ static int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SO
         STREAMCommit(S);
         RetVal=HTTP_CheckResponseCode(S);
         *ResponseData=STREAMReadDocument(*ResponseData, S);
-        //printf("\n%s\n", *ResponseData);
+        if (Settings->Flags & (SETTING_DEBUG | SETTING_VERBOSE)) fprintf(stderr, "\n%s\n", *ResponseData);
         STREAMClose(S);
     }
 

@@ -1,4 +1,4 @@
-AC_INIT([fileferry],[3.4])
+AC_INIT([fileferry],[3.5])
 
 AC_PROG_CC
 AC_LANG([C])
