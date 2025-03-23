@@ -345,7 +345,7 @@ int ParseCommandLine(int argc, const char *argv[])
     if (argc < 2)
     {
         fprintf(stderr, "ERROR: No command-line arguments\n");
-				UI_Exit(0);
+        UI_Exit(0);
     }
 
     Cmd=CommandLineParserCreate(argc, (char **) argv);

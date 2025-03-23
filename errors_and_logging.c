@@ -25,7 +25,7 @@ void EmailError(TFileStore *FS, int ErrorType, const char *Path, const char *Des
 
 void HandleEvent(TFileStore *FS, int ErrorType, const char *Description, const char *Path, const char *Dest)
 {
-    char *Tempstr=NULL;
+    char *Tempstr=NULL, *Cleaned=NULL;
     ListNode *Vars=NULL;
 
     if (! (Settings->Flags & SETTING_NOERROR))
@@ -37,14 +37,18 @@ void HandleEvent(TFileStore *FS, int ErrorType, const char *Description, const c
 
         Tempstr=SubstituteVarsInString(Tempstr, Description, Vars, 0);
         UI_Output(ErrorType, "%s", Tempstr);
-        if (StrValid(Settings->LogFile)) LogToFile(Settings->LogFile, "%s", Tempstr);
-        if (Settings->Flags & SETTING_SYSLOG) syslog(LOG_ERR, "%s", Tempstr);
+
+				Cleaned=TerminalStripControlSequences(Cleaned, Tempstr);
+        if (StrValid(Settings->LogFile)) LogToFile(Settings->LogFile, "%s", Cleaned);
+        if (Settings->Flags & SETTING_SYSLOG) syslog(LOG_ERR, "%s", Cleaned);
         if (StrLen(Settings->EmailForErrors)) EmailError(FS, ErrorType, Path, Description);
 //if (StrLen(Settings->WebhookForErrors)) WebhookError(FS, ErrorType, Path, Description);
     }
 
     ListDestroy(Vars, Destroy);
+
     Destroy(Tempstr);
+    Destroy(Cleaned);
 }
 
 

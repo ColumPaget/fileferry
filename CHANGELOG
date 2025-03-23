@@ -1,3 +1,12 @@
+v3.6 (2025-03-23)
+  * dropbox: support content-hash
+  * dropbox: use upload sessions for uploading (allows uploading larger files)
+  * added hcmp command to compare hashes at both ends for filestore that support this
+  * added sha256/lsha256 command
+  * add more color to interface
+  * fix lln command
+
+
 v3.5 (2025-03-21)
   * major bugfix: fix 'no files match' situation caused in v3.4
   * added 'df' command

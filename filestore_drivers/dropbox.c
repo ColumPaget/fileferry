@@ -1,8 +1,35 @@
 #include "dropbox.h"
 #include "http.h"
+#include "../filestore_dirlist.h"
 #include "../errors_and_logging.h"
 
 #define DROPBOX_CLIENT_ID "tachgefepatxzya"
+
+
+
+static TFileItem *DropBoxParseFileItem(ListNode *JSONP)
+{
+    TFileItem *FI=NULL;
+    const char *ptr;
+    uint64_t size;
+    int FType=FTYPE_FILE;
+
+
+    if (StrValid(ParserGetValue(JSONP, "name")))
+    {
+        ptr=ParserGetValue(JSONP, ".tag");
+        size=(uint64_t) strtoll(ParserGetValue(JSONP, "size"), NULL, 10);
+        if (CompareStr(ptr, "folder")==0) FType=FTYPE_DIR;
+
+        FI=FileItemCreate(ParserGetValue(JSONP, "name"), FType, size, 0666);
+        FI->path=CopyStr(FI->path, ParserGetValue(JSONP, "path_lower"));
+        FI->mtime=DateStrToSecs("%Y-%m-%dT%H:%M:%S.", ParserGetValue(JSONP,"client_modified"), NULL);
+        FI->hash=MCopyStr(FI->hash, "dropboxhash:", ParserGetValue(JSONP, "content_hash"), NULL);
+    }
+
+    return(FI);
+}
+
 
 static char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, const char *Args)
 {
@@ -63,8 +90,7 @@ static char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, co
 
 
 
-/*
-static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Size)
+static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
     STREAM *S, *InfoS=NULL;
     PARSER *P;
@@ -74,14 +100,13 @@ static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, int OpenFlags,
     if (OpenFlags & XFER_FLAG_UPLOAD)
     {
         URL=MCopyStr(URL, "https://content.dropboxapi.com/2/files/upload_session/start");
-        Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"close\": false}' Content-Type=application/octet-stream", FS->Pass);
+        Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"close\": false}' Content-Type=application/octet-stream Content-Length=0", FS->Pass);
     }
     else
     {
         URL=MCopyStr(URL, "https://content.dropboxapi.com/2/files/download");
         //beware, dropbox uses 'POST' for getting files!
         Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"path\": \"%s\"}'", FS->Pass, Path);
-        fprintf(stderr, "%s\n", Tempstr);
     }
 
 
@@ -94,15 +119,15 @@ static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, int OpenFlags,
         {
             if (OpenFlags & XFER_FLAG_UPLOAD)
             {
-                STREAMSetValue(S, "dropbox_transfer", "upload");
                 Tempstr=STREAMReadDocument(Tempstr, S);
                 P=ParserParseDocument("json", Tempstr);
-								InfoS=STREAMCreate();
+                InfoS=STREAMCreate();
                 STREAMSetValue(InfoS, "dropbox_sessionid", ParserGetValue(P, "session_id"));
                 STREAMSetValue(InfoS, "destination_path", Path);
+                STREAMSetValue(InfoS, "dropbox_transfer", "upload");
                 ParserItemsDestroy(P);
-            		STREAMClose(S);
-								S=InfoS;
+                STREAMClose(S);
+                S=InfoS;
             }
         }
         else
@@ -123,6 +148,8 @@ static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, int OpenFlags,
 static int DropBox_CloseFile(TFileStore *FS, STREAM *InfoS)
 {
     char *Tempstr=NULL;
+    TFileItem *FI, *tmpFI;
+    PARSER *P;
     STREAM *S=NULL;
 
     Tempstr=CopyStr(Tempstr, STREAMGetValue(InfoS, "dropbox_transfer"));
@@ -130,12 +157,22 @@ static int DropBox_CloseFile(TFileStore *FS, STREAM *InfoS)
 
     if (strcmp(Tempstr, "upload")==0)
     {
-        Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"commit\": {\"autorename\": true, \"path\": \"%s\"},  \"cursor\": {\"offset\": 0, \"session_id\": \"%s\"}}' Content-Type=application/octet-stream Content-Length=0", FS->Pass, STREAMGetValue(InfoS, "destination_path"), STREAMGetValue(InfoS, "dropbox_sessionid"));
+        Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"commit\": {\"autorename\": true, \"mode\": \"add\", \"path\": \"%s\", \"strict_conflict\": false},  \"cursor\": {\"session_id\": \"%s\", \"offset\": %s}}' Content-Type=application/octet-stream Content-Length=0", FS->Pass, STREAMGetValue(InfoS, "destination_path"), STREAMGetValue(InfoS, "dropbox_sessionid"), STREAMGetValue(InfoS, "dropbox_transfer_size"));
         S=STREAMOpen("https://content.dropboxapi.com/2/files/upload_session/finish", Tempstr);
         if (S)
         {
             STREAMCommit(S);
             Tempstr=STREAMReadDocument(Tempstr, S);
+            UI_Output(UI_OUTPUT_DEBUG, "%s", Tempstr);
+            P=ParserParseDocument("json", Tempstr);
+            tmpFI=DropBoxParseFileItem(P);
+            if (tmpFI)
+            {
+                FI=FileStoreDirListUpdateItem(FS, tmpFI->type, tmpFI->name, tmpFI->size, tmpFI->perms);
+                FI->hash=CopyStr(FI->hash, tmpFI->hash);
+                FileItemDestroy(tmpFI);
+            }
+
             STREAMClose(S);
         }
     }
@@ -152,32 +189,45 @@ static int DropBox_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t o
     return(STREAMReadBytes(S, Buffer, len));
 }
 
+
+//Dropbox has a special API that uses 'upload sessions' where the upload is broken up into chunks pushed in seperate
+//HTTP sessions, which is why this all looks a bit odd
 static int DropBox_WriteBytes(TFileStore *FS, STREAM *InfoS, char *Buffer, uint64_t offset, uint32_t len)
 {
     char *Tempstr=NULL;
     int result=STREAM_CLOSED;
     STREAM *S;
 
-    Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"close\": false, \"cursor\": {\"offset\": %llu, \"session_id\": \"%s\"}}' Content-Type=application/octet-stream Content-Length=%lu", FS->Pass, offset, STREAMGetValue(InfoS, "dropbox_sessionid"), len);
+    Tempstr=FormatStr(Tempstr, "w Authorization='Bearer %s' Dropbox-API-Arg='{\"cursor\": {\"session_id\": \"%s\", \"offset\": %llu}, \"close\": false}' Content-Type=application/octet-stream Content-Length=%lu", FS->Pass, STREAMGetValue(InfoS, "dropbox_sessionid"), offset, len);
 
     S=STREAMOpen("https://content.dropboxapi.com/2/files/upload_session/append_v2", Tempstr);
     if (S)
     {
         result=STREAMWriteBytes(S, Buffer, len);
-        STREAMWriteBytes(S, "\r\n", 2);
+
+        //for some weird reason this Flush is required, even though
+        //STREAMCommit contains a flush. Without this the upload hangs.
+        STREAMFlush(S);
+
         STREAMCommit(S);
 
         Tempstr=STREAMReadDocument(Tempstr, S);
         STREAMClose(S);
+
+        Tempstr=FormatStr(Tempstr, "%llu", offset + len);
+        STREAMSetValue(InfoS, "dropbox_transfer_size", Tempstr);
     }
 
     Destroy(Tempstr);
 
     return(result);
 }
-*/
 
 
+
+/*
+These functions relate to the basic 'upload' feature of dropbox that's been replaced by 'upload_session'.
+Upload is simple, but has limits on how large a file transfer can be.
 
 static STREAM *DropBox_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, uint64_t Offset, uint64_t Size)
 {
@@ -238,7 +288,7 @@ static int DropBox_CloseFile(TFileStore *FS, STREAM *S)
         STREAMWriteLine("\r\n", S);
         STREAMCommit(S);
         Tempstr=STREAMReadDocument(Tempstr, S);
-        fprintf(stderr, "%s\n", Tempstr);
+        if (Settings->Flags & SETTING_DEBUG) fprintf(stderr, "%s\n", Tempstr);
         STREAMClose(S);
     }
 
@@ -257,7 +307,7 @@ static int DropBox_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t 
 {
     return(STREAMWriteBytes(S, Buffer, len));
 }
-
+*/
 
 
 static int DropBox_Unlink(TFileStore *FS, const char *Path)
@@ -319,14 +369,14 @@ static int DropBox_MkDir(TFileStore *FS, const char *Path, int Mkdir)
 }
 
 
+
+
 static ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
 {
     char *Tempstr=NULL, *JSON=NULL;
     ListNode *Items, *FilesP, *Curr;
     TFileItem *FI;
-    const char *ptr;
     PARSER *P;
-    uint64_t size;
 
 //{\"path\": \"/Homework/math\",\"recursive\": false,\"include_media_info\": false,\"include_deleted\": false,\"include_has_explicit_shared_members\": false,\"include_mounted_folders\": true,\"include_non_downloadable_files\": true}
 //
@@ -339,24 +389,15 @@ static ListNode *DropBox_ListDir(TFileStore *FS, const char *Path)
     else Tempstr=MCopyStr(Tempstr, "{\"path\": \"", Path,"\",\"recursive\": false}", NULL);
 
     JSON=DropBox_Transact(JSON, FS, "/files/list_folder", Tempstr);
-if (Settings->Flags & SETTING_DEBUG) fprintf(stderr, "%s\n", JSON);
+    if (Settings->Flags & SETTING_DEBUG) fprintf(stderr, "%s\n", JSON);
     P=ParserParseDocument("json", JSON);
     if (P)
     {
         Curr=ParserOpenItem(P, "entries");
         while (Curr)
         {
-            if (StrValid(ParserGetValue(Curr, "name")))
-            {
-		ptr=ParserGetValue(Curr, ".tag");
-                size=(uint64_t) strtoll(ParserGetValue(Curr, "size"), NULL, 10);
-		if (CompareStr(ptr, "folder")==0) FI=FileItemCreate(ParserGetValue(Curr, "name"), FTYPE_DIR, size, 0666);
-		else FI=FileItemCreate(ParserGetValue(Curr, "name"), FTYPE_FILE, size, 0666);
-                FI->path=CopyStr(FI->path, ParserGetValue(Curr, "path_lower"));
-                FI->mtime=DateStrToSecs("%Y-%m-%dT%H:%M:%S.", ParserGetValue(Curr,"client_modified"), NULL);
-
-                ListAddNamedItem(Items, FI->name, FI);
-            }
+            FI=DropBoxParseFileItem(Curr);
+            if (FI) ListAddNamedItem(Items, FI->name, FI);
             Curr=ListGetNext(Curr);
         }
         ParserItemsDestroy(P);
@@ -446,12 +487,36 @@ static char *DropBox_GetSharedLink(char *RetStr, TFileStore *FS, const char *Pat
     return(RetStr);
 }
 
+static char *DropBox_GetHash(char *RetStr, TFileStore *FS, const char *Path)
+{
+    TFileItem *FI;
+    const char *ptr;
+
+    FI=FileStoreGetFileInfo(FS, Path);
+    if (FI)
+    {
+        if (StrValid(FI->hash))
+        {
+            ptr=strchr(FI->hash, ':');
+            if (ptr) RetStr=CopyStr(RetStr, ptr+1);
+        }
+    }
+
+    return(RetStr);
+}
+
 
 static char *DropBox_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
     RetStr=CopyStr(RetStr, "");
-    if (strcmp(ValName, "DiskQuota")==0) RetStr=DropBox_GetDiskQuota(RetStr, FS, Path);
-    if (strcmp(ValName, "ShareLink")==0) RetStr=DropBox_GetSharedLink(RetStr, FS, Path);
+
+    if (StrValid(ValName))
+    {
+        if (strcasecmp(ValName, "DiskQuota")==0) RetStr=DropBox_GetDiskQuota(RetStr, FS, Path);
+        if (strcasecmp(ValName, "ShareLink")==0) RetStr=DropBox_GetSharedLink(RetStr, FS, Path);
+        if (strcasecmp(ValName, "dropboxhash")==0) RetStr=DropBox_GetHash(RetStr, FS, Path);
+    }
+
     return(RetStr);
 }
 
@@ -505,7 +570,7 @@ static int DropBox_Connect(TFileStore *FS)
 
     if (! SSLAvailable())
     {
-        printf("ERROR: SSL/TLS support not compiled in\n");
+        UI_Output(UI_OUTPUT_ERROR, "SSL/TLS support not compiled in");
         return(FALSE);
     }
 
@@ -526,11 +591,6 @@ static int DropBox_Connect(TFileStore *FS)
         RetVal=DropBox_Info(FS);
     }
 
-
-    /*
-        FS->FileInfo=FTP_FileInfo;
-        FS->ChDir=FTP_ChDir;
-    */
 
     Destroy(Tempstr);
     Destroy(Verbiage);
@@ -553,6 +613,8 @@ int DropBox_Attach(TFileStore *FS)
     FS->RenamePath=DropBox_Rename;
     FS->GetValue=DropBox_GetValue;
     FS->MkDir=DropBox_MkDir;
+
+    AppendVar(FS->Vars, "HashTypes", "dropboxhash");
 
     return(TRUE);
 }

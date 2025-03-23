@@ -139,7 +139,7 @@ int TransferPreProcess(TFileTransfer *Xfer)
     char *Tempstr=NULL, *Path=NULL;
     int i;
 
-    if (FileStoreItemExists(Xfer->ToFS, Xfer->DestFinalName, 0))
+    if (FileStoreItemExists(Xfer->ToFS, Xfer->DestFinalName, FTYPE_FILE))
     {
         if (! (Xfer->Flags & (XFER_FLAG_FORCE | XFER_FLAG_RESUME))) return(XFER_DEST_EXISTS);
     }
@@ -249,7 +249,6 @@ int TransferPostProcess(TFileTransfer *Xfer)
     }
 
     time(&Now);
-    FileStoreDirListAddItem(ToFS, FTYPE_FILE, Xfer->DestFinalName, Xfer->Offset);
 
 
     Destroy(Tempstr);
@@ -315,6 +314,34 @@ ListNode *TransferFileGlob(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
 
 
 
+//setup a buffer to hold the transfer data. We want this to be as big as
+//we can reasonably make it, while not causing an 'out of data' fault.
+//Many transfer types send data in chunks, and if they are http based
+//that may mean a reconnection/renegotiation on each chunk. So bigger
+//transfer buffers mean faster transfers.
+static long TransferSetupBuffer(char **Buffer)
+{
+    long len;
+
+//if we're on a 16-bit system (probably not possible, but if)
+//then don't try to be clever, just go with 4k
+    if (sizeof(long) == 2) len=4096;
+//otherwise start at 4 meg
+    else len=4 * 1024 * 1024;
+
+    *Buffer = SetStrLen(*Buffer, len);
+    while ((Buffer == NULL) & (len > 4096))
+    {
+        len=len / 1024;
+        *Buffer = SetStrLen(*Buffer, len);
+    }
+
+    if (! Buffer) return(0);
+    return(len);
+}
+
+
+
 static int TransferCopyFile(TFileTransfer *Xfer, STREAM *FromS, STREAM *ToS)
 {
     int len, result;
@@ -324,14 +351,27 @@ static int TransferCopyFile(TFileTransfer *Xfer, STREAM *FromS, STREAM *ToS)
     FromFS=Xfer->FromFS;
     ToFS=Xfer->ToFS;
 
-    len=4096 * 10;
-    Tempstr=SetStrLen(Tempstr, len);
+    len=TransferSetupBuffer(&Tempstr);
+    if (len==0)
+    {
+        UI_Output(UI_OUTPUT_ERROR, "Can't allocate memory buffer for file transfers.");
+        return(0);
+    }
+
+    UI_Output(UI_OUTPUT_DEBUG, "Using %s buffer for file transfers", ToIEC((double) len, 1));
     result=FromFS->ReadBytes(FromFS, FromS, Tempstr, Xfer->Offset, len);
     while (result != STREAM_CLOSED)
     {
-        ToFS->WriteBytes(ToFS, ToS, Tempstr, Xfer->Offset, result);
+        result=ToFS->WriteBytes(ToFS, ToS, Tempstr, Xfer->Offset, result);
+        if (result ==STREAM_CLOSED)
+        {
+            UI_Output(UI_OUTPUT_ERROR, "write failed");
+            break;
+        }
+
         Xfer->Offset+=result;
-        Xfer->Downloaded+=result;
+
+        Xfer->Transferred+=result;
         if ((Settings->Flags & SETTING_PROGRESS) && Xfer->ProgressFunc) Xfer->ProgressFunc(Xfer);
         result=FromFS->ReadBytes(FromFS, FromS, Tempstr, Xfer->Offset, len);
     }
@@ -444,26 +484,30 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
             HandleEvent(ToFS, UI_OUTPUT_ERROR, "Destination '$(path)' already exists. Transfer aborted.", GetBasename(Xfer->Path), "");
             break;
 
-        default:
+        case XFER_SHORT_FAIL:
+            HandleEvent(ToFS, UI_OUTPUT_ERROR, "Transfer failed: transfer of $(path) ended early", Xfer->Path,  "");
+            break;
 
+        default:
             duration=((float) (GetTime(TIME_CENTISECS) - Xfer->StartTime)) / 100.0;
-            UI_Output(UI_OUTPUT_SUCCESS, "TRANSFERRED: %llu/%llu %s (%sb) in %0.2fsecs                           ", Xfer->CurrFileNum+1, Xfer->TotalFiles, FI->name, ToMetric(Xfer->Downloaded, 1), duration);
-            if (Xfer->Flags & XFER_FLAG_DOWNLOAD) HandleEvent(FromFS, 0, "$(filestore): Downloaded: $(path)", Xfer->Path, "");
+            UI_Output(UI_OUTPUT_SUCCESS, "TRANSFERRED: %llu/%llu %s (%sb) in %0.2fsecs ~>", Xfer->CurrFileNum+1, Xfer->TotalFiles, FI->name, ToMetric(Xfer->Transferred, 1), duration);
+            if (Xfer->Flags & XFER_FLAG_DOWNLOAD) HandleEvent(FromFS, 0, "$(filestore): Transferred: $(path)", Xfer->Path, "");
             else HandleEvent(ToFS, 0, "$(filestore): Uploaded: $(path)", Xfer->Path, "");
 
             if (Cmd->Flags & CMD_FLAG_INTEGRITY)
             {
-                switch(FileStoreCompareFiles(FromFS, ToFS, GetBasename(Xfer->Path), GetBasename(Xfer->Path), &HashType))
+
+                switch(FileStoreCompareFiles(FromFS, ToFS, Xfer->Path, Xfer->DestFinalName, &HashType))
                 {
                 case CMP_MATCH:
                 case CMP_LOCAL_NEWER:
                 case CMP_REMOTE_NEWER:
-                    Tempstr=MCopyStr(Tempstr,	"$(filestore): Transfer integrity confirmed by ", HashType, NULL);
+                    Tempstr=MCopyStr(Tempstr,	"$(filestore): Transfer integrity ~gconfirmed~0 by ", HashType, NULL);
                     HandleEvent(ToFS, 0, Tempstr, "", "");
                     break;
 
                 default:
-                    HandleEvent(ToFS, 0, "$(filestore): Transfer integrity check FAILED", "", "");
+                    HandleEvent(ToFS, 0, "$(filestore): Transfer integrity check ~rFAILED~0", "", "");
                     break;
                 }
             }
@@ -472,6 +516,8 @@ int TransferFileCommand(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
 
 
         UI_Output(0, "");
+
+        FileStoreDirListUpdateItem(ToFS, FTYPE_FILE, Xfer->DestFinalName, Xfer->Offset, 0);
         FileTransferDestroy(Xfer);
         transfers++;
         if ((Cmd->NoOfItems > 0) && (transfers >= Cmd->NoOfItems)) break;

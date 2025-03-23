@@ -33,7 +33,7 @@ struct t_file_transfer
     int Flags;
     uint64_t Size;
     uint64_t Offset;
-    uint64_t Downloaded;
+    uint64_t Transferred;
     uint64_t MaxTransfers;
     uint64_t CurrFileNum;
     uint64_t TotalFiles;

@@ -5,6 +5,7 @@
 #include "../settings.h"
 #include "../commands.h"
 #include "../file_transfer.h"
+#include "../extra_hashes.h"
 
 ListNode *LockFDs=NULL;
 
@@ -136,16 +137,43 @@ static int LocalDisk_ChMod(TFileStore *FS, const char *Path, int Mode)
 }
 
 
-static char *LocalDisk_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *Name)
+
+static char *LocalDisk_HashFile(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
 {
+    STREAM *S;
+
+    if (StrValid(Path))
+    {
+        S=FS->OpenFile(FS, Path, 0, 0, 0);
+        if (S)
+        {
+            if (strcasecmp(ValName, "dropboxhash")==0) RetStr=DropBoxHashFile(RetStr, S);
+            else HashSTREAM(&RetStr, ValName, S, ENCODE_HEX);
+            FS->CloseFile(FS, S);
+        }
+    }
+
+
+    return(RetStr);
+}
+
+static char *LocalDisk_GetValue(char *RetStr, TFileStore *FS, const char *Path, const char *ValName)
+{
+    char *Tempstr=NULL;
+
     RetStr=CopyStr(RetStr, "");
 
-    if (strcasecmp(Name, "crc")==0) HashFile(&RetStr, "crc32", Path, ENCODE_HEX);
-    if (strcasecmp(Name, "md5")==0) HashFile(&RetStr, "md5", Path, ENCODE_HEX);
-    if (strcasecmp(Name, "sha")==0) HashFile(&RetStr, "sha1", Path, ENCODE_HEX);
-    if (strcasecmp(Name, "sha1")==0) HashFile(&RetStr, "sha1", Path, ENCODE_HEX);
-    if (strcasecmp(Name, "sha256")==0) HashFile(&RetStr, "sha256", Path, ENCODE_HEX);
-    if (strcasecmp(Name, "sha512")==0) HashFile(&RetStr, "sha512", Path, ENCODE_HEX);
+    if (StrValid(ValName))
+    {
+        if (strcasecmp(ValName, "dropboxhash")==0) RetStr=LocalDisk_HashFile(RetStr, FS, Path, ValName);
+        else
+        {
+            Tempstr=HashAvailableTypes(Tempstr);
+            if (InStringList(ValName, Tempstr, ",")) RetStr=LocalDisk_HashFile(RetStr, FS, Path, ValName);
+        }
+    }
+
+    Destroy(Tempstr);
 
     return(RetStr);
 }
@@ -224,8 +252,11 @@ static int LocalDisk_Connect(TFileStore *FS)
 
 int LocalDisk_Attach(TFileStore *FS)
 {
+char *Tempstr=NULL;
 
     FS->Flags |= FILESTORE_FOLDERS | FILESTORE_RESUME_TRANSFERS;
+
+
 
     FS->Connect=LocalDisk_Connect;
     FS->ListDir=LocalDisk_ListDir;
@@ -241,6 +272,13 @@ int LocalDisk_Attach(TFileStore *FS)
     FS->CloseFile=LocalDisk_CloseFile;
     FS->ReadBytes=LocalDisk_ReadBytes;
     FS->WriteBytes=LocalDisk_WriteBytes;
+
+    Tempstr=HashAvailableTypes(Tempstr);
+		strrep(Tempstr, ',', ' ');
+    SetVar(FS->Vars, "HashTypes", Tempstr);
+		AppendVar(FS->Vars, "HashTypes", "dropboxhash");
+ 
+Destroy(Tempstr);
 
     return(TRUE);
 }

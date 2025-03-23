@@ -34,7 +34,7 @@ const char *HTTP_Webdav_Parse_Propfind(const char *XML, TFileStore *FS, ListNode
     const char *ptr;
     TFileItem *FI;
 
-    FI=FileItemCreate("", 0, 0, 0);
+    FI=FileItemCreate("", FTYPE_FILE, 0, 0);
     ptr=XMLGetTag(XML, &Namespace, &Tag, &Value);
     while (ptr)
     {

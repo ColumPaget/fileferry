@@ -134,10 +134,10 @@ STREAM *HTTP_OpenURL(TFileStore *FS, const char *Method, const char *URL, const 
     if (S)
     {
         if (strncmp(FullURL, "https:", 6)==0)
-	{
-		FS->Flags |= FILESTORE_TLS;
-		FileStoreRecordCipherDetails(FS, S);
-	}
+        {
+            FS->Flags |= FILESTORE_TLS;
+            FileStoreRecordCipherDetails(FS, S);
+        }
 
         //we can learn/detect various things from the connection
         if (StrValid(STREAMGetValue(S, "HTTP:DAV")))
@@ -373,10 +373,10 @@ static int HTTP_CloseFile(TFileStore *FS, STREAM *S)
 
 static int HTTP_ReadBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t offset, uint32_t len)
 {
-int result;
+    int result;
 
-result=STREAMReadBytes(S, Buffer, len);
-return(result);
+    result=STREAMReadBytes(S, Buffer, len);
+    return(result);
 }
 
 

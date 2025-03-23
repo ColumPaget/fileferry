@@ -63,6 +63,8 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     else if (strcmp(Switch, "-pg")==0) Cmd->Flags |= CMD_FLAG_PAGE;
     else if (strcmp(Switch, "-files")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
     else if (strcmp(Switch, "-dirs")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
+    else if (strcmp(Switch, "-file")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
+    else if (strcmp(Switch, "-dir")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
     else if (strcmp(Switch, "-i")==0)
     {
         CommandLine=GetToken(CommandLine, "\\S", &Token, GETTOKEN_QUOTES);
@@ -141,8 +143,6 @@ const char *ParseCommandSwitch(const char *CommandLine, TCommand *Cmd, const cha
     case CMD_LEXISTS:
         if (strcmp(Switch, "-f")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
         else if (strcmp(Switch, "-d")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
-        else if (strcmp(Switch, "-file")==0) Cmd->Flags |= CMD_FLAG_FILES_ONLY;
-        else if (strcmp(Switch, "-dir")==0) Cmd->Flags |= CMD_FLAG_DIRS_ONLY;
         else if (strcmp(Switch, "-no")==0) Cmd->Flags |= CMD_FLAG_INVERT;
         break;
 
@@ -259,80 +259,88 @@ int CommandMatch(const char *Str)
 {
     int Cmd=CMD_NONE;
 
-		if (StrValid(Str))
-		{
-    if (strcmp(Str, "cd")==0) Cmd=CMD_CD;
-    else if (strcmp(Str, "chdir")==0) Cmd=CMD_CD;
-    else if (strcmp(Str, "lcd")==0) Cmd=CMD_LCD;
-    else if (strcmp(Str, "lchdir")==0) Cmd=CMD_LCD;
-    else if (strcmp(Str, "mkdir")==0) Cmd=CMD_MKDIR;
-    else if (strcmp(Str, "lmkdir")==0) Cmd=CMD_LMKDIR;
-    else if (strcmp(Str, "rmdir")==0) Cmd=CMD_RMDIR;
-    else if (strcmp(Str, "lrmdir")==0) Cmd=CMD_LRMDIR;
-    else if (strcmp(Str, "rm")==0)  Cmd=CMD_DEL;
-    else if (strcmp(Str, "lrm")==0)  Cmd=CMD_LDEL;
-    else if (strcmp(Str, "del")==0) Cmd=CMD_DEL;
-    else if (strcmp(Str, "ldel")==0) Cmd=CMD_LDEL;
-    else if (strcmp(Str, "ls")==0)  Cmd=CMD_LS;
-    else if (strcmp(Str, "lls")==0) Cmd=CMD_LLS;
-    else if (strcmp(Str, "stat")==0)  Cmd=CMD_STAT;
-    else if (strcmp(Str, "lstat")==0) Cmd=CMD_LSTAT;
-    else if (strcmp(Str, "stats")==0)  Cmd=CMD_STAT;
-    else if (strcmp(Str, "lstats")==0) Cmd=CMD_LSTAT;
-    else if (strcmp(Str, "get")==0) Cmd=CMD_GET;
-    else if (strcmp(Str, "put")==0) Cmd=CMD_PUT;
-    else if (strcmp(Str, "mget")==0) Cmd=CMD_MGET;
-    else if (strcmp(Str, "mput")==0) Cmd=CMD_MPUT;
-    else if (strcmp(Str, "show")==0) Cmd=CMD_SHOW;
-    else if (strcmp(Str, "lshow")==0) Cmd=CMD_LSHOW;
-    else if (strcmp(Str, "share")==0) Cmd=CMD_SHARE;
-    else if (strcmp(Str, "pwd")==0) Cmd=CMD_PWD;
-    else if (strcmp(Str, "lpwd")==0) Cmd=CMD_LPWD;
-    else if (strcmp(Str, "cp")==0) Cmd=CMD_COPY;
-    else if (strcmp(Str, "lcp")==0) Cmd=CMD_LCOPY;
-    else if (strcmp(Str, "copy")==0) Cmd=CMD_COPY;
-    else if (strcmp(Str, "lcopy")==0) Cmd=CMD_LCOPY;
-    else if (strcmp(Str, "ln")==0) Cmd=CMD_LINK;
-    else if (strcmp(Str, "ln")==0) Cmd=CMD_LLINK;
-    else if (strcmp(Str, "link")==0) Cmd=CMD_LINK;
-    else if (strcmp(Str, "llink")==0) Cmd=CMD_LLINK;
-    else if (strcmp(Str, "mv")==0) Cmd=CMD_RENAME;
-    else if (strcmp(Str, "lmv")==0) Cmd=CMD_LRENAME;
-    else if (strcmp(Str, "move")==0) Cmd=CMD_RENAME;
-    else if (strcmp(Str, "lmove")==0) Cmd=CMD_LRENAME;
-    else if (strcmp(Str, "rename")==0) Cmd=CMD_RENAME;
-    else if (strcmp(Str, "chext")==0) Cmd=CMD_CHEXT;
-    else if (strcmp(Str, "lchext")==0) Cmd=CMD_LCHEXT;
-    else if (strcmp(Str, "chmod")==0) Cmd=CMD_CHMOD;
-    else if (strcmp(Str, "crc")==0) Cmd=CMD_CRC;
-    else if (strcmp(Str, "lcrc")==0) Cmd=CMD_LCRC;
-    else if (strcmp(Str, "md5")==0) Cmd=CMD_MD5;
-    else if (strcmp(Str, "md5sum")==0) Cmd=CMD_MD5;
-    else if (strcmp(Str, "lmd5")==0) Cmd=CMD_LMD5;
-    else if (strcmp(Str, "lmd5sum")==0) Cmd=CMD_LMD5;
-    else if (strcmp(Str, "sha1")==0) Cmd=CMD_SHA1;
-    else if (strcmp(Str, "sha1sum")==0) Cmd=CMD_SHA1;
-    else if (strcmp(Str, "lsha1")==0) Cmd=CMD_LSHA1;
-    else if (strcmp(Str, "lsha1sum")==0) Cmd=CMD_LSHA1;
-    else if (strcmp(Str, "info")==0) Cmd=CMD_INFO;
-    else if (strcmp(Str, "df")==0) Cmd=CMD_DISK_FREE;
-    else if (strcmp(Str, "exists")==0) Cmd=CMD_EXISTS;
-    else if (strcmp(Str, "lock")==0) Cmd=CMD_LOCK;
-    else if (strcmp(Str, "llock")==0) Cmd=CMD_LLOCK;
-    else if (strcmp(Str, "unlock")==0) Cmd=CMD_UNLOCK;
-    else if (strcmp(Str, "lunlock")==0) Cmd=CMD_LUNLOCK;
-    else if (strcmp(Str, "chpassword")==0) Cmd=CMD_CHPASSWORD;
-    else if (strcmp(Str, "password")==0) Cmd=CMD_CHPASSWORD;
-    else if (strcmp(Str, "chpasswd")==0) Cmd=CMD_CHPASSWORD;
-    else if (strcmp(Str, "passwd")==0) Cmd=CMD_CHPASSWORD;
-    else if (strcmp(Str, "diff")==0) Cmd=CMD_DIFF;
-    else if (strcmp(Str, "cmp")==0) Cmd=CMD_CMP;
-    else if (strcmp(Str, "compare")==0) Cmd=CMD_CMP;
-    else if (strcmp(Str, "set")==0) Cmd=CMD_SET;
-    else if (strcmp(Str, "help")==0) Cmd=CMD_HELP;
-    else if (strcmp(Str, "quit")==0) Cmd=CMD_QUIT;
-    else if (strcmp(Str, "exit")==0) Cmd=CMD_QUIT;
-    else Cmd=CMD_UNKNOWN;
+    if (StrValid(Str))
+    {
+        if (strcmp(Str, "cd")==0) Cmd=CMD_CD;
+        else if (strcmp(Str, "chdir")==0) Cmd=CMD_CD;
+        else if (strcmp(Str, "lcd")==0) Cmd=CMD_LCD;
+        else if (strcmp(Str, "lchdir")==0) Cmd=CMD_LCD;
+        else if (strcmp(Str, "mkdir")==0) Cmd=CMD_MKDIR;
+        else if (strcmp(Str, "lmkdir")==0) Cmd=CMD_LMKDIR;
+        else if (strcmp(Str, "rmdir")==0) Cmd=CMD_RMDIR;
+        else if (strcmp(Str, "lrmdir")==0) Cmd=CMD_LRMDIR;
+        else if (strcmp(Str, "rm")==0)  Cmd=CMD_DEL;
+        else if (strcmp(Str, "lrm")==0)  Cmd=CMD_LDEL;
+        else if (strcmp(Str, "del")==0) Cmd=CMD_DEL;
+        else if (strcmp(Str, "ldel")==0) Cmd=CMD_LDEL;
+        else if (strcmp(Str, "ls")==0)  Cmd=CMD_LS;
+        else if (strcmp(Str, "lls")==0) Cmd=CMD_LLS;
+        else if (strcmp(Str, "stat")==0)  Cmd=CMD_STAT;
+        else if (strcmp(Str, "lstat")==0) Cmd=CMD_LSTAT;
+        else if (strcmp(Str, "stats")==0)  Cmd=CMD_STAT;
+        else if (strcmp(Str, "lstats")==0) Cmd=CMD_LSTAT;
+        else if (strcmp(Str, "get")==0) Cmd=CMD_GET;
+        else if (strcmp(Str, "put")==0) Cmd=CMD_PUT;
+        else if (strcmp(Str, "mget")==0) Cmd=CMD_MGET;
+        else if (strcmp(Str, "mput")==0) Cmd=CMD_MPUT;
+        else if (strcmp(Str, "show")==0) Cmd=CMD_SHOW;
+        else if (strcmp(Str, "lshow")==0) Cmd=CMD_LSHOW;
+        else if (strcmp(Str, "share")==0) Cmd=CMD_SHARE;
+        else if (strcmp(Str, "pwd")==0) Cmd=CMD_PWD;
+        else if (strcmp(Str, "lpwd")==0) Cmd=CMD_LPWD;
+        else if (strcmp(Str, "cp")==0) Cmd=CMD_COPY;
+        else if (strcmp(Str, "lcp")==0) Cmd=CMD_LCOPY;
+        else if (strcmp(Str, "copy")==0) Cmd=CMD_COPY;
+        else if (strcmp(Str, "lcopy")==0) Cmd=CMD_LCOPY;
+        else if (strcmp(Str, "ln")==0) Cmd=CMD_LINK;
+        else if (strcmp(Str, "lln")==0) Cmd=CMD_LLINK;
+        else if (strcmp(Str, "link")==0) Cmd=CMD_LINK;
+        else if (strcmp(Str, "llink")==0) Cmd=CMD_LLINK;
+        else if (strcmp(Str, "mv")==0) Cmd=CMD_RENAME;
+        else if (strcmp(Str, "lmv")==0) Cmd=CMD_LRENAME;
+        else if (strcmp(Str, "move")==0) Cmd=CMD_RENAME;
+        else if (strcmp(Str, "lmove")==0) Cmd=CMD_LRENAME;
+        else if (strcmp(Str, "rename")==0) Cmd=CMD_RENAME;
+        else if (strcmp(Str, "chext")==0) Cmd=CMD_CHEXT;
+        else if (strcmp(Str, "lchext")==0) Cmd=CMD_LCHEXT;
+        else if (strcmp(Str, "chmod")==0) Cmd=CMD_CHMOD;
+        else if (strcmp(Str, "crc")==0) Cmd=CMD_CRC;
+        else if (strcmp(Str, "lcrc")==0) Cmd=CMD_LCRC;
+        else if (strcmp(Str, "md5")==0) Cmd=CMD_MD5;
+        else if (strcmp(Str, "md5sum")==0) Cmd=CMD_MD5;
+        else if (strcmp(Str, "lmd5")==0) Cmd=CMD_LMD5;
+        else if (strcmp(Str, "lmd5sum")==0) Cmd=CMD_LMD5;
+        else if (strcmp(Str, "sha1")==0) Cmd=CMD_SHA1;
+        else if (strcmp(Str, "sha1sum")==0) Cmd=CMD_SHA1;
+        else if (strcmp(Str, "lsha1")==0) Cmd=CMD_LSHA1;
+        else if (strcmp(Str, "lsha1sum")==0) Cmd=CMD_LSHA1;
+        else if (strcmp(Str, "sha256")==0) Cmd=CMD_SHA256;
+        else if (strcmp(Str, "sha256sum")==0) Cmd=CMD_SHA256;
+        else if (strcmp(Str, "lsha256")==0) Cmd=CMD_LSHA256;
+        else if (strcmp(Str, "lsha256sum")==0) Cmd=CMD_LSHA256;
+        else if (strcmp(Str, "info")==0) Cmd=CMD_INFO;
+        else if (strcmp(Str, "df")==0) Cmd=CMD_DISK_FREE;
+        else if (strcmp(Str, "exist")==0) Cmd=CMD_EXISTS;
+        else if (strcmp(Str, "lexist")==0) Cmd=CMD_LEXISTS;
+        else if (strcmp(Str, "exists")==0) Cmd=CMD_EXISTS;
+        else if (strcmp(Str, "lexists")==0) Cmd=CMD_LEXISTS;
+        else if (strcmp(Str, "lock")==0) Cmd=CMD_LOCK;
+        else if (strcmp(Str, "llock")==0) Cmd=CMD_LLOCK;
+        else if (strcmp(Str, "unlock")==0) Cmd=CMD_UNLOCK;
+        else if (strcmp(Str, "lunlock")==0) Cmd=CMD_LUNLOCK;
+        else if (strcmp(Str, "chpassword")==0) Cmd=CMD_CHPASSWORD;
+        else if (strcmp(Str, "password")==0) Cmd=CMD_CHPASSWORD;
+        else if (strcmp(Str, "chpasswd")==0) Cmd=CMD_CHPASSWORD;
+        else if (strcmp(Str, "passwd")==0) Cmd=CMD_CHPASSWORD;
+        else if (strcmp(Str, "diff")==0) Cmd=CMD_DIFF;
+        else if (strcmp(Str, "cmp")==0) Cmd=CMD_CMP;
+        else if (strcmp(Str, "compare")==0) Cmd=CMD_CMP;
+        else if (strcmp(Str, "hcmp")==0) Cmd=CMD_HCMP;
+        else if (strcmp(Str, "set")==0) Cmd=CMD_SET;
+        else if (strcmp(Str, "help")==0) Cmd=CMD_HELP;
+        else if (strcmp(Str, "quit")==0) Cmd=CMD_QUIT;
+        else if (strcmp(Str, "exit")==0) Cmd=CMD_QUIT;
+        else Cmd=CMD_UNKNOWN;
     }
 
     return(Cmd);
@@ -524,28 +532,36 @@ static void CommandGetValueGlob(TFileStore *FS, const char *ValueName, TCommand 
 int CommandHashCompare(TFileStore *LocalFS, TFileStore *RemoteFS, const char *LocalPath, const char *RemotePath)
 {
     char *Token=NULL, *RemoteHash=NULL, *LocalHash=NULL;
-    const char *ptr;
+    char *Tempstr=NULL;
+    const char *ptr, *p_RemoteItem;
     int result=TRUE;
 
     ptr=GetVar(RemoteFS->Vars, "HashTypes");
     if (! StrValid(ptr)) return(TRUE);
 
+    if (RemotePath) p_RemoteItem=RemotePath;
+    else p_RemoteItem=LocalPath;
+
     ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
-    while (ptr)
+    //while (ptr)
     {
-        if (RemoteFS->GetValue)
+        if (LocalFS->GetValue && RemoteFS->GetValue)
         {
             LocalHash=LocalFS->GetValue(LocalHash, LocalFS, LocalPath, Token);
-            RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemotePath, Token);
+            RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, p_RemoteItem, Token);
+            if (CompareStrNoCase(RemoteHash, LocalHash) != 0) result=FALSE;
 
-            if (strcasecmp(RemoteHash, LocalHash) != 0) result=FALSE;
-            break;
+            if (result==TRUE) Tempstr=CopyStr(Tempstr, "~g");
+            else Tempstr=CopyStr(Tempstr, "~r");
+
+            UI_Output(0, "%s%s~0 local:%s:%s  remote:%s:%s\n", Tempstr, Token, LocalPath, LocalHash, p_RemoteItem, RemoteHash);
         }
-        ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
+        //  ptr=GetToken(ptr, " ", &Token, GETTOKEN_QUOTES);
     }
 
     Destroy(RemoteHash);
     Destroy(LocalHash);
+    Destroy(Tempstr);
     Destroy(Token);
 
     return(result);
@@ -654,6 +670,25 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 
 
 
+int CommandFileItemExists(TCommand *Cmd, TFileStore *FS)
+{
+int val, result;
+
+				val=FTYPE_ANY;
+    		if (Cmd->Flags & CMD_FLAG_FILES_ONLY) val=FTYPE_FILE;
+    		if (Cmd->Flags & CMD_FLAG_DIRS_ONLY) val=FTYPE_DIR;
+
+        if (FileStoreItemExists(FS, Cmd->Target, val)) result=TRUE;
+				else result=FALSE;
+
+				if (result) UI_Output(0, "'%s' exists", Cmd->Target);
+        else UI_Output(0, "'%s' does not exist", Cmd->Target);
+
+return(result);
+}
+
+
+
 int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 {
     char *Tempstr=NULL;
@@ -673,25 +708,21 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
     case CMD_INFO:
         if (StrValid(Cmd->Target))
         {
-        if (strncmp(Cmd->Target, "encrypt", 7)==0) FileStoreOutputCipherDetails(RemoteFS, 0);
-        else if (strcmp(Cmd->Target, "usage")==0) FileStoreOutputDiskQuota(RemoteFS);
-        else if (strcmp(Cmd->Target, "features")==0) FileStoreOutputSupportedFeatures(RemoteFS);
-        // else if (strcmp(Cmd->Target, "service")==0) FileStoreOutputServiceInfo(RemoteFS);
-        else UI_Output(UI_OUTPUT_ERROR, "unrecognized argument to 'info'. Expected one of 'encrypt', 'usage' or 'features'.");
+            if (strncmp(Cmd->Target, "encrypt", 7)==0) FileStoreOutputCipherDetails(RemoteFS, 0);
+            else if (strcmp(Cmd->Target, "usage")==0) FileStoreOutputDiskQuota(RemoteFS);
+            else if (strcmp(Cmd->Target, "features")==0) FileStoreOutputSupportedFeatures(RemoteFS);
+            // else if (strcmp(Cmd->Target, "service")==0) FileStoreOutputServiceInfo(RemoteFS);
+            else UI_Output(UI_OUTPUT_ERROR, "unrecognized argument to 'info'. Expected one of 'encrypt', 'usage' or 'features'.");
         }
         else UI_Output(UI_OUTPUT_ERROR, "'info' requires and argument, one of:\n  'encrypt' for connection encryption details\n  'usage' for remote disk usage\n  'features' for supported features of connection/service");
         break;
 
     case CMD_EXISTS:
-        result=FileStoreItemExists(RemoteFS, Cmd->Target, Cmd->Flags);
-        if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
-        else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
+				result=CommandFileItemExists(Cmd, RemoteFS);
         break;
 
     case CMD_LEXISTS:
-        result=FileStoreGlobCount(LocalFS, Cmd->Target);
-        if (result) UI_Output(UI_OUTPUT_ERROR, "'%s' exists", Cmd->Target);
-        else UI_Output(UI_OUTPUT_ERROR, "'%s' does not exist", Cmd->Target);
+				result=CommandFileItemExists(Cmd, LocalFS);
         break;
 
     case CMD_CD:
@@ -750,7 +781,6 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         result=CommandGlobAndProcess(LocalFS, CMD_TYPE_DEST, Cmd, FileStoreLinkPath);
         break;
 
-
     case CMD_LS:
         UI_OutputDirList(RemoteFS, Cmd);
         break;
@@ -770,13 +800,13 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
     case CMD_GET:
     case CMD_MGET:
         HandleEvent(RemoteFS, UI_OUTPUT_DEBUG, "$(filestore) GET $(path)", Cmd->Target, "");
-        TransferFileCommand(RemoteFS, LocalFS, Cmd);
+        result=TransferFileCommand(RemoteFS, LocalFS, Cmd);
         break;
 
     case CMD_PUT:
     case CMD_MPUT:
         HandleEvent(RemoteFS, UI_OUTPUT_DEBUG, "$(filestore) PUT $(path)", Cmd->Target, "");
-        TransferFileCommand(LocalFS, RemoteFS, Cmd);
+        result=TransferFileCommand(LocalFS, RemoteFS, Cmd);
         break;
 
     case CMD_SHOW:
@@ -865,6 +895,10 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         Cmd->Flags |= CMD_FLAG_ALL;
         CommandDiff(Cmd, LocalFS, RemoteFS);
         break;
+
+    case CMD_HCMP:
+        CommandHashCompare(LocalFS, RemoteFS, Cmd->Target, Cmd->Dest);
+        break;
     }
 
     if (Cmd->Flags & CMD_FLAG_INVERT) result=! result;
@@ -901,7 +935,7 @@ void CommandListProcess(const char *Commands, TFileStore *LocalFS, TFileStore *R
         if (result == CMD_QUIT) break;
         else if (result == CMD_ABORT)
         {
-            HandleEvent(RemoteFS, UI_OUTPUT_ERROR, "ABORT RAISED", "", "");
+            HandleEvent(RemoteFS, UI_OUTPUT_ERROR, "ABORT RAISED: $(path)", Token, "");
             break;
         }
 

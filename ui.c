@@ -28,7 +28,7 @@ void UI_Close()
 void UI_Exit(int RetVal)
 {
     TerminalReset(StdIO);
-		exit(RetVal);
+    exit(RetVal);
 }
 
 
@@ -117,7 +117,7 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
     ListNode *DirList, *Curr;
     TFileItem *FI;
     const char *prefix="", *class="", *whenstr="", *sizestr="";
-    char *Tempstr=NULL;
+    char *Tempstr=NULL, *Output=NULL;
     int LineCount=0;
     int ListFlags=0;
 
@@ -135,6 +135,8 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
         if (Cmd->Flags & CMD_FLAG_SORT_TIME) ListSort(DirList, NULL, SortTimeCompare);
     }
 
+    ListFlags=UI_ListFlags(Cmd);
+
     Curr=ListGetNext(DirList);
     while (Curr)
     {
@@ -143,8 +145,10 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
         {
             if ( (FI->name[0] != '.') || (Cmd->Flags & CMD_FLAG_ALL) )
             {
-                prefix="~e";
                 class="";
+                prefix="";
+                if (ListFlags & (CMD_FLAG_LONG | CMD_FLAG_LONG_LONG)) prefix="~e";
+
                 switch (FI->type)
                 {
                 case FTYPE_FILE:
@@ -164,7 +168,6 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
                     break;
                 }
 
-                ListFlags=UI_ListFlags(Cmd);
 
                 if (ListFlags & (CMD_FLAG_LONG | CMD_FLAG_LONG_LONG))
                 {
@@ -172,22 +175,31 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
                     else if ((Now - FI->mtime) < (3600 * 24)) whenstr=GetDateStrFromSecs("%H:%M:%S", FI->mtime, NULL);
                     else whenstr=GetDateStrFromSecs("%Y/%m/%d", FI->mtime, NULL);
 
-                    if (ListFlags & CMD_FLAG_LONG_LONG) Tempstr=FormatStr(Tempstr, "% 12llu % 10s % 10s %s% 30s%s~0", (unsigned long long) FI->size, whenstr, FI->user, prefix, FI->name, class);
-                    else Tempstr=FormatStr(Tempstr, "% 8s % 10s % 10s %s% 30s%s~0", ToMetric((double)FI->size, 1), whenstr, FI->user, prefix, FI->name, class);
+                    if (ListFlags & CMD_FLAG_LONG_LONG) Output=FormatStr(Output, "% 12llu % 10s % 10s %s% 30s%s~0", (unsigned long long) FI->size, whenstr, FI->user, prefix, FI->name, class);
+                    else Output=FormatStr(Output, "% 8s % 10s % 10s %s% 30s%s~0", ToMetric((double)FI->size, 1), whenstr, FI->user, prefix, FI->name, class);
 
-                    if (StrValid(FI->hash)) Tempstr=MCatStr(Tempstr, "	", FI->hash, NULL);
-                    if (StrValid(FI->destination)) Tempstr=MCatStr(Tempstr, " -> ", FI->destination, NULL);
-                    if (StrValid(FI->title)) Tempstr=MCatStr(Tempstr, "  ", FI->title, "", NULL);
+	                  if (ListFlags & CMD_FLAG_LONG_LONG)
+                    {
+                    if (StrValid(FI->hash)) Output=MCatStr(Output, "	", FI->hash, NULL);
+										}
+
+                    if (StrValid(FI->destination)) Output=MCatStr(Output, " -> ", FI->destination, NULL);
+                    if (StrValid(FI->title)) Output=MCatStr(Output, "  ~e~c", FI->title, "~0", NULL);
 
                     if (ListFlags & CMD_FLAG_LONG_LONG)
                     {
-                        if (StrValid(FI->description)) Tempstr=MCatStr(Tempstr, "\n  ", FI->description, "\n", NULL);
+                        if (StrValid(FI->description)) 
+												{
+														Tempstr=CopyStr(Tempstr, FI->description);
+														strrep(Tempstr, '\n', ' ');
+														Output=MCatStr(Output, "\n  ", Tempstr, "\n", NULL);
+												}
                     }
                 }
-                else Tempstr=MCopyStr(Tempstr, prefix, FI->name, class, "~0", NULL);
-                Tempstr=CatStr(Tempstr, "\n");
+                else Output=MCopyStr(Output, prefix, FI->name, class, "~0", NULL);
+                Output=CatStr(Output, "\n");
 
-                TerminalPutStr(Tempstr, StdIO);
+                TerminalPutStr(Output, StdIO);
                 LineCount++;
             }
 
@@ -215,6 +227,7 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
     FileStoreDirListFree(FS, DirList);
 
     Destroy(Tempstr);
+    Destroy(Output);
 }
 
 
@@ -294,7 +307,7 @@ TCommand *UI_ReadCommand(TFileStore *FS)
     }
 
     STREAMSetTimeout(StdIO, 0);
-    Tempstr=MCopyStr(Tempstr, FS->URL, ": ", NULL);
+    Tempstr=MCopyStr(Tempstr, "~e~b", FS->URL, ":~0 ", NULL);
 
 #ifdef HAVE_PROMPT_HISTORY
     static ListNode *History=NULL;
@@ -307,11 +320,11 @@ TCommand *UI_ReadCommand(TFileStore *FS)
 
     if (StrValid(Input))
     {
-    STREAMWriteLine("\n", StdIO);
-    StripTrailingWhitespace(Input);
+        STREAMWriteLine("\n", StdIO);
+        StripTrailingWhitespace(Input);
     }
 
-		//we want to have a Cmd returned even if Input is blank
+    //we want to have a Cmd returned even if Input is blank
     Cmd=CommandParse(Input);
 
     Destroy(Tempstr);
@@ -319,6 +332,7 @@ TCommand *UI_ReadCommand(TFileStore *FS)
 
     return(Cmd);
 }
+
 
 
 int UI_TransferProgress(TFileTransfer *Xfer)
@@ -331,10 +345,13 @@ int UI_TransferProgress(TFileTransfer *Xfer)
     if (isatty(0))
     {
         Centisecs=GetTime(TIME_CENTISECS);
-        diff=((long) (Centisecs)) - Xfer->StartTime;
+        diff=((uint64_t) (Centisecs)) - Xfer->StartTime;
         if ( ((Centisecs - LastCentisecs) > 20) || (Xfer->Offset == Xfer->Size) )
         {
-            if (diff > 0) BPS=CopyStr(BPS, ToMetric((float) Xfer->Downloaded / ((float)diff / 100.0), 1));
+            if (diff > 0)
+            {
+                BPS=CopyStr(BPS, ToMetric((float) Xfer->Transferred / ((float)diff / 100.0), 1));
+            }
             else BPS=CopyStr(BPS, "0.0");
 
             if (Xfer->TotalFiles > 1) XofX=FormatStr(XofX, "%llu/%llu ", Xfer->CurrFileNum+1, Xfer->TotalFiles);
@@ -396,7 +413,7 @@ int UI_ShowFile(TFileStore *FromFS, TFileStore *LocalFS, TCommand *Cmd)
 
     DirList=FileStoreGlob(FromFS, Cmd->Target);
     Curr=ListGetNext(DirList);
-    if (! Curr) printf("ERROR: No files matching '%s'\n", Cmd->Target);
+    if (! Curr) UI_Output(UI_OUTPUT_ERROR, "No files matching '%s'", Cmd->Target);
     while (Curr)
     {
         FI=(TFileItem *) Curr->Item;
@@ -406,8 +423,8 @@ int UI_ShowFile(TFileStore *FromFS, TFileStore *LocalFS, TCommand *Cmd)
             else ToFS=StdOutFS;
             Xfer=FileTransferFromCommand(Cmd, FromFS, ToFS, FI);
             result=TransferFile(Xfer);
-            if (result==XFER_SOURCE_FAIL) printf("ERROR: Failed to open source file %s\n", Xfer->Path);
-            else if (result==XFER_DEST_FAIL) printf("ERROR: Failed to open destination file %s\n", Xfer->Path);
+            if (result==XFER_SOURCE_FAIL) UI_Output(UI_OUTPUT_ERROR, "Failed to open source file %s", Xfer->Path);
+            else if (result==XFER_DEST_FAIL) UI_Output(UI_OUTPUT_ERROR, "Failed to open destination file %s", Xfer->Path);
             else UI_ShowFilePostProcess(Cmd, Xfer);
             FileTransferDestroy(Xfer);
         }
@@ -456,7 +473,8 @@ void UI_Output(int Flags, const char *Fmt, ...)
         //if (Settings->Flags & SETTING_TIMESTAMPS) printf("%s ", GetDateStr("%Y/%m/%d %H:%M:%S", NULL));
         va_start(list, Fmt);
         Tempstr=VFormatStr(Tempstr, Fmt, list);
-        if (Flags & UI_OUTPUT_ERROR) TerminalPrint(StdIO, "ERROR: %s\n", Tempstr);
+        if (Flags & UI_OUTPUT_ERROR) TerminalPrint(StdIO, "~rERROR~0: %s\n", Tempstr);
+        else if (Flags & UI_OUTPUT_DEBUG) TerminalPrint(StdIO, "~bDEBUG~0: %s\n", Tempstr);
         else if (Flags & UI_OUTPUT_SUCCESS) TerminalPrint(StdIO, "%s\n", Tempstr);
         else TerminalPrint(StdIO, "%s\n", Tempstr);
         va_end(list);

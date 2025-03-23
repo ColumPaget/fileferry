@@ -1,4 +1,4 @@
-OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o html.o rss.o filecache.o image_display.o commands.o ui.o help.o errors_and_logging.o filestore_drivers/fileferry_builtin_drivers.a
+OBJ=common.o settings.o proc.o encrypt.o password.o file_transfer.o filestore.o filestore_dirlist.o filestore_index.o saved_filestores.o stdout.o fileitem.o file_include_exclude.o list_content_type.o html.o rss.o filecache.o image_display.o extra_hashes.o commands.o ui.o help.o errors_and_logging.o filestore_drivers/fileferry_builtin_drivers.a
 FLAGS=-g -D_FILE_OFFSET_BITS=64 @DEFS@
 PREFIX=@prefix@
 LIBS=@LIBS@
@@ -82,6 +82,9 @@ image_display.o: image_display.h image_display.c
 
 encrypt.o: encrypt.h encrypt.c
 	gcc $(FLAGS) -c encrypt.c
+
+extra_hashes.o: extra_hashes.h extra_hashes.c
+	gcc $(FLAGS) -c extra_hashes.c
 
 password.o: password.h password.c
 	gcc $(FLAGS) -c password.c

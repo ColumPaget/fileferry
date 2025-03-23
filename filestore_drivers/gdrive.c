@@ -453,6 +453,7 @@ int GDrive_Attach(TFileStore *FS)
     FS->MkDir=GDrive_MkDir;
     FS->ChDir=GDrive_ChDir;
     FS->GetValue=GDrive_GetValue;
+    SetVar(FS->Vars, "HashTypes", "md5");
 
     return(TRUE);
 }

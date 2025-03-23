@@ -2,6 +2,28 @@
 #include "commands.h"
 #include <fnmatch.h>
 
+
+TFileItem *FileStoreItemExists(TFileStore *FS, const char *FName, int FType)
+{
+    ListNode *Curr;
+    TFileItem *FI;
+
+    Curr=ListGetNext(FS->DirList);
+    while (Curr)
+    {
+        FI=(TFileItem *) Curr->Item;
+        if ( (FI->type != FTYPE_DELETED) && (strcmp(FI->name, FName)==0) )
+        {
+            if (FType==FTYPE_ANY) return(FI);
+            if (FI->type==FType) return(FI);
+        }
+        Curr=ListGetNext(Curr);
+    }
+
+    return(NULL);
+}
+
+
 void FileStoreDirListFree(TFileStore *FS, ListNode *Dir)
 {
     if (FS->DirList==Dir) return;
@@ -11,18 +33,34 @@ void FileStoreDirListFree(TFileStore *FS, ListNode *Dir)
 
 
 
-void FileStoreDirListAddItem(TFileStore *FS, int Type, const char *Name, uint64_t Size)
+TFileItem *FileStoreDirListUpdateItem(TFileStore *FS, int Type, const char *Name, uint64_t Size, int Perms)
 {
     TFileItem *FI;
     char *Path=NULL;
+    ListNode *Node;
 
     if (! FS->DirList) FS->DirList=ListCreate();
+
     Path=FileStoreReformatPath(Path, Name, FS);
-    FI=FileItemCreate(Path, Type, Size, 0);
-    FI->mtime=Now;
-    ListAddNamedItem(FS->DirList, FI->name, FI);
+
+    //Does a file item already exist?
+    FI=FileStoreItemExists(FS, GetBasename(Path), Type);
+
+    if (! FI)
+    {
+        FI=FileItemCreate(Path, Type, Size, Perms);
+        ListAddNamedItem(FS->DirList, FI->name, FI);
+    }
+
+    if ((FI->mtime - Now) > 1)
+    {
+        FI->mtime=Now;
+        FI->hash=CopyStr(FI->hash, "");
+    }
 
     Destroy(Path);
+
+    return(FI);
 }
 
 
@@ -197,16 +235,16 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
         }
 
         //use neither basename nor 'GetBasename' as these both exhibit unexpected behavior
-	//what we want is a match string to limit searches in SrcDir. If Path ends in '/'
+        //what we want is a match string to limit searches in SrcDir. If Path ends in '/'
         //then we want this match string to be "" (empty) to indicate 'sort everything'
 
         //GetBasename will return '/tmp' for '/tmp/', which is normally desirable, but not here, as we already have 'SrcDir'
- 
+
         //basename exists in two versions:
         //1) POSIX basename modifies the contents of Path, and can return '.' if Path is empty or null. It returns '/' if Path is just '/'
         //2) GNU basename doesn't modify path, and returns the empty string when Path ends in '/' or is just '/'
 
-	//props to barracuda156@github.com for pointing me in the direction of this whole mess
+        //props to barracuda156@github.com for pointing me in the direction of this whole mess
 
         Match=strrchr(Path, '/');
         if (Match) Match++;
@@ -217,6 +255,7 @@ ListNode *FileStoreGlob(TFileStore *FS, const char *Path)
         SrcDir=FileStoreDirListRefresh(FS, 0);
         Match="*";
     }
+
 
     if (StrValid(Match)) GlobList=FileStoreDirListMatch(FS, SrcDir, Match);
     FileStoreDirListFree(FS, SrcDir);
@@ -248,24 +287,4 @@ int FileStoreGlobCount(TFileStore *FS, const char *Path)
 
 
 
-int FileStoreItemExists(TFileStore *FS, const char *FName, int Flags)
-{
-    ListNode *Curr;
-    TFileItem *FI;
-
-    Curr=ListGetNext(FS->DirList);
-    while (Curr)
-    {
-        FI=(TFileItem *) Curr->Item;
-        if ( (FI->type != FTYPE_DELETED) && (strcmp(FI->name, FName)==0) )
-        {
-            if ((Flags & CMD_FLAG_FILES_ONLY) && (FI->type==FTYPE_FILE)) return(TRUE);
-            else if ((Flags & CMD_FLAG_DIRS_ONLY) && (FI->type==FTYPE_DIR)) return(TRUE);
-            else return(TRUE);
-        }
-        Curr=ListGetNext(Curr);
-    }
-
-    return(FALSE);
-}
 

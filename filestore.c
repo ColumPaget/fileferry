@@ -14,8 +14,17 @@ TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path)
     TFileItem *FI;
     ListNode *Node;
 
-    Node=ListFindNamedItem(FS->DirList, Path);
-    if (Node) return((TFileItem *) Node->Item);
+    Node=ListGetNext(FS->DirList);
+    while (Node)
+    {
+        FI=(TFileItem *) Node->Item;
+        if (strcmp(FI->name, Path)==0) return(FI);
+        if (strcmp(FI->path, Path)==0) return(FI);
+        Node=ListGetNext(Node);
+    }
+
+    if (FS->FileInfo) return(FS->FileInfo(FS, Path));
+
     return(NULL);
 }
 
@@ -308,7 +317,7 @@ int FileStoreMkDir(TFileStore *FS, const char *Path, int Mode)
 
         if (result==TRUE)
         {
-            FileStoreDirListAddItem(FS, FTYPE_DIR, Path, Mode);
+            FileStoreDirListUpdateItem(FS, FTYPE_DIR, Path, 0, Mode);
             HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) MKDIR: $(path)", Path, "");
         }
         else
@@ -681,23 +690,38 @@ int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileIt
 
     if (! LocalFI) return(CMP_NO_LOCAL);
     if (! RemoteFI) return(CMP_NO_REMOTE);
+
     if (LocalFI->size != RemoteFI->size) return(CMP_SIZE_MISMATCH);
 
     RetVal=CMP_MATCH;
     if (MatchType) *MatchType=CopyStr(*MatchType, "size");
 
+		if (LocalFS->GetValue && RemoteFS->GetValue)
+		{
     ptr=GetVar(RemoteFS->Vars, "HashTypes");
     if (StrValid(ptr))
     {
-        GetToken(ptr, " ", &HashType, 0);
-        LocalHash=LocalFS->GetValue(LocalHash, LocalFS,  LocalFI->path, HashType);
-        RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemoteFI->path, HashType);
-
-        if (strcasecmp(LocalHash, RemoteHash)==0)
+        while (ptr)
         {
-            if (MatchType) *MatchType=CopyStr(*MatchType, HashType);
+            ptr=GetToken(ptr, " ", &HashType, 0);
+            LocalHash=LocalFS->GetValue(LocalHash, LocalFS,  LocalFI->path, HashType);
+
+            if (StrValid(LocalHash))
+            {
+                RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemoteFI->path, HashType);
+
+                if (StrValid(RemoteHash))
+                {
+                    if (strcasecmp(LocalHash, RemoteHash)==0)
+                    {
+                        if (MatchType) *MatchType=CopyStr(*MatchType, HashType);
+                        break;
+                    }
+                    else RetVal=CMP_HASH_MISMATCH;
+                }
+            }
         }
-        else RetVal=CMP_HASH_MISMATCH;
+    }
     }
 
     if (LocalFI->mtime < RemoteFI->mtime) RetVal=CMP_LOCAL_NEWER;
@@ -814,12 +838,12 @@ void FileStoreOutputCipherDetails(TFileStore *FS, int Verbosity)
     StripTrailingWhitespace(Tempstr);
     if (StrValid(Tempstr))
     {
-        UI_Output(0, "Encryption: %s", Tempstr);
+        UI_Output(0, "~eEncryption:~0 %s", Tempstr);
         ptr=GetVar(FS->Vars, "SSL:CertificateVerify");
         if (ptr && (strcmp(ptr, "OK") ==0)) Tempstr=MCopyStr(Tempstr, "~g", ptr, "~0", NULL);
         else Tempstr=MCopyStr(Tempstr, "~r", ptr, "~0", NULL);
 
-        UI_Output(0, "Certificate: %s  Validity: %s  Issuer: %s", GetVar(FS->Vars, "SSL:CertificateCommonName"), Tempstr,  GetVar(FS->Vars, "SSL:CertificateIssuer"));
+        UI_Output(0, "~eCertificate:~0 ~y%s~0  Validity: %s  Issuer: %s", GetVar(FS->Vars, "SSL:CertificateCommonName"), Tempstr,  GetVar(FS->Vars, "SSL:CertificateIssuer"));
         UI_Output(Verbosity, "Certificate Life: %s to %s", GetVar(FS->Vars, "SSL:CertificateNotBefore"), GetVar(FS->Vars, "SSL:CertificateNotAfter"));
         UI_Output(Verbosity, "Certificate Fingerprint: %s", GetVar(FS->Vars, "SSL:CertificateFingerprint"));
     }
@@ -858,6 +882,11 @@ void FileStoreOutputDiskQuota(TFileStore *FS)
     Destroy(Value);
 }
 
+void FileStoreOutputFeature(const char *Feature, int Supported, const char *Comment1, const char *Comment2)
+{
+    if (Supported) UI_Output(0, "This filestore ~gsupports ~e%s~0 %s %s", Feature, Comment1, Comment2);
+    else UI_Output(0, "This filestore ~r does NOT support ~e%s~0", Feature);
+}
 
 
 void FileStoreOutputSupportedFeatures(TFileStore *FS)
@@ -866,18 +895,18 @@ void FileStoreOutputSupportedFeatures(TFileStore *FS)
 
     if (FS->Flags & FILESTORE_TLS) FileStoreOutputCipherDetails(FS, UI_OUTPUT_VERBOSE);
     ptr=GetVar(FS->Vars, "HashTypes");
-    if (StrValid(ptr)) UI_Output(0, "This filestore supports checksum/hashing using %s", ptr);
-    if (FS->Flags & FILESTORE_SHARELINK) UI_Output(0, "This filestore supports link sharing via the 'share' command");
-    if (FS->Flags & FILESTORE_USAGE) UI_Output(0, "This filestore supports disk-usage/quota reporting via the 'info usage' command");
-    if (FS->Flags & FILESTORE_RESUME_TRANSFERS) UI_Output(0, "This filestore supports resuming transfers via 'get -resume'");
-    if (! FS->ReadBytes) UI_Output(0, "~rThis filestore does NOT support downloads (write only)~0");
-    if (! FS->WriteBytes) UI_Output(0, "~rThis filestore does NOT support uploads (read only)~0");
-    if (! FS->Flags & FILESTORE_FOLDERS) UI_Output(0, "~rThis filestore does not support directories/folders~0");
-    if (! FS->UnlinkPath) UI_Output(0, "~rThis filestore does NOT support deleting files~0");
-    if (! FS->MkDir) UI_Output(0, "~rThis filestore does NOT support creating folders/directories~0");
-    if (! FS->RenamePath) UI_Output(0, "~rThis filestore does NOT support moving/renaming files~0");
-    if (FS->LinkPath) UI_Output(0, "~rThis filestore supports links/symlinks~0");
-    else UI_Output(0, "~rThis filestore does NOT support links/symlinks~0");
+    if (StrValid(ptr)) FileStoreOutputFeature("checksum/hashing", TRUE, "using", ptr);
+    if (FS->Flags & FILESTORE_SHARELINK) FileStoreOutputFeature("link sharing", TRUE, "via the 'share' command", "");
+    if (FS->Flags & FILESTORE_USAGE) FileStoreOutputFeature("disk-usage/quota reporting", TRUE, "via the 'info usage' command", "");
+    if (FS->Flags & FILESTORE_RESUME_TRANSFERS) FileStoreOutputFeature("resuming transfers", TRUE, "via 'get -resume'", "");
+    if (FS->LinkPath) FileStoreOutputFeature("links/symlinks", TRUE, "via the ln/link command", "");
+    else FileStoreOutputFeature("links/symlinks", FALSE, "", "");
+    if (! FS->ReadBytes) FileStoreOutputFeature("downloads", FALSE, "(write only)", "");
+    if (! FS->WriteBytes) FileStoreOutputFeature("uploads", FALSE, "(read only)", "");
+    if (! FS->Flags & FILESTORE_FOLDERS) FileStoreOutputFeature("directories/folders", FALSE, "", "");
+    if (! FS->UnlinkPath) FileStoreOutputFeature("deleting files", FALSE, "", "");
+    if (! FS->MkDir) FileStoreOutputFeature("creating folders/directories", FALSE, "", "");
+    if (! FS->RenamePath) FileStoreOutputFeature("moving/renaming files", FALSE, "", "");
     if (StrValid(FS->Features)) UI_Output(0, "Protocol Supported Features: %s", FS->Features);
     if (StrValid(GetVar(FS->Vars, "ProtocolVersion"))) UI_Output(0, "Protocol Version: %s", GetVar(FS->Vars, "ProtocolVersion"));
 }

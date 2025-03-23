@@ -38,8 +38,8 @@ void HandleConnection(TFileStore *FS)
 
     if (StrValid(Settings->ProxyChain)) Proxy=CopyStr(Proxy, Settings->ProxyChain);
     if (StrValid(FS->Proxy)) Proxy=CopyStr(Proxy, FS->Proxy);
-    if (StrValid(Proxy)) Tempstr=FormatStr(Tempstr, "Connected to %s using proxy %s. time is %d seconds adrift from local", FS->URL, Proxy, FS->TimeOffset);
-    else Tempstr=FormatStr(Tempstr, "Connected to %s. time is %d seconds adrift from local", FS->URL, FS->TimeOffset);
+    if (StrValid(Proxy)) Tempstr=FormatStr(Tempstr, "~gConnected~0 to %s ~eusing proxy %s~0. Time is %d seconds adrift from local", FS->URL, Proxy, FS->TimeOffset);
+    else Tempstr=FormatStr(Tempstr, "~gConnected~0 to %s. Time is %d seconds adrift from local", FS->URL, FS->TimeOffset);
     HandleEvent(FS, 0, Tempstr, "", "");
 
     Destroy(Tempstr);
@@ -60,7 +60,7 @@ int main(int argc, const char *argv[])
         if (Settings->LogFile)
         {
             Tempstr=ProcLookupParent(Tempstr);
-            HandleEvent(NULL, 0, "Starting up. parent=$(path)", Tempstr, "");
+            HandleEvent(NULL, 0, "~gStarting up.~0 parent=$(path)", Tempstr, "");
         }
 
 
@@ -77,22 +77,21 @@ int main(int argc, const char *argv[])
 
         if (! RemoteFS)
         {
-            fprintf(stderr, "ERROR: unknown filestore: '%s'\n", Tempstr);
-    				UI_Exit(1);
+            HandleEvent(NULL, UI_OUTPUT_ERROR, "unknown filestore: '$(path)'", Tempstr, "");
+            UI_Exit(1);
         }
 
         if (! (RemoteFS->Flags & FILESTORE_ATTACHED))
         {
-            fprintf(stderr, "ERROR: failed to find driver for %s\n", Settings->URL);
-    				UI_Exit(1);
+            HandleEvent(NULL, UI_OUTPUT_ERROR, "failed to find driver for '$(path)'", Settings->URL, "");
+            UI_Exit(1);
         }
 
         if (! (RemoteFS->Flags & FILESTORE_CONNECTED))
         {
-            fprintf(stderr, "ERROR: failed to connect to %s\n", Settings->URL);
-    				UI_Exit(1);
+            HandleEvent(NULL, UI_OUTPUT_ERROR, "failed to connect to '$(path)'", Settings->URL, "");
+            UI_Exit(1);
         }
-
 
         HandleConnection(RemoteFS);
 
@@ -107,5 +106,5 @@ int main(int argc, const char *argv[])
     UI_Close();
     Destroy(Tempstr);
 
-UI_Exit(0);
+    UI_Exit(0);
 }

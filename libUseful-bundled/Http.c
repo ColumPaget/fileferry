@@ -671,7 +671,9 @@ void HTTPSendHeaders(STREAM *S, HTTPInfoStruct *Info)
     }
 
     //probably need to find some other way of detecting need for sending ContentLength other than whitelisting methods
-    if ((Info->PostContentLength > 0) &&
+    //if ((Info->PostContentLength > 0) &&
+
+		if (
             (
                 (strcasecmp(Info->Method,"POST")==0) ||
                 (strcasecmp(Info->Method,"PUT")==0) ||
@@ -827,6 +829,7 @@ void HTTPReadHeaders(STREAM *S, HTTPInfoStruct *Info)
         HTTPParseHeader(S, Info,Tempstr);
         Tempstr=STREAMReadLine(Tempstr,S);
     }
+
 
     S->BytesRead=0;
     ptr=STREAMGetValue(S, "HTTP:Content-Length");

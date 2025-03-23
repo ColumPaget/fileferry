@@ -25,16 +25,22 @@ void HelpCommandList()
     printf("lstats <path>        statistics for local directory. <path> is optional\n");
     printf("mkdir <path>         make a remote directory <path>\n");
     printf("lmkdir <path>        make a local directory <path>\n");
+    printf("rmdir <path>         remove a remote directory <path>\n");
+    printf("rmkdir <path>        remove a local directory <path>\n");
     printf("rm <path>            delete remote file at <path> (wildcards allowed)\n");
     printf("lrm <path>           delete local file at <path> (wildcards allowed)\n");
     printf("del <path>           delete remote file at <path> (wildcards allowed)\n");
     printf("ldel <path>          delete local file at <path> (wildcards allowed)\n");
-    printf("chmod <mode> <path>  change mode of files in <path> (wildcards allowed)\n");
-    printf("chmod <mode> <path>  change mode of files in <path> (wildcards allowed)\n");
+    printf("chmod <mode> <path>  change mode of remote files in <path> (wildcards allowed)\n");
+    printf("lchmod <mode> <path> change mode of local files in <path> (wildcards allowed)\n");
     printf("exists <path>        check if files matching <path> exist (wildcards allowed)\n");
     printf("lexists <path>       check if files matching <path> exist (wildcards allowed)\n");
     printf("get <path>           copy remote file at <path> to local (wildcards allowed)\n");
+    printf("get <path> <name>    copy remote file at <path> to local <name> (wildcards allowed)\n");
+    printf("mget <p1> <p2> ...   copy multiple remote files at <p1>, <p2>, <p[n]> to local (wildcards allowed)\n");
     printf("put <path>           copy local file at <path> to remote (wildcards allowed)\n");
+    printf("put <path> <name>    copy local file at <path> to remote <name> (wildcards allowed)\n");
+    printf("mput <p1> <p2> ..    copy multiple local files at <p1>, <p2> <p[n]> to remote (wildcards allowed)\n");
     printf("share <path>         get 'sharing' url for remote file at <path> (if filestore supports this)\n");
     printf("show <path>          output contents remote file at <path> to screen\n");
     printf("lshow <path>         output contents local file at <path> to screen\n");
@@ -48,10 +54,16 @@ void HelpCommandList()
     printf("lmv <src> <dest>     move/rename local file at <src> to local <dest>\n");
     printf("lmove <src> <dest>   move/rename local file at <src> to local <dest>\n");
     printf("lrename <src> <dest> move/rename local file at <src> to local <dest>\n");
+    printf("ln <src> <dest>      create symlink of remote file\n");
+    printf("lln <src> <dest>     create symlink of local file\n");
+    printf("link <src> <dest>    create symlink of remote file\n");
+    printf("llink <src> <dest>   create symlink of local file\n");
     printf("chext <new extn> <files>  change file extention of remote files to <new extn>. (wildcards allowed)\n");
     printf("lchext <new extn> <files>  change file extention of local files to <new extn>. (wildcards allowed)\n");
+    printf("info features        print info about features offered by current connection\n");
     printf("info encrypt         print info about transport encryption on the current connection\n");
     printf("info usage           print info about disk/quota usage\n");
+    printf("df                   print info about disk/quota usage\n");
     printf("crc <path>           print checksum for file at <path> on remote host (only on services that support this)\n");
     printf("lcrc <path>          print checksum for file at <path> on local host\n");
     printf("md5 <path>           print md5 hash for file at <path> on remote host (only on services that support this)\n");
@@ -61,19 +73,25 @@ void HelpCommandList()
     printf("sha256 <path>        print sha256 hash for file at <path> on remote host (only on services that support this)\n");
     printf("lsha256 <path>       print sha256 hash for file at <path> on local host\n");
     printf("diff <pattern>       list files matching <pattern> that are different between local and remote directories\n");
-
-
-
+    printf("exists <path>        check item exists at remote <path> (use with -A or -Q to abort or quit if it doesn't\n");
+    printf("lexists <path>       check item exists at local  <path> (use with -A or -Q to abort or quit if it doesn't\n");
 
 
     /*
-        else if (strcmp(Str, "info")==0) Cmd=CMD_INFO;
         else if (strcmp(Str, "lock")==0) Cmd=CMD_LOCK;
+        else if (strcmp(Str, "llock")==0) Cmd=CMD_LLOCK;
+        else if (strcmp(Str, "unlock")==0) Cmd=CMD_UNLOCK;
+        else if (strcmp(Str, "lunlock")==0) Cmd=CMD_LUNLOCK;
         else if (strcmp(Str, "chpassword")==0) Cmd=CMD_CHPASSWORD;
         else if (strcmp(Str, "password")==0) Cmd=CMD_CHPASSWORD;
         else if (strcmp(Str, "chpasswd")==0) Cmd=CMD_CHPASSWORD;
         else if (strcmp(Str, "passwd")==0) Cmd=CMD_CHPASSWORD;
+        else if (strcmp(Str, "cmp")==0) Cmd=CMD_CMP;
+        else if (strcmp(Str, "compare")==0) Cmd=CMD_CMP;
+        else Cmd=CMD_UNKNOWN;
     */
+
+
 }
 
 void HelpCommand(const char *Command)
@@ -150,6 +168,10 @@ void HelpCommand(const char *Command)
         printf("    -Q                     (scripts only) quit script silently if no matching files\n");
         printf("    -A                     (scripts only) abort script, logging an error, if no matching files\n");
         printf("    -no                    invert response, return true if item doesn't exist\n");
+        printf("    -f                     only match against files\n");
+        printf("    -d                     only match against directories\n");
+        printf("    -files                 only match against files\n");
+        printf("    -dirs                  only match against directories\n");
         break;
 
     case CMD_LEXISTS:
@@ -158,6 +180,10 @@ void HelpCommand(const char *Command)
         printf("    -Q                     (scripts only) quit script silently if no matching files\n");
         printf("    -A                     (scripts only) abort script, logging an error, if no matching files\n");
         printf("    -no                    invert response, return true if item doesn't exist\n");
+        printf("    -f                     only match against files\n");
+        printf("    -d                     only match against directories\n");
+        printf("    -files                 only match against files\n");
+        printf("    -dirs                  only match against directories\n");
         break;
 
     case CMD_LS:
@@ -232,7 +258,9 @@ void HelpCommand(const char *Command)
     case CMD_MGET:
         printf("put <options> <path>     pull a file from remote host to local host (expects one file as argument)\n");
         printf("mput <options> <path>    pull a file from remote host to local host (expects multiple files as arguments)\n");
-        printf("options:\n");
+        printf("options:\n"); 
+        printf("    -Q                   (scripts only) quit script silently if transfer fails\n");
+        printf("    -A                   (scripts only) abort script, logging an error, transfer fails\n");
         printf("    -f                   force transfer even if destination already exists\n");
         printf("    -F                   force transfer even if destination already exists\n");
         printf("    -s                   sync. Only transfer files newer than existing files\n");
@@ -262,6 +290,8 @@ void HelpCommand(const char *Command)
         printf("put <options> <path>     push a file from local host to remote host (expects one file as argument)\n");
         printf("mput <options> <path>    push a file from local host to remote host (expects multiple files as arguments)\n");
         printf("options:\n");
+        printf("    -Q                   (scripts only) quit script silently if transfer fails\n");
+        printf("    -A                   (scripts only) abort script, logging an error, transfer fails\n");
         printf("    -f                   force transfer even if destination already exists\n");
         printf("    -F                   force transfer even if destination already exists\n");
         printf("    -s                   sync. Only transfer files newer than existing files\n");

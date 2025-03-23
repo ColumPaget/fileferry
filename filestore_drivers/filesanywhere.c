@@ -31,7 +31,7 @@ static int FilesAnywhere_Command(TFileStore *FS, const char *XML, const char *SO
     //printf("XML: %s\n", XML);
     S=STREAMOpen("https://api.filesanywhere.com/v2/fawapi.asmx", Tempstr);
     if (S)
-    { 
+    {
         FS->Flags |= FILESTORE_TLS;
         FileStoreRecordCipherDetails(FS, S);
 

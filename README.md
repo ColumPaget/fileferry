@@ -188,6 +188,26 @@ All these options (including '-t') are also honored on 'get' commands, but bewar
 
 
 
+SCRIPTING
+=========
+
+The `-c` and `-b` commands can be used to run fileferry in 'non-interactive' scripted mode. The argument to `-c` is a list of commands as a single string, and the argument to `-b` is the path to a file containing a list of commands. Scripting is rather basic, consisting of just a list of commands to perform, and lacks any 'if/for/while' control structures. However, most commands accept the '-Q' or '-A' options which trigger 'quit' or 'abort' when a command fails. 'Quit' simply stops performing commands, whereas 'Abort' will log a message and stop. For instance:
+
+```
+mkdir -Q mydir
+```
+
+will exit if the directory can't be created
+
+
+```
+exists -A testfile.txt
+```
+
+will exit if a file or directory exists and log a message recording which command caused the abort.
+
+
+
 FILE ENCRYPTION
 ===============
 
@@ -206,15 +226,15 @@ show -image *.jpg
 
 this will launch an external image viewer if one can be found. The default list of image viewers is:
 
-image magick 'display'
-fim
-feh
-mage
-xv
-imlib2_view
-gqview
-qimageviewer
-links -g
+ * image magick 'display'
+ * fim
+ * feh
+ * mage
+ * xv
+ * imlib2_view
+ * gqview
+ * qimageviewer
+ * links -g
 
 This list can be changed using 'set viewers'.
 
@@ -286,4 +306,4 @@ sha1 <path>          print sha1 hash for file at <path> on remote host (only on 
 lsha1 <path>         print sha1 hash for file at <path> on local host
 sha256 <path>        print sha256 hash for file at <path> on remote host (only on services that support this)
 lsha256 <path>       print sha256 hash for file at <path> on local host
-```
+``
