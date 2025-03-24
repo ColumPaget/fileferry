@@ -851,16 +851,18 @@ static int SFTP_WriteBytes(TFileStore *FS, STREAM *S, char *Buffer, uint64_t off
 {
     TPacket *Packet;
     const char *p_handle;
+    int result;
 
     Packet=SFTP_PacketCreate();
     p_handle=STREAMGetValue(S, "SFTP:Handle");
 
     SFTP_SendFileWrite(S, p_handle, offset, len, Buffer);
-    SFTP_ReadPacket(FS, S, Packet);
+    result=SFTP_ReadPacket(FS, S, Packet);
 
     SFTP_PacketDestroy(Packet);
 
-    return(len);
+    if (result==SSH_FX_OK) return(len);
+    return(-1);
 }
 
 
@@ -1055,6 +1057,8 @@ int SFTP_Attach(TFileStore *FS)
     FS->RenamePath=SFTP_Rename_Path;
     FS->ChMod=SFTP_ChMod;
 
+    //sftp-server seems to fail for 'write' sizes larger than this
+    SetVar(FS->Vars, "max_transfer_chunk", "40960");
     return(TRUE);
 }
 

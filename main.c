@@ -10,7 +10,7 @@
 
 void SigHandler(int Sig)
 {
-    if (Sig == SIGALRM) exit(1);
+    if (Sig == SIGALRM) _exit(1);
 }
 
 
@@ -19,6 +19,7 @@ int ApplicationInit(int argc, const char *argv[])
     int Act;
 
     signal(SIGALRM, SigHandler);
+    signal(SIGPIPE, SigHandler);
     ProcessStartTime=GetTime(0);
     FileStoreDriversInit();
     UI_Init();

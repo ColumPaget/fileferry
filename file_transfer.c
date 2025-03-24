@@ -319,15 +319,23 @@ ListNode *TransferFileGlob(TFileStore *FromFS, TFileStore *ToFS, TCommand *Cmd)
 //Many transfer types send data in chunks, and if they are http based
 //that may mean a reconnection/renegotiation on each chunk. So bigger
 //transfer buffers mean faster transfers.
-static long TransferSetupBuffer(char **Buffer)
+static long TransferSetupBuffer(char **Buffer, TFileStore *FromFS, TFileStore *ToFS)
 {
     long len;
+    const char *ptr;
 
 //if we're on a 16-bit system (probably not possible, but if)
 //then don't try to be clever, just go with 4k
     if (sizeof(long) == 2) len=4096;
 //otherwise start at 4 meg
     else len=4 * 1024 * 1024;
+
+   //Does either filestore specify a limit?
+   ptr=GetVar(FromFS->Vars, "max_transfer_chunk");
+   if (StrValid(ptr) && (atol(ptr) < len)) len=atol(ptr);
+
+   ptr=GetVar(ToFS->Vars, "max_transfer_chunk");
+   if (StrValid(ptr) && (atol(ptr) < len)) len=atol(ptr);
 
     *Buffer = SetStrLen(*Buffer, len);
     while ((Buffer == NULL) & (len > 4096))
@@ -351,7 +359,7 @@ static int TransferCopyFile(TFileTransfer *Xfer, STREAM *FromS, STREAM *ToS)
     FromFS=Xfer->FromFS;
     ToFS=Xfer->ToFS;
 
-    len=TransferSetupBuffer(&Tempstr);
+    len=TransferSetupBuffer(&Tempstr, FromFS, ToFS);
     if (len==0)
     {
         UI_Output(UI_OUTPUT_ERROR, "Can't allocate memory buffer for file transfers.");
