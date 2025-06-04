@@ -56,7 +56,7 @@ static char *DropBox_Transact(char *RetStr, TFileStore *FS, const char *Path, co
         Tempstr=MCopyStr(Tempstr, "$(filestore): PUT ", URL, NULL);
     }
 
-    HandleEvent(FS, UI_OUTPUT_DEBUG, Tempstr, "", "");
+    //HandleEvent(FS, UI_OUTPUT_DEBUG, Tempstr, "", "");
 
     S=STREAMOpen(URL, ConnectConfig);
     if (S)
@@ -575,7 +575,7 @@ static int DropBox_Connect(TFileStore *FS)
     }
 
 
-    OauthCtx=OAuthCreate("pkce", FS->URL, DROPBOX_CLIENT_ID, "", "", "https://www.dropbox.com/oauth2/token");
+    OauthCtx=OAuthCreate("pkce", FS->URL, FS->ApiKey, "", "", "https://www.dropbox.com/oauth2/token");
     DropBox_OAuth(FS, OauthCtx, FALSE);
     RetVal=DropBox_Info(FS);
     if (RetVal != TRUE)
@@ -603,6 +603,7 @@ int DropBox_Attach(TFileStore *FS)
 {
     FS->Flags |= FILESTORE_FOLDERS | FILESTORE_SHARELINK | FILESTORE_USAGE;
 
+
     FS->Connect=DropBox_Connect;
     FS->ListDir=DropBox_ListDir;
     FS->OpenFile=DropBox_OpenFile;
@@ -615,6 +616,12 @@ int DropBox_Attach(TFileStore *FS)
     FS->MkDir=DropBox_MkDir;
 
     AppendVar(FS->Vars, "HashTypes", "dropboxhash");
+
+    if (! StrValid(FS->ApiKey)) 
+    {
+	UI_Output(0, "~yWARNING~0: You are using the default ClientID/AppKey for dropbox. As dropbox limits users per ClientID it might be an idea to get one at https://www.dropbox.com/developers/apps/. It will be called 'AppKey' when generated.\n");
+        FS->ApiKey=CopyStr(FS->ApiKey, DROPBOX_CLIENT_ID);
+    }
 
     return(TRUE);
 }

@@ -293,8 +293,14 @@ int FileStoreChDir(TFileStore *FS, const char *DestName)
             StripDirectorySlash(FS->CurrDir);
             HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) CHDIR: $(path)", Path, "");
             result=TRUE;
-            FileStoreDirListClear(FS);
-            FileStoreDirListRefresh(FS, 0);
+
+            //for some filestores (e.g. http) chdir actually does a directory listing
+            //so we don't need to do that twice
+            if (! (FS->Flags & FILESTORE_CHDIR_LOADS_DIR))
+            {
+                FileStoreDirListClear(FS);
+                FileStoreDirListRefresh(FS, 0);
+            }
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) CHDIR FAILED: $(path)", Path, "");
     }
@@ -696,32 +702,32 @@ int FileStoreCompareFileItems(TFileStore *LocalFS, TFileStore *RemoteFS, TFileIt
     RetVal=CMP_MATCH;
     if (MatchType) *MatchType=CopyStr(*MatchType, "size");
 
-		if (LocalFS->GetValue && RemoteFS->GetValue)
-		{
-    ptr=GetVar(RemoteFS->Vars, "HashTypes");
-    if (StrValid(ptr))
+    if (LocalFS->GetValue && RemoteFS->GetValue)
     {
-        while (ptr)
+        ptr=GetVar(RemoteFS->Vars, "HashTypes");
+        if (StrValid(ptr))
         {
-            ptr=GetToken(ptr, " ", &HashType, 0);
-            LocalHash=LocalFS->GetValue(LocalHash, LocalFS,  LocalFI->path, HashType);
-
-            if (StrValid(LocalHash))
+            while (ptr)
             {
-                RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemoteFI->path, HashType);
+                ptr=GetToken(ptr, " ", &HashType, 0);
+                LocalHash=LocalFS->GetValue(LocalHash, LocalFS,  LocalFI->path, HashType);
 
-                if (StrValid(RemoteHash))
+                if (StrValid(LocalHash))
                 {
-                    if (strcasecmp(LocalHash, RemoteHash)==0)
+                    RemoteHash=RemoteFS->GetValue(RemoteHash, RemoteFS, RemoteFI->path, HashType);
+
+                    if (StrValid(RemoteHash))
                     {
-                        if (MatchType) *MatchType=CopyStr(*MatchType, HashType);
-                        break;
+                        if (strcasecmp(LocalHash, RemoteHash)==0)
+                        {
+                            if (MatchType) *MatchType=CopyStr(*MatchType, HashType);
+                            break;
+                        }
+                        else RetVal=CMP_HASH_MISMATCH;
                     }
-                    else RetVal=CMP_HASH_MISMATCH;
                 }
             }
         }
-    }
     }
 
     if (LocalFI->mtime < RemoteFI->mtime) RetVal=CMP_LOCAL_NEWER;
@@ -790,6 +796,7 @@ TFileStore *FileStoreParse(const char *Config)
 //            else if (strcasecmp(Name, "password")==0) CredsStoreAdd(FS->URL, FS->User, Value);
             else if (strcasecmp(Name, "pass")==0) FS->Pass=CopyStr(FS->Pass, Value);
             else if (strcasecmp(Name, "password")==0) FS->Pass=CopyStr(FS->Pass, Value);
+            else if (strcasecmp(Name, "apikey")==0) FS->ApiKey=CopyStr(FS->ApiKey, Value);
             else if (strcasecmp(Name, "encrypt")==0) FS->Encrypt=CopyStr(FS->Encrypt, Value);
             else if (strcasecmp(Name, "credsfile")==0) FS->CredsFile=CopyStr(FS->CredsFile, Value);
             else if (strcasecmp(Name, "proxy")==0) FS->Proxy=CopyStr(FS->Proxy, Value);

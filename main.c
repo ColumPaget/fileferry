@@ -68,6 +68,7 @@ int main(int argc, const char *argv[])
         Tempstr=MCopyStr(Tempstr, "remote ", Settings->URL, NULL);
         if (StrValid(Settings->User)) Tempstr=MCatStr(Tempstr, " user='", Settings->User, "'", NULL);
         if (StrValid(Settings->Pass)) Tempstr=MCatStr(Tempstr, " pass='", Settings->Pass, "'", NULL);
+        if (StrValid(Settings->ApiKey)) Tempstr=MCatStr(Tempstr, " apikey='", Settings->ApiKey, "'", NULL);
         if (StrValid(Settings->Encryption)) Tempstr=MCatStr(Tempstr, " encrypt='", Settings->Encryption, "'", NULL);
         if (StrValid(Settings->IdentityFile)) Tempstr=MCatStr(Tempstr, " identityfile='", Settings->IdentityFile, "'", NULL);
 

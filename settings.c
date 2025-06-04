@@ -243,6 +243,7 @@ void ParseCommandLineAddFilestore(int argc, const char *argv[])
             else if (strcmp(argv[i], "-passwd")==0) Tempstr=MCatStr(Tempstr, "pass='", argv[++i], "' ", NULL);
             else if (strcmp(argv[i], "-pass")==0) Tempstr=MCatStr(Tempstr, "pass='", argv[++i], "' ", NULL);
             else if (strcmp(argv[i], "-pw")==0) Tempstr=MCatStr(Tempstr, "pass='", argv[++i], "' ", NULL);
+            else if (strcmp(argv[i], "-api-key")==0) Tempstr=MCatStr(Tempstr, "apikey='", argv[++i], "' ", NULL);
             else if (strcmp(argv[i], "-e")==0) Tempstr=MCatStr(Tempstr, "encrypt='", argv[++i], "' ", NULL);
             else if (strcmp(argv[i], "-encrypt")==0) Tempstr=MCatStr(Tempstr, "encrypt='", argv[++i], "' ", NULL);
             else if (strcmp(argv[i], "-i")==0) Tempstr=MCatStr(Tempstr, "credsfile='", argv[++i], "' ", NULL);
@@ -295,6 +296,7 @@ void ParseCommandLineDefault(CMDLINE *Cmd)
         else if (strcmp(arg, "-passwd")==0) Settings->Pass=CopyStr(Settings->Pass, CommandLineNext(Cmd));
         else if (strcmp(arg, "-pass")==0) Settings->Pass=CopyStr(Settings->Pass, CommandLineNext(Cmd));
         else if (strcmp(arg, "-pw")==0) Settings->Pass=CopyStr(Settings->Pass, CommandLineNext(Cmd));
+        else if (strcmp(arg, "-api-key")==0) Settings->ApiKey=CopyStr(Settings->ApiKey, CommandLineNext(Cmd));
         else if (strcmp(arg, "-c")==0) Settings->Commands=CopyStr(Settings->Commands, CommandLineNext(Cmd));
         else if (strcmp(arg, "-b")==0) Settings->Commands=CommandFileLoad(Settings->Commands, CommandLineNext(Cmd));
         else if (strcmp(arg, "-e")==0) Settings->Encryption=CopyStr(Settings->Encryption, CommandLineNext(Cmd));

@@ -26,6 +26,7 @@ typedef struct
     char *URL;
     char *User;
     char *Pass;
+    char *ApiKey;
     char *LogFile;
     char *Encryption;
     char *IdentityFile;

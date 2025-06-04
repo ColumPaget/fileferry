@@ -5,6 +5,6 @@
 
 
 int IsDownloadableURL(const char *URL);
-void HTML_ListDir(ListNode *FileList, const char *HTML);
+int HTML_ListDir(ListNode *FileList, const char *HTML);
 
 #endif

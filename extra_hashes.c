@@ -2,7 +2,7 @@
 
 
 /*
-Some filestores implement weird hashing formats. 
+Some filestores implement weird hashing formats.
 Really these should probably be included in the filestore driver
 but it's simpler to implement them outside of the driver
 to prevent having to lookup the driver when using them

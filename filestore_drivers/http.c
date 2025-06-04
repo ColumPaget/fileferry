@@ -4,6 +4,7 @@
 #include "../ui.h"
 #include "../list_content_type.h"
 #include "../errors_and_logging.h"
+#include "../filestore_dirlist.h"
 #include "../password.h"
 
 static char *HTTP_SetConfig(char *RetStr, TFileStore *FS, const char *Method, int Depth, const char *ContentType, uint64_t ContentLength, uint64_t ContentOffset, const char *ExtraArgs)
@@ -208,6 +209,7 @@ static int HTTP_MkDir(TFileStore *FS, const char *Path, int Mode)
 }
 
 
+
 static int HTTP_Rename_Path(TFileStore *FS, const char *Path, const char *NewPath)
 {
     char *Tempstr=NULL, *URL=NULL;
@@ -259,11 +261,34 @@ static ListNode *HTTP_ListDir(TFileStore *FS, const char *Dir)
 {
     ListNode *FileList;
 
+    HandleEvent(FS, UI_OUTPUT_DEBUG, "$(filestore) LIST $(path)", Dir, "");
+
     FileList=ListCreate();
-    HTTP_Internal_ListDir(FS, Dir, FileList);
+    if (! HTTP_Internal_ListDir(FS, Dir, FileList))
+    {
+        ListDestroy(FileList, FileItemDestroy);
+        return(NULL);
+    }
 
     return(FileList);
 }
+
+
+static int HTTP_ChDir(TFileStore *FS, const char *Path)
+{
+    ListNode *FileList;
+
+    FileList=HTTP_ListDir(FS, Path);
+    if (FileList)
+    {
+        FileStoreDirListClear(FS);
+        FS->DirList=FileList;
+        return(TRUE);
+    }
+    return(FALSE);
+}
+
+
 
 char *HTTP_GetHash(char *RetStr, TFileStore *FS, const char *Path, const char *HashType)
 {
@@ -324,6 +349,8 @@ static STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, ui
 {
     char *Method=NULL;
     STREAM *S;
+     const char *ptr;
+    uint64_t ContentLength;
 
     if (OpenFlags & XFER_FLAG_WRITE) Method=CopyStr(Method, "PUT");
     else Method=CopyStr(Method, "GET");
@@ -332,6 +359,16 @@ static STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, ui
     if (S)
     {
         STREAMSetValue(S, "HTTP:Method", Method);
+
+        //capture size of transfer from Content-Length
+        //this will one day move into libuseful
+	ptr=STREAMGetValue(S, "HTTP:Content-Length");
+	if (StrValid(ptr))
+	{
+        ContentLength=(uint64_t) strtoull(ptr, NULL, 10);
+	if ((Size > 0) && (S->Size==0)) S->Size=Size;
+	}
+
 
         if (strcmp(Method, "GET")==0)
         {
@@ -440,10 +477,11 @@ static int HTTP_Connect(TFileStore *FS)
 int HTTP_Attach(TFileStore *FS)
 {
     FS->Type=FILESTORE_HTTP;
-    FS->Flags |= FILESTORE_FOLDERS;
+    FS->Flags |= FILESTORE_FOLDERS | FILESTORE_CHDIR_LOADS_DIR;
     FS->Connect=HTTP_Connect;
     FS->ListDir=HTTP_ListDir;
     FS->MkDir=HTTP_MkDir;
+    FS->ChDir=HTTP_ChDir;
     FS->OpenFile=HTTP_OpenFile;
     FS->CloseFile=HTTP_CloseFile;
     FS->ReadBytes=HTTP_ReadBytes;
@@ -452,5 +490,4 @@ int HTTP_Attach(TFileStore *FS)
     FS->RenamePath=HTTP_Rename_Path;
     FS->GetValue=HTTP_GetValue;
     SetVar(FS->Vars, "HashTypes", "detect");
-//FS->CurrDir=HTTP_RealPath(FS->CurrDir, ".", S);
 }

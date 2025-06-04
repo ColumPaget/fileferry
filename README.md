@@ -58,6 +58,7 @@ options:
   -passwd <password>                         - password to log in with
   -pass <password>                           - password to log in with
   -pw <password>                             - password to log in with
+  -api-key                                   - api-key for services that require it
   -c <commands>                              - list of filestore commands to run instead of reading commands from user
   -b <command file>                          - read a list of commands from a 'batch' command file
   -e <config>                                - encrypt/decrypt transferred files
@@ -109,6 +110,7 @@ Filestores are saved using the `-add` option:
 ```
   fileferry -add mydrive gdrive:user1@gdrive
   fileferry -add admin-server https:fred:password1234@webdav.test.com:8443
+  fileferry -add dropbox dropbox://username -api-key fakleaahyzxekf
 ```
 
 these can then be used as:
@@ -156,6 +158,17 @@ SFTP filestores are a special case. SSH/SFTP has a feature where server details 
 
 SFTP filestores require openssh (though not the sftp program) installed to work.
 
+
+DROPBOX FILESTORES
+==================
+
+Dropbox has fairly complete support. A dropbox account is entirely configured using OAuth, so there's no need for a username and password, as those will be completely decided on first login when the user goes through the OAuth registration. However, a dropbox filestore must be set up with some kind of URL. This is because an identifying 'name' is needed to store the OAuth credentials against, and the URL is used for that purpose. As a result the URL can be any unique identifier, e.g. the username for this dropbox instance, or a text string that identifies the purpose for which it is used.
+
+Dropbox requires an API key. Fileferry comes with a default one, but that is shared between all users. It's recommended to get your own from the dropbox developer console and add it using:
+
+```
+fileferry -add mydropbox dropbox:mydropbox -api-key u4SfkeXPIA21V -save
+``` 
 
 
 PROXY SUPPORT

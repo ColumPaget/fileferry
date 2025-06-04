@@ -178,22 +178,22 @@ void UI_OutputDirList(TFileStore *FS, TCommand *Cmd)
                     if (ListFlags & CMD_FLAG_LONG_LONG) Output=FormatStr(Output, "% 12llu % 10s % 10s %s% 30s%s~0", (unsigned long long) FI->size, whenstr, FI->user, prefix, FI->name, class);
                     else Output=FormatStr(Output, "% 8s % 10s % 10s %s% 30s%s~0", ToMetric((double)FI->size, 1), whenstr, FI->user, prefix, FI->name, class);
 
-	                  if (ListFlags & CMD_FLAG_LONG_LONG)
+                    if (ListFlags & CMD_FLAG_LONG_LONG)
                     {
-                    if (StrValid(FI->hash)) Output=MCatStr(Output, "	", FI->hash, NULL);
-										}
+                        if (StrValid(FI->hash)) Output=MCatStr(Output, "	", FI->hash, NULL);
+                    }
 
                     if (StrValid(FI->destination)) Output=MCatStr(Output, " -> ", FI->destination, NULL);
                     if (StrValid(FI->title)) Output=MCatStr(Output, "  ~e~c", FI->title, "~0", NULL);
 
                     if (ListFlags & CMD_FLAG_LONG_LONG)
                     {
-                        if (StrValid(FI->description)) 
-												{
-														Tempstr=CopyStr(Tempstr, FI->description);
-														strrep(Tempstr, '\n', ' ');
-														Output=MCatStr(Output, "\n  ", Tempstr, "\n", NULL);
-												}
+                        if (StrValid(FI->description))
+                        {
+                            Tempstr=CopyStr(Tempstr, FI->description);
+                            strrep(Tempstr, '\n', ' ');
+                            Output=MCatStr(Output, "\n  ", Tempstr, "\n", NULL);
+                        }
                     }
                 }
                 else Output=MCopyStr(Output, prefix, FI->name, class, "~0", NULL);
@@ -357,11 +357,12 @@ int UI_TransferProgress(TFileTransfer *Xfer)
             if (Xfer->TotalFiles > 1) XofX=FormatStr(XofX, "%llu/%llu ", Xfer->CurrFileNum+1, Xfer->TotalFiles);
             else XofX=CopyStr(XofX, "");
 
+            Transferred=CopyStr(Transferred, ToMetric((double) Xfer->Offset, 1));
+
             if (Xfer->Size > 0)
             {
                 percent=(double) Xfer->Offset * 100.0 / (double) Xfer->Size;
                 Size=CopyStr(Size, ToMetric((double) Xfer->Size, 1));
-                Transferred=CopyStr(Transferred, ToMetric((double) Xfer->Offset, 1));
                 printf("%s% 5.1f%% %s  (%s of %s) %sbps         \r", XofX, percent, Xfer->DestFinalName, Transferred, Size, BPS);
             }
             else printf("%s%s %s %sbps            \r", XofX, Transferred, Xfer->DestFinalName, BPS);

@@ -11,6 +11,7 @@
 #define FILESTORE_CONNECTED 4
 #define FILESTORE_TLS 32
 #define FILESTORE_NOPATH 64
+#define FILESTORE_CHDIR_LOADS_DIR 128
 #define FILESTORE_FOLDERS 1024
 #define FILESTORE_USAGE 2048
 #define FILESTORE_SHARELINK 4096
@@ -63,6 +64,7 @@ typedef struct t_struct_fs
     char *Features;
     char *Encrypt;
     char *CredsFile;
+    char *ApiKey;
     CONNECT_FUNC Connect;
     CONNECT_FUNC DisConnect;
     LIST_DIR_FUNC ListDir;

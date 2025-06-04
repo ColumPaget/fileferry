@@ -22,7 +22,7 @@ static void RSS_ListDir_Items(ListNode *FileList, ListNode *ItemInfo)
 
 
 
-void RSS_ListDir(ListNode *FileList, const char *RSS)
+int RSS_ListDir(ListNode *FileList, const char *RSS)
 {
     ListNode *Parser, *Curr;
 
@@ -36,5 +36,7 @@ void RSS_ListDir(ListNode *FileList, const char *RSS)
         }
         Curr=ListGetNext(Curr);
     }
+
+    return(TRUE);
 }
 

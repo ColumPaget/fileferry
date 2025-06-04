@@ -317,7 +317,7 @@ int FileBin_Attach(TFileStore *FS)
     FS->UnlinkPath=FileBin_Unlink;
     FS->Freeze=FileBin_Freeze;
 
-		SetVar(FS->Vars, "HashType", "sha256");
+    SetVar(FS->Vars, "HashType", "sha256");
 
     /*
     FS->GetValue=FileBin_GetValue;

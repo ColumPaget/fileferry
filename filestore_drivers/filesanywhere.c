@@ -4,7 +4,7 @@
 #include "../ui.h"
 
 #define LOGIN_URL "http://api.filesanywhere.com/AccountLogin"
-#define API_KEY "40D380BA-4E80-46D9-8629-6A2F229DBA94"
+#define FAW_API_KEY "40D380BA-4E80-46D9-8629-6A2F229DBA94"
 
 
 static char *FilesAnywhere_Path(char *FAWPath, const char *Path)
@@ -473,7 +473,7 @@ static int FilesAnywhere_Login(TFileStore *FS)
     const char *ptr;
     int RetVal=FALSE;
 
-    XML=MCopyStr(XML, "<AccountLogin xmlns=\"http://api.filesanywhere.com/\">\n", "<APIKey>", API_KEY, "</APIKey>\n", "<OrgID>0</OrgID>\n", "<UserName>",FS->User,"</UserName>\n", "<Password>",FS->Pass,"</Password>\n",
+    XML=MCopyStr(XML, "<AccountLogin xmlns=\"http://api.filesanywhere.com/\">\n", "<APIKey>", FS->ApiKey, "</APIKey>\n", "<OrgID>0</OrgID>\n", "<UserName>",FS->User,"</UserName>\n", "<Password>",FS->Pass,"</Password>\n",
 //"<ClientEncryptParam>ENCRYPTEDNO</ClientEncryptParam>\n",
 //"<AllowedIPList>string</AllowedIPList>",
                  "</AccountLogin>\n",NULL);
@@ -667,6 +667,11 @@ int FilesAnywhere_Attach(TFileStore *FS)
     FS->MkDir=FilesAnywhere_MkDir;
     FS->GetValue=FilesAnywhere_GetValue;
 
+    if (! StrValid(FS->ApiKey))
+    {
+        UI_Output(0, "~yWARNING~0: You are using the default API key for files anywhere. It might be an idea to get a unique API key of your own.\n");
+        FS->ApiKey=CopyStr(FS->ApiKey, FAW_API_KEY);
+    }
 
     return(TRUE);
 }

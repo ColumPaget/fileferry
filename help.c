@@ -258,7 +258,7 @@ void HelpCommand(const char *Command)
     case CMD_MGET:
         printf("put <options> <path>     pull a file from remote host to local host (expects one file as argument)\n");
         printf("mput <options> <path>    pull a file from remote host to local host (expects multiple files as arguments)\n");
-        printf("options:\n"); 
+        printf("options:\n");
         printf("    -Q                   (scripts only) quit script silently if transfer fails\n");
         printf("    -A                   (scripts only) abort script, logging an error, transfer fails\n");
         printf("    -f                   force transfer even if destination already exists\n");
@@ -419,13 +419,13 @@ void HelpCommand(const char *Command)
 void HelpCommandLine()
 {
     printf("\nusage:\n");
-    printf("  fileferry [options] [url]                  - connect to a filestore by url\n");
-    printf("  fileferry [options] [name]                 - connect to a saved, filestore by name\n");
-    printf("  fileferry -add [name] [filestore url]      - add a filestore to saved filestores list\n");
-    printf("  fileferry -filestores                      - print list of saved filestores\n");
-    printf("  fileferry -drivers                         - print list of available filestore drivers\n");
-    printf("  fileferry -commands                        - print list of interactive commands\n");
-    printf("  fileferry -config <name>=<value>           - show config, and/or change a config setting (multiple settings can be supplied on the command line)\n");
+    printf("  fileferry [url] [options]                           - connect to a filestore by url\n");
+    printf("  fileferry [name] [options]                          - connect to a saved, filestore by name\n");
+    printf("  fileferry -add [name] [filestore url] [options]     - add a filestore to saved filestores list\n");
+    printf("  fileferry -filestores                               - print list of saved filestores\n");
+    printf("  fileferry -drivers                                  - print list of available filestore drivers\n");
+    printf("  fileferry -commands                                 - print list of interactive commands\n");
+    printf("  fileferry -config <name>=<value>                    - show config, and/or change a config setting (multiple settings can be supplied on the command line)\n");
     printf("\noptions:\n");
     printf("  -v                                         - be verbose\n");
     printf("  -N                                         - batch mode, do not try to read any user input, even passwords\n");
@@ -441,6 +441,7 @@ void HelpCommandLine()
     printf("  -passwd <password>                         - password to log in with\n");
     printf("  -pass <password>                           - password to log in with\n");
     printf("  -pw <password>                             - password to log in with\n");
+    printf("  -api-key <key>                             - api-key for service\n");
     printf("  -c <commands>                              - list of commands to run instead of reading commands from user\n");
     printf("  -b <command file>                          - path to a file containing commands to run instead of reading commands from user\n");
     printf("  -e <config>                                - encrypt/decrypt transferred files\n");

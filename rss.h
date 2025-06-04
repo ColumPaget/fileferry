@@ -3,6 +3,6 @@
 
 #include "common.h"
 
-void RSS_ListDir(ListNode *FileList, const char *RSS);
+int RSS_ListDir(ListNode *FileList, const char *RSS);
 
 #endif

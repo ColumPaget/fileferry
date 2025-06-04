@@ -252,7 +252,7 @@ static int LocalDisk_Connect(TFileStore *FS)
 
 int LocalDisk_Attach(TFileStore *FS)
 {
-char *Tempstr=NULL;
+    char *Tempstr=NULL;
 
     FS->Flags |= FILESTORE_FOLDERS | FILESTORE_RESUME_TRANSFERS;
 
@@ -274,11 +274,11 @@ char *Tempstr=NULL;
     FS->WriteBytes=LocalDisk_WriteBytes;
 
     Tempstr=HashAvailableTypes(Tempstr);
-		strrep(Tempstr, ',', ' ');
+    strrep(Tempstr, ',', ' ');
     SetVar(FS->Vars, "HashTypes", Tempstr);
-		AppendVar(FS->Vars, "HashTypes", "dropboxhash");
- 
-Destroy(Tempstr);
+    AppendVar(FS->Vars, "HashTypes", "dropboxhash");
+
+    Destroy(Tempstr);
 
     return(TRUE);
 }

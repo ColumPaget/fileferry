@@ -15,7 +15,7 @@ static void HTML_ListDir_HTMLTag(ListNode *FileList, const char *Args)
 {
     TFileItem *FI;
     char *Name=NULL, *Value=NULL;
-    const char *ptr;
+    const char *ptr, *tptr;
 
     ptr=GetNameValuePair(Args, "\\S", "=", &Name, &Value);
     while (ptr)
@@ -25,7 +25,16 @@ static void HTML_ListDir_HTMLTag(ListNode *FileList, const char *Args)
             if (IsDownloadableURL(Value))
             {
                 FI=FileItemCreate(Value, 0, 0, 0);
-                if (FI) ListAddNamedItem(FileList, FI->name, FI);
+                if (FI)
+                {
+                    tptr=strrchr(FI->name, '/');
+                    if (tptr && (*(tptr+1)=='\0'))
+                    {
+                        FI->type=FTYPE_DIR;
+                        StrTrunc(FI->name, tptr - FI->name);
+                    }
+                    ListAddNamedItem(FileList, FI->name, FI);
+                }
             }
         }
 
@@ -37,20 +46,28 @@ static void HTML_ListDir_HTMLTag(ListNode *FileList, const char *Args)
 }
 
 
-void HTML_ListDir(ListNode *FileList, const char *HTML)
+int HTML_ListDir(ListNode *FileList, const char *HTML)
 {
     char *Namespace=NULL, *Name=NULL, *Value=NULL;
     const char *ptr;
+    int RetVal=FALSE;
 
     ptr=XMLGetTag(HTML, &Namespace, &Name, &Value);
     while (ptr)
     {
-        if (strcasecmp(Name, "a")==0) HTML_ListDir_HTMLTag(FileList, Value);
+        if (strcasecmp(Name, "html")==0) RetVal=TRUE; //it's an html document, maybe an empty one, but still.
+        else if (strcasecmp(Name, "a")==0) //it has an anchor tag!
+        {
+            HTML_ListDir_HTMLTag(FileList, Value);
+            RetVal=TRUE;
+        }
         ptr=XMLGetTag(ptr, &Namespace, &Name, &Value);
     }
 
     Destroy(Namespace);
     Destroy(Name);
     Destroy(Value);
+
+    return(RetVal);
 }
 

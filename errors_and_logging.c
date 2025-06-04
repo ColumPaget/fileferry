@@ -38,7 +38,7 @@ void HandleEvent(TFileStore *FS, int ErrorType, const char *Description, const c
         Tempstr=SubstituteVarsInString(Tempstr, Description, Vars, 0);
         UI_Output(ErrorType, "%s", Tempstr);
 
-				Cleaned=TerminalStripControlSequences(Cleaned, Tempstr);
+        Cleaned=TerminalStripControlSequences(Cleaned, Tempstr);
         if (StrValid(Settings->LogFile)) LogToFile(Settings->LogFile, "%s", Cleaned);
         if (Settings->Flags & SETTING_SYSLOG) syslog(LOG_ERR, "%s", Cleaned);
         if (StrLen(Settings->EmailForErrors)) EmailError(FS, ErrorType, Path, Description);

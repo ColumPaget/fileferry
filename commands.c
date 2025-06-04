@@ -672,19 +672,19 @@ void CommandDiff(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
 
 int CommandFileItemExists(TCommand *Cmd, TFileStore *FS)
 {
-int val, result;
+    int val, result;
 
-				val=FTYPE_ANY;
-    		if (Cmd->Flags & CMD_FLAG_FILES_ONLY) val=FTYPE_FILE;
-    		if (Cmd->Flags & CMD_FLAG_DIRS_ONLY) val=FTYPE_DIR;
+    val=FTYPE_ANY;
+    if (Cmd->Flags & CMD_FLAG_FILES_ONLY) val=FTYPE_FILE;
+    if (Cmd->Flags & CMD_FLAG_DIRS_ONLY) val=FTYPE_DIR;
 
-        if (FileStoreItemExists(FS, Cmd->Target, val)) result=TRUE;
-				else result=FALSE;
+    if (FileStoreItemExists(FS, Cmd->Target, val)) result=TRUE;
+    else result=FALSE;
 
-				if (result) UI_Output(0, "'%s' exists", Cmd->Target);
-        else UI_Output(0, "'%s' does not exist", Cmd->Target);
+    if (result) UI_Output(0, "'%s' exists", Cmd->Target);
+    else UI_Output(0, "'%s' does not exist", Cmd->Target);
 
-return(result);
+    return(result);
 }
 
 
@@ -718,11 +718,11 @@ int CommandProcess(TCommand *Cmd, TFileStore *LocalFS, TFileStore *RemoteFS)
         break;
 
     case CMD_EXISTS:
-				result=CommandFileItemExists(Cmd, RemoteFS);
+        result=CommandFileItemExists(Cmd, RemoteFS);
         break;
 
     case CMD_LEXISTS:
-				result=CommandFileItemExists(Cmd, LocalFS);
+        result=CommandFileItemExists(Cmd, LocalFS);
         break;
 
     case CMD_CD:

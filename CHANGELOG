@@ -1,3 +1,9 @@
+v3.8 (2025-06-04)
+  * add '-api-key' command-line option so user can supply their own api-key to services
+  * fix for 'chdir' with pure HTTP/HTTPS (not webdav) filestores
+  * don't raise 'transfer ended early' error for transfers where size is not known
+  * for filestores like http where transfer-size may not be known in advance, get transfer-size from 'content-length'
+
 v3.7 (2025-03-24)
   * limit bytes sent in one write command to sftp-server to 40960. 
 

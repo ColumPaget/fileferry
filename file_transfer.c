@@ -330,12 +330,12 @@ static long TransferSetupBuffer(char **Buffer, TFileStore *FromFS, TFileStore *T
 //otherwise start at 4 meg
     else len=4 * 1024 * 1024;
 
-   //Does either filestore specify a limit?
-   ptr=GetVar(FromFS->Vars, "max_transfer_chunk");
-   if (StrValid(ptr) && (atol(ptr) < len)) len=atol(ptr);
+    //Does either filestore specify a limit?
+    ptr=GetVar(FromFS->Vars, "max_transfer_chunk");
+    if (StrValid(ptr) && (atol(ptr) < len)) len=atol(ptr);
 
-   ptr=GetVar(ToFS->Vars, "max_transfer_chunk");
-   if (StrValid(ptr) && (atol(ptr) < len)) len=atol(ptr);
+    ptr=GetVar(ToFS->Vars, "max_transfer_chunk");
+    if (StrValid(ptr) && (atol(ptr) < len)) len=atol(ptr);
 
     *Buffer = SetStrLen(*Buffer, len);
     while ((Buffer == NULL) & (len > 4096))
@@ -417,6 +417,10 @@ int TransferFile(TFileTransfer *Xfer)
     if (! FromS) RetVal=XFER_SOURCE_FAIL;
     else
     {
+	//For e.g. HTTP filestores we might not know the size of the document we're getting until
+        //the transfer starts and it's passed as 'Content-Length' or whatver
+	if ((Xfer->Size ==0) && (FromS->Size > 0)) Xfer->Size=FromS->Size;
+
         Name=FileStoreReformatPath(Name, GetBasename(Xfer->TransferName), ToFS);
         ToS=ToFS->OpenFile(ToFS, Name, XFER_FLAG_WRITE | (Xfer->Flags & XFER_FLAGS_OPEN_FILE), Xfer->Offset, Xfer->Size);
         if (! ToS)
@@ -430,7 +434,7 @@ int TransferFile(TFileTransfer *Xfer)
             FromFS->CloseFile(FromFS, FromS);
 
             if (! ToFS->CloseFile(ToFS, ToS)) RetVal=XFER_DEST_FAIL;
-            else if (Xfer->Offset != Xfer->Size) RetVal=XFER_SHORT_FAIL;
+            else if ((Xfer->Size > 0) && (Xfer->Offset != Xfer->Size)) RetVal=XFER_SHORT_FAIL;
             else
             {
                 TransferPostProcess(Xfer);
