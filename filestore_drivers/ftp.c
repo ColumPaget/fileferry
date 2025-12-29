@@ -57,9 +57,6 @@ static int FTP_HasFeature(TFileStore *FS, const char *Feature)
 
 
 
-
-
-
 static int FTP_DecodePORTStr(char *PortStr, char **Address, int *Port)
 {
     char *Tempstr=NULL;
@@ -115,7 +112,7 @@ static char *FTP_NegotiatePassiveDataConnection(char *RetStr, TFileStore *FS)
     char *ptr;
     int result;
 
-
+		RetStr=CopyStr(RetStr, "");
     SendLoggedLine("PASV\r\n",FS, FS->S);
 
     Tempstr=ReadLoggedLine(Tempstr, FS, FS->S);
@@ -123,18 +120,31 @@ static char *FTP_NegotiatePassiveDataConnection(char *RetStr, TFileStore *FS)
     //if (Settings.Flags & FLAG_VERBOSE) printf("%s",Tempstr);
     if (StrValid(Tempstr))
     {
+				//anything starting with '1' means 'more coming'
         if (*Tempstr=='1') Tempstr=ReadLoggedLine(Tempstr, FS, FS->S);
-        if (*Tempstr=='2')
+
+        switch (*Tempstr)
         {
+				case '2':
             ptr=strrchr(Tempstr,'(');
             if (ptr)
             {
                 ptr++;
                 GetToken(ptr, ")", &Token, 0);
                 FTP_DecodePORTStr(Token, &Address, &Port);
-                RetStr=FormatStr(RetStr, "tcp:%s:%d", Address, Port);
 
+                ParseURL(FS->URL, NULL, &Token, NULL, NULL, NULL, NULL,  NULL);
+                if ( IsIP6Address(Token) || (strcmp(Address, "0.0.0.0")==0) ) Address=CopyStr(Address, Token);
+
+                RetStr=FormatStr(RetStr, "tcp:%s:%d", Address, Port);
             }
+				break;
+
+
+				case '4':
+				case '5':
+          SetVar(FS->Vars,"Error",Tempstr);
+				break;
         }
     }
 
@@ -155,11 +165,6 @@ static TFileItem *FTP_FileInfo(TFileStore *FS, const char *Path)
 }
 
 
-
-
-
-
-
 static ListNode *FTP_ListDir(TFileStore *FS, const char *Path)
 {
     int result, MLSD=FALSE;
@@ -170,7 +175,12 @@ static ListNode *FTP_ListDir(TFileStore *FS, const char *Path)
 
     MLSD=FTP_HasFeature(FS,"MLSD");
     URL=FTP_NegotiatePassiveDataConnection(URL, FS);
-    if (! StrValid(URL)) return(NULL);
+    if (! StrValid(URL)) 
+		{
+			UI_Output(UI_OUTPUT_ERROR, "Data Connection failed: %s", GetVar(FS->Vars, "Error"));
+
+			return(NULL);
+		}
 
     if (MLSD) SendLoggedLine("MLSD\r\n", FS, FS->S);
     else SendLoggedLine("LIST\r\n", FS, FS->S);
@@ -775,7 +785,6 @@ static int FTP_Connect(TFileStore *FS)
     char *Proto=NULL, *Host=NULL, *PortStr=NULL, *Path=NULL, *Tempstr=NULL, *Verbiage=NULL;
     char *ptr;
     int RetVal=FALSE;
-
 
     ParseURL(FS->URL, &Proto, &Host, &PortStr, NULL, NULL, &Path,  NULL);
     if (! StrValid(PortStr)) PortStr=CopyStr(PortStr, "21");

@@ -62,22 +62,26 @@ int BASIC_FUNC_EXEC_COMMAND(void *Command, int Flags)
         ptr=FinalCommand;
         ptr=GetToken(FinalCommand,"\\S",&Token,GETTOKEN_QUOTES);
         ExecPath=FindFileInPath(ExecPath,Token,getenv("PATH"));
-        i=0;
-
-        if (! (Flags & SPAWN_ARG0))
+        if (StrValid(ExecPath))
         {
-            argv[0]=CopyStr(argv[0],ExecPath);
-            i=1;
-        }
+            i=0;
 
-        for (; i < max_arg; i++)
-        {
-            ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-            if (! ptr) break;
-            argv[i]=CopyStr(argv[i],Token);
-        }
+            if (! (Flags & SPAWN_ARG0))
+            {
+                argv[0]=CopyStr(argv[0],ExecPath);
+                i=1;
+            }
 
-        result=execv(ExecPath, argv);
+            for (; i < max_arg; i++)
+            {
+                ptr=GetToken(ptr, "\\S", &Token, GETTOKEN_QUOTES);
+                if (! ptr) break;
+                argv[i]=CopyStr(argv[i], Token);
+            }
+
+            result=execv(ExecPath, argv);
+        }
+        else RaiseError(ERRFLAG_ERRNO, "Spawn", "Failed to execute '%s', can't find executable",Command);
     }
     else result=execl("/bin/sh","/bin/sh","-c",(char *) Command,NULL);
 
@@ -362,6 +366,7 @@ STREAM *STREAMSpawnFunction(BASIC_FUNC Func, void *Data, const char *Config)
         Tempstr=FormatStr(Tempstr,"%d",pid);
         STREAMSetValue(S,"PeerPID",Tempstr);
         S->Type=STREAM_TYPE_PIPE;
+        S->Path=MCopyStr(S->Path, "fork:", Tempstr, NULL);
     }
 
     DestroyString(Tempstr);
@@ -391,6 +396,7 @@ STREAM *STREAMSpawnCommand(const char *Command, const char *Config)
     //take a copy of this as it's going to be passed to another process and
     Token=CopyStr(Token, Command);
     if (UseShell || StrValid(ExecPath)) S=STREAMSpawnFunction(BASIC_FUNC_EXEC_COMMAND, (void *) Token, Config);
+    if (S) S->Path=MCopyStr(S->Path, "exec:", Command, NULL);
 
     Destroy(ExecPath);
     Destroy(Token);

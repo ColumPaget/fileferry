@@ -20,6 +20,11 @@ static ListNode *Drivers=NULL;
 #include "pop3.h"
 #endif
 
+#ifdef FILESTORE_BUILTIN_GOPHER
+#include "gopher.h"
+#endif
+
+
 #ifdef FILESTORE_BUILTIN_GDRIVE
 #include "gdrive.h"
 #endif
@@ -68,6 +73,13 @@ void FileStoreDriversInit()
     FileStoreDriverAdd("pop3", "POP3", "POP3 Mail", POP3_Attach);
     FileStoreDriverAdd("pop3s", "POP3", "POP3 Mail", POP3_Attach);
 #endif
+
+#ifdef FILESTORE_BUILTIN_GOPHER
+    FileStoreDriverAdd("gopher", "GOPHER", "GOPHER Mail", Gopher_Attach);
+    FileStoreDriverAdd("gophers", "GOPHER", "GOPHER Mail", Gopher_Attach);
+    FileStoreDriverAdd("sgopher", "GOPHER", "GOPHER Mail", Gopher_Attach);
+#endif
+
 
 #ifdef FILESTORE_BUILTIN_GDRIVE
     FileStoreDriverAdd("gdrive", "Google Drive", "Google drive api v3", GDrive_Attach);

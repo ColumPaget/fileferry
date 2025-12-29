@@ -617,9 +617,9 @@ int DropBox_Attach(TFileStore *FS)
 
     AppendVar(FS->Vars, "HashTypes", "dropboxhash");
 
-    if (! StrValid(FS->ApiKey)) 
+    if (! StrValid(FS->ApiKey))
     {
-	UI_Output(0, "~yWARNING~0: You are using the default ClientID/AppKey for dropbox. As dropbox limits users per ClientID it might be an idea to get one at https://www.dropbox.com/developers/apps/. It will be called 'AppKey' when generated.\n");
+        UI_Output(0, "~yWARNING~0: You are using the default ClientID/AppKey for dropbox. As dropbox limits users per ClientID it might be an idea to get one at https://www.dropbox.com/developers/apps/. It will be called 'AppKey' when generated.\n");
         FS->ApiKey=CopyStr(FS->ApiKey, DROPBOX_CLIENT_ID);
     }
 

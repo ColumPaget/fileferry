@@ -15,5 +15,7 @@ int FileStoreGlobCount(TFileStore *FS, const char *Path);
 TFileItem *FileStoreItemExists(TFileStore *FS, const char *FName, int Flags);
 TFileItem *FileStoreDirListUpdateItem(TFileStore *FS, int Type, const char *Name, uint64_t Size, int Perms);
 ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char *Match);
+TFileItem *FileStoreDirListMoveItem(TFileStore *FS, const char *Path, const char *NewPath, int IsMove);
+
 
 #endif

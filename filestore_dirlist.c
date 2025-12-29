@@ -33,6 +33,9 @@ void FileStoreDirListFree(TFileStore *FS, ListNode *Dir)
 
 
 
+
+
+
 TFileItem *FileStoreDirListUpdateItem(TFileStore *FS, int Type, const char *Name, uint64_t Size, int Perms)
 {
     TFileItem *FI;
@@ -81,7 +84,7 @@ void FileStoreDirListRemoveItem(TFileStore *FS, const char *Path)
 ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char *Match)
 {
     ListNode *GlobList, *Curr;
-    TFileItem *Item;
+    TFileItem *FI;
     const char *rname;
 
     GlobList=ListCreate();
@@ -92,8 +95,9 @@ ListNode *FileStoreDirListMatch(TFileStore *FS, ListNode *InputList, const char 
         rname=GetBasename(Curr->Tag);
         if ((! StrValid(Match)) || (fnmatch(Match, rname, 0)==0))
         {
-            Item=FileItemClone((TFileItem *) Curr->Item);
-            if (Item->type != FTYPE_DELETED) ListAddNamedItem(GlobList, Item->name, Item);
+            FI=(TFileItem *) Curr->Item;
+            FI=FileItemClone((TFileItem *) Curr->Item);
+            if (FI->type != FTYPE_DELETED) ListAddNamedItem(GlobList, FI->name, FI);
         }
 
         Curr=ListGetNext(Curr);
@@ -285,6 +289,30 @@ int FileStoreGlobCount(TFileStore *FS, const char *Path)
     return(count);
 }
 
+
+
+TFileItem *FileStoreDirListMoveItem(TFileStore *FS, const char *Path, const char *NewPath, int IsMove)
+{
+    ListNode *Node;
+    TFileItem *FI;
+
+    Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
+    if (Node)
+    {
+        if (IsMove) FileStoreDirListRemoveItem(FS, Path);
+        else
+        {
+            //take a clone so we can delete the existing item
+            FI=FileItemClone((TFileItem *) Node->Item);
+            FileStoreDirListRemoveItem(FS, Path);
+            FI->path=CopyStr(FI->path, NewPath);
+            FI->name=CopyStr(FI->name, GetBasename(FI->path));
+            ListAddNamedItem(FS->DirList, FI->name, FI);
+        }
+    }
+
+    return(FI);
+}
 
 
 

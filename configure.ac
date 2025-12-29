@@ -1,4 +1,4 @@
-AC_INIT([fileferry],[3.8])
+AC_INIT([fileferry],[3.9])
 
 AC_PROG_CC
 AC_LANG([C])
@@ -12,6 +12,7 @@ AC_ARG_ENABLE(ftp, [  --enable-ftp		enable FTP/FTPS file transfer (default=yes) 
 AC_ARG_ENABLE(sftp, [  --enable-sftp		enable SFTP file transfer (default=yes) ], cf_enable_sftp=$enableval )
 AC_ARG_ENABLE(http, [  --enable-http		enable HTTP/HTTPS/WEBDAV file transfer (default=yes) ], cf_enable_http=$enableval )
 AC_ARG_ENABLE(pop3, [  --enable-pop3		enable POP3/POP3S file transfer (default=yes) ], cf_enable_pop3=$enableval )
+AC_ARG_ENABLE(gopher, [  --enable-gopher		enable GOPHER/SGOPHER file transfer (default=yes) ], cf_enable_gopher=$enableval )
 AC_ARG_ENABLE(syno, [  --enable-syno		enable SYNOLOGY NAS API file transfer (default=no) ], cf_enable_syno=$enableval )
 AC_ARG_ENABLE(synology, [  --enable-synology		enable SYNOLOGY NAS API file transfer (default=no) ], cf_enable_syno=$enableval )
 AC_ARG_ENABLE(faw, [  --enable-faw 		enable FilesAnywhere API file transfer (default=no) ], cf_enable_faw=$enableval )
@@ -20,6 +21,7 @@ AC_ARG_ENABLE(gdrive, [  --enable-gdrive 		enable GOOGLEDRIVE API file transfer 
 AC_ARG_ENABLE(gofile, [  --enable-gofile 		enable GOFILE API file transfer (default=no) ], cf_enable_gofile=$enableval )
 AC_ARG_ENABLE(filebin, [  --enable-filebin		enable FILEBIN API file transfer (default=no) ], cf_enable_filebin=$enableval )
 AC_ARG_ENABLE(allfs, [  --enable-allfs		enable all filestore types (default=no) ], cf_enable_allfs=$enableval )
+AC_ARG_ENABLE(allfs, [  --enable-all-fs		enable all filestore types (default=no) ], cf_enable_allfs=$enableval )
 
 AC_ARG_WITH(libuseful, [  --with-libuseful		use system-wide libUseful (default=auto) ], cf_system_libuseful=$withval )
 
@@ -43,6 +45,7 @@ cf_enable_sftp="yes"
 cf_enable_http="yes"
 cf_enable_syno="yes"
 cf_enable_pop3="yes"
+cf_enable_gopher="yes"
 cf_enable_faw="yes"
 cf_enable_dropbox="yes"
 cf_enable_gdrive="yes"
@@ -87,6 +90,11 @@ fi
 if test "$cf_enable_pop3" == "yes"
 then
 AC_SUBST(FILESTORE_BUILTIN_POP3, "Y")
+fi
+
+if test "$cf_enable_gopher" == "yes"
+then
+AC_SUBST(FILESTORE_BUILTIN_GOPHER, "Y")
 fi
 
 if test "$cf_enable_gofile" == "yes"

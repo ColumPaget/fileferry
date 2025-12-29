@@ -9,6 +9,9 @@
 
 
 
+
+
+
 TFileItem *FileStoreGetFileInfo(TFileStore *FS, const char *Path)
 {
     TFileItem *FI;
@@ -438,7 +441,7 @@ int FileStoreUnLock(TFileStore *FS, const char *Path)
 
 int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
 {
-    char *Arg1=NULL, *Arg2=NULL, *Tempstr=NULL;
+    char *Arg1=NULL, *Arg2=NULL;
     TFileItem *FI;
     ListNode *Node;
     int result=FALSE, IsMove=FALSE, i;
@@ -460,20 +463,8 @@ int FileStoreRename(TFileStore *FS, const char *Path, const char *Dest)
 
         if (result==TRUE)
         {
-            Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
-            if (Node)
-            {
-                if (IsMove) FileStoreDirListRemoveItem(FS, Path);
-                else
-                {
-                    //take a clone so we can delete the existing item
-                    FI=FileItemClone((TFileItem *) Node->Item);
-                    FileStoreDirListRemoveItem(FS, Path);
-                    FI->path=CopyStr(FI->path, Arg2);
-                    FI->name=CopyStr(FI->name, GetBasename(FI->path));
-                    ListAddNamedItem(FS->DirList, FI->name, FI);
-                }
-            }
+            FI=FileStoreDirListMoveItem(FS, Path, Arg2, IsMove);
+
             HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) RENAME: $(path) $(dest)", Path, Arg2);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) RENAME FAILED: $(path) $(dest)", Path, Arg2);
@@ -506,16 +497,7 @@ int FileStoreCopyFile(TFileStore *FS, const char *Path, const char *Dest)
         if (result==TRUE)
         {
             HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) COPY: $(path) $(dest)", Path, Arg2);
-            Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
-            if (Node)
-            {
-                FI=FileItemClone((TFileItem *) Node->Item);
-                FileStoreDirListRemoveItem(FS, Path);
-                FI->path=CopyStr(FI->path, Dest);
-                FI->name=CopyStr(FI->name, GetBasename(Dest));
-                ListAddNamedItem(FS->DirList, FI->name, FI);
-            }
-
+            FI=FileStoreDirListMoveItem(FS, Path, Dest, FALSE);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) COPY FAILED: $(path) $(dest)", Path, Arg2);
     }
@@ -545,16 +527,7 @@ int FileStoreLinkPath(TFileStore *FS, const char *Path, const char *Dest)
         if (result==TRUE)
         {
             HandleEvent(FS, UI_OUTPUT_VERBOSE, "$(filestore) LINK: $(path) $(dest)", Path, Arg2);
-            Node=ListFindNamedItem(FS->DirList, GetBasename(Path));
-            if (Node)
-            {
-                FI=FileItemClone((TFileItem *) Node->Item);
-                FileStoreDirListRemoveItem(FS, Path);
-                FI->path=CopyStr(FI->path, Dest);
-                FI->name=CopyStr(FI->name, GetBasename(Dest));
-                ListAddNamedItem(FS->DirList, FI->name, FI);
-            }
-
+            FI=FileStoreDirListMoveItem(FS, Path, Dest, FALSE);
         }
         else HandleEvent(FS, UI_OUTPUT_ERROR, "$(filestore) LINK FAILED: $(path) $(dest)", Path, Arg2);
     }

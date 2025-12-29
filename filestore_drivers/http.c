@@ -349,7 +349,7 @@ static STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, ui
 {
     char *Method=NULL;
     STREAM *S;
-     const char *ptr;
+    const char *ptr;
     uint64_t ContentLength;
 
     if (OpenFlags & XFER_FLAG_WRITE) Method=CopyStr(Method, "PUT");
@@ -362,12 +362,12 @@ static STREAM *HTTP_OpenFile(TFileStore *FS, const char *Path, int OpenFlags, ui
 
         //capture size of transfer from Content-Length
         //this will one day move into libuseful
-	ptr=STREAMGetValue(S, "HTTP:Content-Length");
-	if (StrValid(ptr))
-	{
-        ContentLength=(uint64_t) strtoull(ptr, NULL, 10);
-	if ((Size > 0) && (S->Size==0)) S->Size=Size;
-	}
+        ptr=STREAMGetValue(S, "HTTP:Content-Length");
+        if (StrValid(ptr))
+        {
+            ContentLength=(uint64_t) strtoull(ptr, NULL, 10);
+            if ((Size > 0) && (S->Size==0)) S->Size=Size;
+        }
 
 
         if (strcmp(Method, "GET")==0)
@@ -477,7 +477,8 @@ static int HTTP_Connect(TFileStore *FS)
 int HTTP_Attach(TFileStore *FS)
 {
     FS->Type=FILESTORE_HTTP;
-    FS->Flags |= FILESTORE_FOLDERS | FILESTORE_CHDIR_LOADS_DIR;
+    //FS->Flags |= FILESTORE_FOLDERS | FILESTORE_CHDIR_LOADS_DIR;
+    FS->Flags |= FILESTORE_FOLDERS;
     FS->Connect=HTTP_Connect;
     FS->ListDir=HTTP_ListDir;
     FS->MkDir=HTTP_MkDir;

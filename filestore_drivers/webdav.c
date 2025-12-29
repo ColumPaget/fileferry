@@ -1,6 +1,7 @@
 #include "webdav.h"
 #include "http.h"
 #include "../fileitem.h"
+#include "../filestore_dirlist.h"
 #include "../ui.h"
 
 #define PROPFIND_XML "<?xml version=\"1.0\" encoding=\"utf-8\" ?> <D:propfind xmlns:D=\"DAV:\" > <D:prop> <D:getcontentlength/> <D:resourcetype/> <D:iscollection/> <D:creationdate/> <D:getlastmodified/> <executable xmlns=\"http://apache.org/dav/props/\"/> <md5-checksum xmlns=\"http://subversion.tigris.org/xmlns/dav/\"/> </D:prop> </D:propfind>"
@@ -19,6 +20,7 @@ static void HTTP_Webdav_Normalize_Path(TFileStore *FS, TFileItem *FI, const char
 
     Path=HTTPUnQuote(Path, ptr);
     StripDirectorySlash(Path);
+
     FI->path=CopyStr(FI->path, FileStorePathRelativeToCurr(FS, Path));
     FI->name=CopyStr(FI->name, GetBasename(FI->path));
 
@@ -112,6 +114,8 @@ int Webdav_ListDir(TFileStore *FS, const char *URL, ListNode *FileList)
             UI_Output(UI_OUTPUT_DEBUG, "%s", Tempstr);
             if (RetVal==TRUE)
             {
+                FileStoreDirListClear(FS);
+
                 ptr=XMLGetTag(Tempstr, &Namespace, &Tag, &Value);
                 while (ptr)
                 {

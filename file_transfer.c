@@ -417,9 +417,9 @@ int TransferFile(TFileTransfer *Xfer)
     if (! FromS) RetVal=XFER_SOURCE_FAIL;
     else
     {
-	//For e.g. HTTP filestores we might not know the size of the document we're getting until
+        //For e.g. HTTP filestores we might not know the size of the document we're getting until
         //the transfer starts and it's passed as 'Content-Length' or whatver
-	if ((Xfer->Size ==0) && (FromS->Size > 0)) Xfer->Size=FromS->Size;
+        if ((Xfer->Size ==0) && (FromS->Size > 0)) Xfer->Size=FromS->Size;
 
         Name=FileStoreReformatPath(Name, GetBasename(Xfer->TransferName), ToFS);
         ToS=ToFS->OpenFile(ToFS, Name, XFER_FLAG_WRITE | (Xfer->Flags & XFER_FLAGS_OPEN_FILE), Xfer->Offset, Xfer->Size);
